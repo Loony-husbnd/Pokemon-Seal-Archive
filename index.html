@@ -102,6 +102,40 @@
       -webkit-backdrop-filter: saturate(160%) blur(10px);
       border-bottom-color: rgba(255, 255, 255, 0.06) !important;
     }
+
+    /* ---------- Clean theme: 정돈된 카드·여백·톤 ---------- */
+    :root { --app-bg: #F6F7F9; --card-border: #E8EAEF; }
+    #app-header { box-shadow: none; }
+    #app-header h1 { font-size: 15px; font-weight: 700; }
+    #section-metrics > div, #section-gen-progress, #section-charts > div,
+    #section-collection, #view-archive section > div.rounded-lg { box-shadow: none !important; }
+    #section-metrics > div, #section-gen-progress, #section-charts > div, #section-collection {
+      border-color: var(--card-border) !important; border-radius: 14px;
+    }
+    #section-metrics > div { padding: 16px 18px; }
+    #section-metrics > div > div:first-child span:first-child { text-transform: none; font-size: 12px; font-weight: 600; color: #6B7280; }
+    #section-metrics > div > div:first-child span:last-child { background: transparent !important; border-color: transparent !important; }
+    #section-metrics .text-2xl { font-size: 26px; }
+    #metric-card-anniversary * { color: inherit; }
+    #metric-card-anniversary #stat-anniversary-count { color: #D97706; }
+    #metric-card-anniversary > div:first-child span:first-child,
+    #metric-card-anniversary > div:last-child, #metric-card-anniversary > div:last-child * { color: #6B7280; }
+    #metric-card-anniversary > div:last-child { border-top-color: #F1F2F5 !important; }
+    #metric-card-anniversary #stat-anniversary-ratio { color: #374151; }
+    #section-metrics > div > div:last-child { border-top-color: #F1F2F5 !important; }
+    #section-charts h2, #section-gen-progress h2 { font-size: 14px; font-weight: 700; }
+    #section-charts, #view-archive { gap: 16px; }
+    #section-collection input, #section-collection select {
+      border-color: #E1E4EA; border-radius: 10px; background-color: #fff;
+    }
+    #section-collection input:focus, #section-collection select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(229,56,59,.10); }
+    #section-collection .bg-slate-50\/50 { background: #FAFBFC; }
+    #section-collection thead { background: #FAFBFC; }
+    #section-collection table tbody tr:hover { background: #FAFBFC; }
+    #section-collection label.block { text-transform: none; font-size: 11px; font-weight: 600; color: #6B7280; }
+    .sticker-border { border-radius: 12px; box-shadow: none; }
+    .sticker-border:hover { box-shadow: 0 6px 16px -8px rgba(16,24,40,.18); }
+    @media (max-width: 640px) { #section-metrics > div { padding: 12px 14px; } }
     /* Holographic / Foil Sticker Effect for 30th Anniversary */
     .foil-shimmer {
       background: linear-gradient(135deg, #FFFFFF 0%, #FFF7E3 28%, #F6F0FF 52%, #FFF4D6 76%, #FFFFFF 100%);
@@ -405,12 +439,7 @@
           <div class="flex items-center gap-2">
             <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 whitespace-nowrap">
               <span>포켓몬 띠부씰 컬렉션</span>
-              <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">
-                PRO
-              </span>
             </h1>
-            <span class="text-slate-600 hidden md:inline">|</span>
-            <p class="text-[11px] text-slate-400 hidden md:inline font-medium">전국도감 1~9세대 자동 분류 & 실시간 통계</p>
           </div>
         </div>
 
@@ -545,7 +574,7 @@
       </div>
 
       <!-- 30th Anniversary -->
-      <div id="metric-card-anniversary" class="bg-gradient-to-br from-amber-500/10 via-white to-amber-500/5 rounded-xl p-4 border border-amber-200 shadow-dense relative overflow-hidden flex flex-col justify-between">
+      <div id="metric-card-anniversary" class="bg-white rounded-xl p-4 border border-slate-200/90 shadow-dense relative overflow-hidden flex flex-col justify-between">
         <div class="flex items-center justify-between">
           <span class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider">30주년 기념 씰</span>
           <span class="p-1 rounded bg-amber-100 text-amber-700 border border-amber-200"><i data-lucide="award" class="w-3.5 h-3.5"></i></span>
@@ -624,17 +653,17 @@
     <section id="section-charts" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
       
       <!-- Generation Distribution (Bar Chart with Toggle) -->
-      <div id="chart-card-generations" class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-dense lg:col-span-6 flex flex-col justify-between">
+      <div id="chart-card-generations" class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-dense lg:col-span-4 flex flex-col justify-between">
         <div class="flex items-center justify-between mb-2">
           <div>
             <h2 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-poke-red"></i>
-              세대별 현황 차트 (1세대 ~ 9세대)
+              세대별 현황 차트
             </h2>
             <p id="chart-gen-subtitle" class="text-[10px] text-slate-500">중복 제외 세대별 도감 달성률(%)</p>
           </div>
           <!-- Toggle Tab: Completion Rate (%) vs Seal Count -->
-          <div class="inline-flex rounded bg-slate-100 p-0.5 text-[11px] font-medium border border-slate-200">
+          <div class="inline-flex rounded bg-slate-100 p-0.5 text-[11px] font-medium border border-slate-200 whitespace-nowrap shrink-0">
             <button id="btn-chart-tab-gen-percent" type="button" class="px-2 py-0.5 rounded bg-white text-slate-800 shadow-dense">수집률 (%)</button>
             <button id="btn-chart-tab-gen-count" type="button" class="px-2 py-0.5 rounded text-slate-500 hover:text-slate-800">보유 수량</button>
           </div>
@@ -645,7 +674,7 @@
       </div>
 
       <!-- 18 Pokemon Types Distribution (Radar / Bar Chart with Toggle) -->
-      <div id="chart-card-types" class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-dense lg:col-span-6 flex flex-col justify-between">
+      <div id="chart-card-types" class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-dense lg:col-span-4 flex flex-col justify-between">
         <div class="flex items-center justify-between mb-2">
           <div>
             <h2 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -655,7 +684,7 @@
             <p id="chart-type-subtitle" class="text-[10px] text-slate-500">공식 18개 타입별 보유 씰 분포</p>
           </div>
           <!-- Toggle Tab: Radar vs Horizontal Bar Chart -->
-          <div class="inline-flex rounded bg-slate-100 p-0.5 text-[11px] font-medium border border-slate-200">
+          <div class="inline-flex rounded bg-slate-100 p-0.5 text-[11px] font-medium border border-slate-200 whitespace-nowrap shrink-0">
             <button id="btn-chart-tab-type-radar" type="button" class="px-2 py-0.5 rounded bg-white text-slate-800 shadow-dense">레이더 차트</button>
             <button id="btn-chart-tab-type-bar" type="button" class="px-2 py-0.5 rounded text-slate-500 hover:text-slate-800">막대 차트</button>
           </div>
@@ -665,24 +694,8 @@
         </div>
       </div>
 
-      <!-- Binder Location Distribution (Doughnut Chart) -->
-      <div id="chart-card-binders" class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-dense lg:col-span-6 flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-2">
-          <div>
-            <h2 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <i data-lucide="book-marked" class="w-3.5 h-3.5 text-poke-blue"></i>
-              보관 도감별 현황
-            </h2>
-            <p class="text-[10px] text-slate-500">도감 1권 ~ 4권 분배</p>
-          </div>
-        </div>
-        <div class="relative h-44 w-full flex items-center justify-center">
-          <canvas id="chart-binders"></canvas>
-        </div>
-      </div>
-
       <!-- Grade & Type Distribution (Pie Chart with Tabs) -->
-      <div id="chart-card-attributes" class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-dense lg:col-span-6 flex flex-col justify-between">
+      <div id="chart-card-attributes" class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-dense lg:col-span-4 flex flex-col justify-between">
         <div class="flex items-center justify-between mb-2">
           <div>
             <h2 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -692,7 +705,7 @@
             <p class="text-[10px] text-slate-500">미개봉/일반/하자 및 30주년</p>
           </div>
           <!-- Toggle Tab: Grade vs Type -->
-          <div class="inline-flex rounded bg-slate-100 p-0.5 text-[11px] font-medium border border-slate-200">
+          <div class="inline-flex rounded bg-slate-100 p-0.5 text-[11px] font-medium border border-slate-200 whitespace-nowrap shrink-0">
             <button id="btn-chart-tab-grade" type="button" class="px-2 py-0.5 rounded bg-white text-slate-800 shadow-dense">상태 등급</button>
             <button id="btn-chart-tab-type" type="button" class="px-2 py-0.5 rounded text-slate-500 hover:text-slate-800">에디션 종류</button>
           </div>
@@ -826,27 +839,27 @@
     <section id="section-collection" class="bg-white rounded-xl border border-slate-200/90 shadow-dense overflow-hidden">
       
       <!-- Primary View Mode Header Switcher: [📋 띠부씰 목록 보기] vs [📖 실물 바인더 도감] -->
-      <div class="px-3 py-2.5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-800">
+      <div class="px-4 py-3 bg-white text-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-200/90">
         <div class="flex items-center gap-2">
-          <div class="inline-flex rounded-lg bg-slate-950 p-1 border border-slate-800 shadow-inner gap-1">
-            <button id="tab-view-list" type="button" class="px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-white shadow-xs">
-              <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-red-400"></i>
-              <span>📋 띠부씰 목록 보기</span>
+          <div class="inline-flex rounded-lg bg-slate-100 p-1 gap-1">
+            <button id="tab-view-list" type="button" class="px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-white text-slate-900 shadow-xs">
+              <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-poke-red"></i>
+              <span>띠부씰 목록</span>
             </button>
-            <button id="tab-view-binder" type="button" class="px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-400 hover:text-amber-300 hover:bg-slate-900">
-              <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
-              <span>📖 실물 바인더 도감</span>
-              <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">18포켓 양면</span>
+            <button id="tab-view-binder" type="button" class="px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-500 hover:text-slate-900">
+              <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-400"></i>
+              <span>바인더 보기</span>
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-slate-200/70 text-slate-500">18포켓</span>
             </button>
           </div>
         </div>
 
-        <div class="flex items-center gap-3 text-xs text-slate-400 font-medium">
+        <div class="flex items-center gap-3 text-xs text-slate-500 font-medium">
           <span class="hidden md:inline">전국도감 수집:</span>
-          <div class="flex items-center gap-1.5 bg-slate-800/90 px-2.5 py-1 rounded-md border border-slate-700/60 font-mono">
-            <span class="text-[11px] text-slate-400">전국도감</span>
-            <span id="quick-dex-count" class="font-bold text-amber-400">0 / 1025</span>
-            <span class="text-slate-500 text-[11px]">(<span id="quick-dex-pct">0.0%</span>)</span>
+          <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 font-mono">
+            <span class="text-[11px] text-slate-500">전국도감</span>
+            <span id="quick-dex-count" class="font-bold text-poke-red">0 / 1025</span>
+            <span class="text-slate-400 text-[11px]">(<span id="quick-dex-pct">0.0%</span>)</span>
           </div>
         </div>
       </div>
@@ -938,18 +951,6 @@
             </select>
           </div>
 
-          <!-- Binder Filter -->
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">도감 위치</label>
-            <select id="filter-binder" class="w-full text-xs py-1.5 px-2 bg-white border border-slate-300 rounded-md focus:ring-1 focus:ring-poke-red focus:border-poke-red focus:outline-hidden">
-              <option value="all">모든 도감 (전체)</option>
-              <option value="도감 1권">도감 1권</option>
-              <option value="도감 2권">도감 2권</option>
-              <option value="도감 3권">도감 3권</option>
-              <option value="도감 4권">도감 4권</option>
-            </select>
-          </div>
-
           <!-- Grade Filter -->
           <div>
             <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">상태 등급</label>
@@ -1003,17 +1004,6 @@
       <div id="bulk-action-bar" class="hidden bg-slate-900 text-white px-3 py-2 flex items-center justify-between text-xs border-b border-slate-800">
         <div class="flex items-center gap-2.5">
           <span id="bulk-selected-count" class="font-bold text-amber-400 font-mono">0개 선택됨</span>
-          <div class="h-3.5 w-px bg-slate-700"></div>
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] text-slate-300">도감 일괄 이동:</span>
-            <select id="bulk-binder-target" class="bg-slate-800 text-white border border-slate-700 rounded px-2 py-0.5 text-xs">
-              <option value="도감 1권">도감 1권</option>
-              <option value="도감 2권">도감 2권</option>
-              <option value="도감 3권">도감 3권</option>
-              <option value="도감 4권">도감 4권</option>
-            </select>
-            <button id="btn-bulk-move" type="button" class="px-2 py-0.5 bg-poke-blue hover:bg-blue-600 rounded text-xs font-semibold text-white">이동 적용</button>
-          </div>
         </div>
         <div class="flex items-center gap-1.5">
           <button id="btn-bulk-delete" type="button" class="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 rounded text-xs font-semibold text-white flex items-center gap-1">
@@ -1043,7 +1033,6 @@
               <th scope="col" class="px-2.5 py-2.5">세대</th>
               <th scope="col" class="px-2.5 py-2.5">종류 / 30주년</th>
               <th scope="col" class="px-2.5 py-2.5">등급</th>
-              <th scope="col" class="px-2.5 py-2.5">보관 위치</th>
               <th scope="col" class="px-2.5 py-2.5">등록일시</th>
               <th scope="col" class="relative py-2.5 pl-2 pr-3 text-right">관리</th>
             </tr>
@@ -1603,11 +1592,10 @@
         <div class="flex items-center justify-between">
           <span class="text-slate-400 dark:text-slate-500 font-medium flex items-center gap-1">
             <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
-            <span>보유 등급 / 보관 위치</span>
+            <span>보유 등급</span>
           </span>
           <div class="flex items-center gap-1.5">
             <span id="lightbox-seal-grade"></span>
-            <span id="lightbox-seal-location" class="font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"></span>
           </div>
         </div>
 
@@ -2026,23 +2014,6 @@
               <option value="하자">하자 (손상/오염)</option>
             </select>
           </div>
-        </div>
-
-        <!-- Binder Location -->
-        <div>
-          <label for="form-binder-location" class="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">
-            보관 위치 (바인더)
-          </label>
-          <select 
-            id="form-binder-location" 
-            name="binder_location"
-            class="w-full text-xs py-1.5 px-2 bg-slate-50 border border-slate-300 rounded-md focus:ring-1 focus:ring-poke-red focus:bg-white"
-          >
-            <option value="도감 1권">도감 1권</option>
-            <option value="도감 2권">도감 2권</option>
-            <option value="도감 3권">도감 3권</option>
-            <option value="도감 4권">도감 4권</option>
-          </select>
         </div>
 
         <!-- Modal Actions -->
@@ -3603,7 +3574,6 @@
         is_30th_anniversary: true,
         grade: "미개봉",
         seal_type: "30주년 오리지널 컬러",
-        binder_location: "도감 1권",
         created_at: new Date(Date.now() - 86400000 * 5).toISOString()
       },
       {
@@ -3617,7 +3587,6 @@
         is_30th_anniversary: true,
         grade: "미개봉",
         seal_type: "30주년",
-        binder_location: "도감 1권",
         created_at: new Date(Date.now() - 86400000 * 4).toISOString()
       },
       {
@@ -3631,7 +3600,6 @@
         is_30th_anniversary: false,
         grade: "미개봉",
         seal_type: "레트로",
-        binder_location: "도감 1권",
         created_at: new Date(Date.now() - 86400000 * 3.5).toISOString()
       },
       {
@@ -3645,7 +3613,6 @@
         is_30th_anniversary: true,
         grade: "미개봉",
         seal_type: "30주년",
-        binder_location: "도감 2권",
         created_at: new Date(Date.now() - 86400000 * 3).toISOString()
       },
       {
@@ -3659,7 +3626,6 @@
         is_30th_anniversary: false,
         grade: "일반",
         seal_type: "일반",
-        binder_location: "도감 2권",
         created_at: new Date(Date.now() - 86400000 * 2.5).toISOString()
       },
       {
@@ -3673,7 +3639,6 @@
         is_30th_anniversary: false,
         grade: "일반",
         seal_type: "일반",
-        binder_location: "도감 3권",
         created_at: new Date(Date.now() - 86400000 * 2).toISOString()
       },
       {
@@ -3687,7 +3652,6 @@
         is_30th_anniversary: true,
         grade: "미개봉",
         seal_type: "30주년 오리지널 컬러",
-        binder_location: "도감 3권",
         created_at: new Date(Date.now() - 86400000 * 1.5).toISOString()
       },
       {
@@ -3701,7 +3665,6 @@
         is_30th_anniversary: false,
         grade: "하자",
         seal_type: "일반",
-        binder_location: "도감 4권",
         created_at: new Date(Date.now() - 86400000 * 1).toISOString()
       },
       {
@@ -3715,7 +3678,6 @@
         is_30th_anniversary: false,
         grade: "미개봉",
         seal_type: "일반",
-        binder_location: "도감 4권",
         created_at: new Date(Date.now() - 86400000 * 0.5).toISOString()
       },
       {
@@ -3729,7 +3691,6 @@
         is_30th_anniversary: true,
         grade: "일반",
         seal_type: "30주년",
-        binder_location: "도감 1권",
         created_at: new Date().toISOString()
       }
     ];
@@ -3768,9 +3729,7 @@
     let lastSealSettings = {
       is_30th_anniversary: false,
       seal_type: '일반',
-      grade: '미개봉',
-      binder_location: '도감 1권'
-    };
+      grade: '미개봉'    };
 
     function loadLastSettings() {
       try {
@@ -3795,7 +3754,6 @@
     // Chart instances
     let chartGenerationsInstance = null;
     let chartTypesInstance = null;
-    let chartBindersInstance = null;
     let chartAttributesInstance = null;
 
     // --- 4. Database Operations with LocalStorage ---
@@ -3964,7 +3922,6 @@
       const filterGen = document.getElementById('filter-generation').value;
       const filterPokemonTypeEl = document.getElementById('filter-pokemon-type');
       const filterPokemonType = filterPokemonTypeEl ? filterPokemonTypeEl.value : 'all';
-      const filterBinder = document.getElementById('filter-binder').value;
       const filterGrade = document.getElementById('filter-grade').value;
       const filterType = document.getElementById('filter-type').value;
       const anniversaryOnly = document.getElementById('filter-anniversary-toggle').checked;
@@ -3975,7 +3932,6 @@
         searchQuery !== '' || 
         filterGen !== 'all' || 
         filterPokemonType !== 'all' || 
-        filterBinder !== 'all' || 
         filterGrade !== 'all' || 
         filterType !== 'all' || 
         anniversaryOnly
@@ -4016,9 +3972,6 @@
                           item.secondary_type === filterPokemonType;
           if (!hasType) return false;
         }
-
-        // Binder filter
-        if (filterBinder !== 'all' && item.binder_location !== filterBinder) return false;
 
         // Grade filter
         if (filterGrade !== 'all' && item.grade !== filterGrade) return false;
@@ -4597,13 +4550,6 @@
         }
       }
 
-      // 3. Binder Distribution Data (1 to 4)
-      const binderLabels = ['도감 1권', '도감 2권', '도감 3권', '도감 4권'];
-      const binderColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
-      const binderCounts = binderLabels.map(label => {
-        return sealDatabase.filter(s => s.binder_location === label).length;
-      });
-
       // 4. Attribute Distribution Data (Grade or Seal Type)
       let attrLabels = [];
       let attrColors = [];
@@ -4627,35 +4573,6 @@
           sealDatabase.filter(s => s.seal_type === '30주년 오리지널 컬러').length
         ];
       }
-
-      // Render Binder Doughnut Chart
-      const ctxBinder = document.getElementById('chart-binders').getContext('2d');
-      if (chartBindersInstance) {
-        chartBindersInstance.destroy();
-      }
-      chartBindersInstance = new Chart(ctxBinder, {
-        type: 'doughnut',
-        data: {
-          labels: binderLabels,
-          datasets: [{
-            data: binderCounts,
-            backgroundColor: binderColors,
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '65%',
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { boxWidth: 12, font: { size: 11 }, padding: 10 }
-            }
-          }
-        }
-      });
 
       // Render Attribute Pie Chart
       const ctxAttr = document.getElementById('chart-attributes').getContext('2d');
@@ -4855,7 +4772,6 @@
         const specialBadges = getSpecialFormBadgesHtml(item);
         const inHabitat = isSealInHabitat(item.id);
         const safeName = escapeHtml(item.pokemon_name);
-        const safeBinder = escapeHtml(item.binder_location);
         const dexNum = Number(item.pokedex_number) || 1;
 
         return `
@@ -4922,7 +4838,6 @@
               <div class="flex items-center gap-1 flex-wrap mb-1">
                 ${getGradeBadgeHtml(item.grade)}
                 ${item.seal_type && item.seal_type !== '일반' ? getTypeBadgeHtml(item.seal_type, item.is_30th_anniversary) : ''}
-                <span class="text-[9px] text-slate-500 bg-white px-1 py-0.2 rounded border border-slate-200 font-medium">${safeBinder}</span>
               </div>
 
               <!-- Action Bar on Card -->
@@ -5044,9 +4959,6 @@
             <td class="px-2.5 py-2 text-xs">
               ${getGradeBadgeHtml(item.grade)}
             </td>
-            <td class="px-2.5 py-2 text-xs font-medium text-slate-700">
-              <span class="px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-[11px]">${escapeHtml(item.binder_location)}</span>
-            </td>
             <td class="px-2.5 py-2 text-[11px] text-slate-400 font-mono">
               ${formattedDate}
             </td>
@@ -5120,14 +5032,14 @@
       const containerBinder = document.getElementById('container-binder-mode');
 
       if (preferredViewMode === 'binder') {
-        if (tabList) tabList.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900";
-        if (tabBinder) tabBinder.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-amber-500 text-slate-950 shadow-xs font-bold";
+        if (tabList) tabList.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-500 hover:text-slate-900";
+        if (tabBinder) tabBinder.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-white text-slate-900 shadow-xs";
         if (containerList) containerList.classList.add('hidden');
         if (containerBinder) containerBinder.classList.remove('hidden');
         renderSpreadBinderView();
       } else {
-        if (tabList) tabList.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-white shadow-xs";
-        if (tabBinder) tabBinder.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-400 hover:text-amber-300 hover:bg-slate-900";
+        if (tabList) tabList.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-white text-slate-900 shadow-xs";
+        if (tabBinder) tabBinder.className = "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-500 hover:text-slate-900";
         if (containerList) containerList.classList.remove('hidden');
         if (containerBinder) containerBinder.classList.add('hidden');
         renderCollection();
@@ -5171,7 +5083,7 @@
       }
 
       // Exact user mandate:
-      // "바인더 뷰는 띠부씰의 종류(30주년 여부, 레트로, 오리지널 컬러, 상태 등급, 보관 위치 등)를 일체 따지지 않습니다.
+      // "바인더 뷰는 띠부씰의 종류(30주년 여부, 레트로, 오리지널 컬러, 상태 등급 등)를 일체 따지지 않습니다.
       //  사용자의 보유 띠부씰 배열(seals) 중 해당 전국도감 번호가 1개 이상 존재하는지만 판별합니다."
       const matchingSeals = sealDatabase.filter(s => Number(s.pokedex_number) === slotNum);
       const isCollected = matchingSeals.length > 0;
@@ -5502,7 +5414,6 @@
                 ${seal.is_30th_anniversary ? '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">👑 30주년</span>' : ''}
                 <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(seal.seal_type || '일반')}</span>
                 ${getGradeBadgeHtml(seal.grade)}
-                <span class="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">${escapeHtml(seal.binder_location || '도감 1권')}</span>
               </div>
               <div class="text-[10px] text-slate-400 font-mono">
                 등록: ${seal.created_at ? new Date(seal.created_at).toLocaleDateString('ko-KR') : '날짜 미상'}
@@ -5608,11 +5519,9 @@
         typesEl.innerHTML = getPokemonTypeBadgeHtml(seal.types || seal.primary_type, 'sm');
       }
 
-      // Grade & Location
+      // Grade
       const gradeEl = document.getElementById('lightbox-seal-grade');
-      const locEl = document.getElementById('lightbox-seal-location');
       if (gradeEl) gradeEl.innerHTML = getGradeBadgeHtml(seal.grade);
-      if (locEl) locEl.textContent = seal.binder_location || '도감 미배치';
 
       // Seal Rarity Type & Date
       const typeEl = document.getElementById('lightbox-seal-type');
@@ -5959,7 +5868,6 @@
         document.getElementById('form-is-30th').checked = !!sealToEdit.is_30th_anniversary;
         document.getElementById('form-seal-type').value = sealToEdit.seal_type || '일반';
         document.getElementById('form-grade').value = sealToEdit.grade || '일반';
-        document.getElementById('form-binder-location').value = sealToEdit.binder_location || '도감 1권';
         if (document.getElementById('form-primary-type')) {
           document.getElementById('form-primary-type').value = sealToEdit.primary_type || '노말';
         }
@@ -6013,7 +5921,6 @@
         document.getElementById('form-is-30th').checked = !!lastSealSettings.is_30th_anniversary;
         document.getElementById('form-seal-type').value = lastSealSettings.seal_type || '일반';
         document.getElementById('form-grade').value = lastSealSettings.grade || '미개봉';
-        document.getElementById('form-binder-location').value = lastSealSettings.binder_location || '도감 1권';
         if (document.getElementById('form-primary-type')) {
           const defaultTypes = prefillData?.pokedex_number && OFFLINE_POKEMON_TYPES[prefillData.pokedex_number];
           document.getElementById('form-primary-type').value = defaultTypes ? defaultTypes[0] : '노말';
@@ -6293,7 +6200,6 @@
           is_30th_anniversary: !!item.is_30th_anniversary,
           grade: ['미개봉', '일반', '하자'].includes(item.grade) ? item.grade : '일반',
           seal_type: ['일반', '레트로', '30주년', '30주년 오리지널 컬러'].includes(item.seal_type) ? item.seal_type : '일반',
-          binder_location: ['도감 1권', '도감 2권', '도감 3권', '도감 4권'].includes(item.binder_location) ? item.binder_location : '도감 1권',
           primary_type: POKEMON_TYPES[item.primary_type] ? item.primary_type : '노말',
           secondary_type: POKEMON_TYPES[item.secondary_type] ? item.secondary_type : null,
           types: Array.isArray(item.types) && item.types.some(t => POKEMON_TYPES[t])
@@ -7879,7 +7785,6 @@
                 <div class="text-xs font-bold text-slate-800 truncate">
                   ${escapeHtml(seal.pokemon_name)}
                 </div>
-                <span class="text-[10px] text-slate-400 block truncate">${escapeHtml(seal.binder_location || '도감 미배치')}</span>
               </div>
             </div>
 
@@ -8196,7 +8101,6 @@
             const is30th = !!seal.is_30th_anniversary || (seal.seal_type && seal.seal_type.includes('30주년'));
             const sealType = seal.seal_type || (is30th ? '30주년' : '일반');
             const grade = ['미개봉', '일반', '하자'].includes(seal.grade) ? seal.grade : '일반';
-            const binder = ['도감 1권', '도감 2권', '도감 3권', '도감 4권'].includes(seal.binder_location) ? seal.binder_location : '도감 1권';
 
             sealDatabase[i] = {
               ...seal,
@@ -8208,8 +8112,7 @@
               types: typeInfo.types || [typeInfo.primary_type || '노말'],
               is_30th_anniversary: is30th,
               seal_type: sealType,
-              grade: grade,
-              binder_location: binder
+              grade: grade
             };
             updatedCount++;
           }
@@ -8328,7 +8231,6 @@
       const is30thCheckbox = document.getElementById('form-is-30th');
       const typeSelect = document.getElementById('form-seal-type');
       const gradeSelect = document.getElementById('form-grade');
-      const binderSelect = document.getElementById('form-binder-location');
 
       is30thCheckbox.addEventListener('change', (e) => {
         if (e.target.checked && (typeSelect.value === '일반' || typeSelect.value === '레트로')) {
@@ -8356,10 +8258,6 @@
 
       gradeSelect.addEventListener('change', (e) => {
         saveLastSettings({ grade: e.target.value });
-      });
-
-      binderSelect.addEventListener('change', (e) => {
-        saveLastSettings({ binder_location: e.target.value });
       });
 
       // Special Form Selection Listeners (Mega, Gmax, Regional, Shiny)
@@ -8395,7 +8293,6 @@
         const is30th = document.getElementById('form-is-30th').checked;
         const sealType = document.getElementById('form-seal-type').value;
         const grade = document.getElementById('form-grade').value;
-        const binderLocation = document.getElementById('form-binder-location').value;
 
         // Extract Special Form State
         const formType = document.querySelector('input[name="form_type"]:checked')?.value || 'none';
@@ -8435,8 +8332,7 @@
         saveLastSettings({
           is_30th_anniversary: is30th,
           seal_type: sealType,
-          grade: grade,
-          binder_location: binderLocation
+          grade: grade
         });
 
         if (editId) {
@@ -8454,7 +8350,6 @@
               is_30th_anniversary: is30th,
               seal_type: sealType,
               grade: grade,
-              binder_location: binderLocation,
               is_mega: isMega,
               mega_variant: megaVariant,
               is_gmax: isGmax,
@@ -8477,7 +8372,6 @@
             is_30th_anniversary: is30th,
             grade: grade,
             seal_type: sealType,
-            binder_location: binderLocation,
             is_mega: isMega,
             mega_variant: megaVariant,
             is_gmax: isGmax,
@@ -8511,7 +8405,6 @@
       });
 
       document.getElementById('filter-generation').addEventListener('change', renderCollection);
-      document.getElementById('filter-binder').addEventListener('change', renderCollection);
       document.getElementById('filter-grade').addEventListener('change', renderCollection);
       document.getElementById('filter-type').addEventListener('change', renderCollection);
       
@@ -8528,7 +8421,6 @@
         searchInput.value = '';
         btnClearSearch.classList.add('hidden');
         document.getElementById('filter-generation').value = 'all';
-        document.getElementById('filter-binder').value = 'all';
         document.getElementById('filter-grade').value = 'all';
         document.getElementById('filter-type').value = 'all';
         if (document.getElementById('filter-pokemon-type')) {
@@ -8708,22 +8600,7 @@
         renderCollection();
       });
 
-      // 11. Bulk Move & Bulk Delete
-      document.getElementById('btn-bulk-move').addEventListener('click', () => {
-        const targetBinder = document.getElementById('bulk-binder-target').value;
-        if (selectedSealIds.size === 0) return;
-
-        sealDatabase.forEach(seal => {
-          if (selectedSealIds.has(seal.id)) {
-            seal.binder_location = targetBinder;
-          }
-        });
-
-        saveDatabase();
-        updateAll();
-        showToast(`선택된 ${selectedSealIds.size}개의 띠부씰이 '${targetBinder}'(으)로 이동되었습니다.`, 'success');
-      });
-
+      // 11. Bulk Delete
       document.getElementById('btn-bulk-delete').addEventListener('click', () => {
         if (selectedSealIds.size === 0) return;
         showConfirmDialog({
