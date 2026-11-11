@@ -2201,81 +2201,9 @@
           </div>
         </div>
 
-        <!-- Pokemon Type Manual Selectors (주 속성 / 보조 속성) -->
-        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
-              <i data-lucide="sparkles" class="w-3 h-3 text-indigo-500"></i>
-              포켓몬 속성 설정 (자동 입력 & 수동 변경)
-            </span>
-            <span class="text-[10px] text-slate-400">18개 공식 속성</span>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <!-- Primary Type -->
-            <div>
-              <label for="form-primary-type" class="block text-[10px] font-semibold text-slate-500 mb-0.5">
-                주 속성 (타입 1) <span class="text-poke-red">*</span>
-              </label>
-              <select 
-                id="form-primary-type" 
-                name="primary_type"
-                required
-                class="w-full text-xs py-1.5 px-2 bg-white border border-slate-300 rounded-md focus:ring-1 focus:ring-poke-red focus:border-poke-red font-medium"
-              >
-                <option value="노말">⚪ 노말 (Normal)</option>
-                <option value="불꽃">🔥 불꽃 (Fire)</option>
-                <option value="물">💧 물 (Water)</option>
-                <option value="풀">🌿 풀 (Grass)</option>
-                <option value="전기">⚡ 전기 (Electric)</option>
-                <option value="얼음">❄️ 얼음 (Ice)</option>
-                <option value="격투">🥊 격투 (Fighting)</option>
-                <option value="독">☠️ 독 (Poison)</option>
-                <option value="땅">🏜️ 땅 (Ground)</option>
-                <option value="비행">🕊️ 비행 (Flying)</option>
-                <option value="에스퍼">🔮 에스퍼 (Psychic)</option>
-                <option value="벌레">🐛 벌레 (Bug)</option>
-                <option value="바위">🪨 바위 (Rock)</option>
-                <option value="고스트">👻 고스트 (Ghost)</option>
-                <option value="드래곤">🐉 드래곤 (Dragon)</option>
-                <option value="악">🌑 악 (Dark)</option>
-                <option value="강철">⚙️ 강철 (Steel)</option>
-                <option value="페어리">✨ 페어리 (Fairy)</option>
-              </select>
-            </div>
-
-            <!-- Secondary Type -->
-            <div>
-              <label for="form-secondary-type" class="block text-[10px] font-semibold text-slate-500 mb-0.5">
-                보조 속성 (타입 2)
-              </label>
-              <select 
-                id="form-secondary-type" 
-                name="secondary_type"
-                class="w-full text-xs py-1.5 px-2 bg-white border border-slate-300 rounded-md focus:ring-1 focus:ring-poke-red focus:border-poke-red font-medium"
-              >
-                <option value="">없음 (단일 타입)</option>
-                <option value="노말">⚪ 노말 (Normal)</option>
-                <option value="불꽃">🔥 불꽃 (Fire)</option>
-                <option value="물">💧 물 (Water)</option>
-                <option value="풀">🌿 풀 (Grass)</option>
-                <option value="전기">⚡ 전기 (Electric)</option>
-                <option value="얼음">❄️ 얼음 (Ice)</option>
-                <option value="격투">🥊 격투 (Fighting)</option>
-                <option value="독">☠️ 독 (Poison)</option>
-                <option value="땅">🏜️ 땅 (Ground)</option>
-                <option value="비행">🕊️ 비행 (Flying)</option>
-                <option value="에스퍼">🔮 에스퍼 (Psychic)</option>
-                <option value="벌레">🐛 벌레 (Bug)</option>
-                <option value="바위">🪨 바위 (Rock)</option>
-                <option value="고스트">👻 고스트 (Ghost)</option>
-                <option value="드래곤">🐉 드래곤 (Dragon)</option>
-                <option value="악">🌑 악 (Dark)</option>
-                <option value="강철">⚙️ 강철 (Steel)</option>
-                <option value="페어리">✨ 페어리 (Fairy)</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        <!-- 속성은 도감 번호로 자동 결정되므로 수동 선택 UI 없이 값만 보관 -->
+        <input type="hidden" id="form-primary-type" name="primary_type" value="노말" />
+        <input type="hidden" id="form-secondary-type" name="secondary_type" value="" />
 
         <!-- 30th Anniversary Checkbox -->
         <div class="p-2 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between">
@@ -3417,6 +3345,45 @@
       475: [{ formId: 10068 }], // 엘레이드 (정정: 10068)
       531: [{ formId: 10069 }], // 다부니 (정정: 10069)
       719: [{ formId: 10075 }], // 디안시
+      // --- Z-A 시리즈 신규 메가진화 (공식 아트워크 ID 미확정 → 기본 일러스트로 대체 표시) ---
+      26: [{ nameSuffix: 'X', formId: null }, { nameSuffix: 'Y', formId: null }], // 라이츄
+      36: [{ formId: null }], // 픽시
+      71: [{ formId: null }], // 우츠보트
+      121: [{ formId: null }], // 아쿠스타
+      149: [{ formId: null }], // 망나뇽
+      154: [{ formId: null }], // 메가니움
+      160: [{ formId: null }], // 장크로다일
+      227: [{ formId: null }], // 무장조
+      358: [{ formId: null }], // 치렁
+      398: [{ formId: null }], // 찌르호크
+      478: [{ formId: null }], // 눈여아
+      485: [{ formId: null }], // 히트란
+      491: [{ formId: null }], // 다크라이
+      500: [{ formId: null }], // 염무왕
+      530: [{ formId: null }], // 몰드류
+      545: [{ formId: null }], // 펜드라
+      560: [{ formId: null }], // 곤율거니
+      604: [{ formId: null }], // 저리더프
+      609: [{ formId: null }], // 샹델라
+      623: [{ formId: null }], // 골루그
+      652: [{ formId: null }], // 브리가론
+      655: [{ formId: null }], // 마폭시
+      658: [{ formId: null }], // 개굴닌자
+      668: [{ formId: null }], // 화염레오
+      670: [{ formId: null }], // 플라엣테
+      687: [{ formId: null }], // 칼라마네로
+      689: [{ formId: null }], // 거북손데스
+      691: [{ formId: null }], // 드래캄
+      701: [{ formId: null }], // 루차불
+      718: [{ formId: null }], // 지가르데
+      740: [{ formId: null }], // 모단단게
+      780: [{ formId: null }], // 할비롱
+      801: [{ formId: null }], // 마기아나
+      807: [{ formId: null }], // 제라오라
+      870: [{ formId: null }], // 대여르
+      970: [{ formId: null }], // 킬라플로르
+      978: [{ formId: null }], // 싱글링
+      998: [{ formId: null }], // 세글면
     };
 
     // 3. 거다이맥스 전용 검증 공식 아트워크 ID 테이블
@@ -3564,7 +3531,7 @@
             const match = list.find(item => isY ? item.nameSuffix === 'Y' : item.nameSuffix === 'X');
             if (match && match.formId) return match.formId;
           }
-          return list[0].formId;
+          return list[0].formId || id;
         }
       }
 
@@ -8742,43 +8709,32 @@
         const targetFormId = getTargetPokemonFormId(seal);
 
         return `
-          <div class="flex items-center justify-between p-2.5 rounded-xl border ${inHabitat ? 'border-pink-300 bg-pink-50/20' : 'border-slate-200 bg-white'} shadow-xs min-w-0">
-            <!-- 1. 좌측: 포켓몬 이미지 + 정보 (이름, 번호, 뱃지) -->
-            <div class="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
-              <!-- 포켓몬 썸네일 -->
+          <div class="flex flex-col gap-2 p-2.5 rounded-xl border ${inHabitat ? 'border-pink-300 bg-pink-50/20' : 'border-slate-200 bg-white'} shadow-xs min-w-0">
+            <!-- 1. 이미지 + 정보 (번호, 이름 전체 노출, 뱃지는 줄바꿈) -->
+            <div class="flex items-start gap-2.5 min-w-0">
               <img
                 src="${escapeHtml(artworkUrl)}"
                 alt="${escapeHtml(seal.pokemon_name)}"
-                class="w-10 h-10 object-contain shrink-0"
+                class="w-12 h-12 object-contain shrink-0"
                 onerror="handleSealImageError(this, ${targetFormId}, ${Number(seal.pokedex_number) || 1})"
               />
-
-              <!-- 텍스트 영역: 번호, 이름, 특수 폼 뱃지 -->
               <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 mb-0.5">
-                  <span class="text-[11px] font-mono text-slate-400 shrink-0">
-                    ${formattedDex}
-                  </span>
-                  <!-- 특수 폼 뱃지 (메가/이로치 등) -->
-                  ${specialBadges ? `<div class="flex items-center whitespace-nowrap shrink-0 gap-1">${specialBadges}</div>` : ''}
-                </div>
-                <!-- 포켓몬 이름: 절대 숨겨지거나 꺾이지 않고 온전히 노출 -->
-                <div class="text-xs font-bold text-slate-800 truncate">
+                <span class="block text-[10px] font-mono text-slate-400 leading-none mb-1">${formattedDex}</span>
+                <div class="text-xs font-bold text-slate-800 leading-snug break-keep break-words" title="${escapeHtml(seal.pokemon_name)}">
                   ${escapeHtml(seal.pokemon_name)}
                 </div>
+                ${specialBadges ? `<div class="flex flex-wrap items-center gap-1 mt-1">${specialBadges}</div>` : ''}
               </div>
             </div>
 
-            <!-- 2. 우측: [참여 중] 또는 [+ 등록] 버튼 (절대 찌그러지지 않게 shrink-0 고정) -->
-            <div class="shrink-0">
-              <button 
-                type="button" 
-                onclick="toggleHabitatSeal('${seal.id}'); renderEntryModalSlots(); renderEntryModalGrid();"
-                class="px-2.5 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${inHabitat ? 'bg-pink-100 text-pink-700 border border-pink-300 hover:bg-pink-200' : 'bg-slate-100 text-slate-700 hover:bg-pink-50 hover:text-pink-600 border border-slate-200'}"
-              >
-                ${inHabitat ? '<i data-lucide="check" class="w-3 h-3 shrink-0"></i>참여 중' : '+ 등록'}
-              </button>
-            </div>
+            <!-- 2. 등록 버튼 (카드 하단 전체 너비) -->
+            <button
+              type="button"
+              onclick="toggleHabitatSeal('${seal.id}'); renderEntryModalSlots(); renderEntryModalGrid();"
+              class="w-full px-2.5 py-1 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${inHabitat ? 'bg-pink-100 text-pink-700 border border-pink-300 hover:bg-pink-200' : 'bg-slate-100 text-slate-700 hover:bg-pink-50 hover:text-pink-600 border border-slate-200'}"
+            >
+              ${inHabitat ? '<i data-lucide="check" class="w-3 h-3 shrink-0"></i>참여 중' : '+ 등록'}
+            </button>
           </div>
         `;
       }).join('');
