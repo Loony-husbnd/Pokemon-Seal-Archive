@@ -319,21 +319,238 @@
       animation: amieSquashStretch 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
-    /* Day: Pale Cream Yellow (#FFFDF2) -> Soft Sky Blue (#E0F2FE) */
+    /* ===== 사육장 풍경 팔레트 (시간대별 CSS 변수) ===== */
     .terrarium-bg-day {
-      background: linear-gradient(180deg, #FFFDF2 0%, #E0F2FE 100%);
+      background: linear-gradient(180deg, #5db9f2 0%, #97d6f8 32%, #d6f0fb 52%, #fff3d2 66%);
+      --sc-mt-far: #c3d9f0; --sc-mt-near: #9cc3de; --sc-snow: #ffffff;
+      --sc-hill-back1: #b9e8a4; --sc-hill-back2: #8fd58b;
+      --sc-forest1: #63bd7b; --sc-forest2: #3f9a68;
+      --sc-hill-mid1: #a2e083; --sc-hill-mid2: #77ca68;
+      --sc-field1: #93df6e; --sc-field2: #4fae4e; --sc-field-band: rgba(255, 255, 255, 0.09);
+      --sc-path1: #f3deb0; --sc-path2: #dfc088;
+      --sc-fence: #fbf3e2; --sc-fence-shade: #cbb48c;
+      --sc-trunk: #8a5a3a; --sc-trunk2: #6e4329;
+      --sc-leaf1: #57b85f; --sc-leaf2: #3c9a55; --sc-leaf3: #86d477; --sc-fruit: #f2545b;
+      --sc-wall: #fff3df; --sc-wall2: #ecd9b8; --sc-roof: #e2604f; --sc-roof2: #c24a3e;
+      --sc-door: #a56a43; --sc-window: #bfe6fb; --sc-window-glow: rgba(255, 220, 120, 0);
+      --sc-water1: #c4eefc; --sc-water2: #58b8ec; --sc-water-edge: #dff5c9; --sc-lily: #4fb564;
+      --sc-grass1: #3f9d48; --sc-grass2: #6cc75c; --sc-rock1: #d3d8df; --sc-rock2: #9aa3b0;
+      --sc-fl1: #ff8fb1; --sc-fl2: #ffd166; --sc-fl3: #ffffff; --sc-fl4: #b79cff; --sc-fl-core: #ffb703;
+      --sc-smoke: rgba(255, 255, 255, 0.85); --sc-haze: rgba(255, 255, 255, 0.5);
+      --sc-ball1: #ff6b6b; --sc-ball2: #ffffff;
     }
-
-    /* Sunset fallback */
     .terrarium-bg-sunset {
-      background: linear-gradient(180deg, #FFFDF2 0%, #FED7AA 40%, #F472B6 100%);
+      background: linear-gradient(180deg, #3f3a8c 0%, #8d4f9d 22%, #e2708a 42%, #ff9f6e 55%, #ffd58f 66%);
+      --sc-mt-far: #b784b4; --sc-mt-near: #8a5c98; --sc-snow: #ffd9c2;
+      --sc-hill-back1: #e9b072; --sc-hill-back2: #c98a5e;
+      --sc-forest1: #a8684f; --sc-forest2: #7a4551;
+      --sc-hill-mid1: #dba05c; --sc-hill-mid2: #b9794d;
+      --sc-field1: #d9a852; --sc-field2: #8f6b3f; --sc-field-band: rgba(255, 230, 170, 0.10);
+      --sc-path1: #f2c486; --sc-path2: #cf9560;
+      --sc-fence: #ffe3bd; --sc-fence-shade: #b98059;
+      --sc-trunk: #6f4034; --sc-trunk2: #57302b;
+      --sc-leaf1: #c7773f; --sc-leaf2: #9d5338; --sc-leaf3: #e9a04c; --sc-fruit: #ff5d5d;
+      --sc-wall: #ffd9b0; --sc-wall2: #e0a97e; --sc-roof: #b8433f; --sc-roof2: #8f3236;
+      --sc-door: #7c4a35; --sc-window: #ffe9a6; --sc-window-glow: rgba(255, 214, 110, 0.55);
+      --sc-water1: #ffd9a8; --sc-water2: #e7778a; --sc-water-edge: #e8c07a; --sc-lily: #8f7a3c;
+      --sc-grass1: #8f6a2f; --sc-grass2: #c9983f; --sc-rock1: #d9b6a4; --sc-rock2: #a17c79;
+      --sc-fl1: #ff7f9a; --sc-fl2: #ffc24d; --sc-fl3: #ffe9d2; --sc-fl4: #c18be0; --sc-fl-core: #ff9d1c;
+      --sc-smoke: rgba(255, 226, 200, 0.75); --sc-haze: rgba(255, 196, 140, 0.45);
+      --sc-ball1: #e5565d; --sc-ball2: #ffe6cc;
     }
-
-    /* Night: Deep Indigo (#0F172A) -> Pale Navy/Purple (#1E1B4B) */
     .terrarium-bg-night {
-      background: linear-gradient(180deg, #0F172A 0%, #1E1B4B 100%);
+      background: linear-gradient(180deg, #060a20 0%, #101848 38%, #272468 60%, #3b2f7a 68%);
+      --sc-mt-far: #2a2f66; --sc-mt-near: #1e2452; --sc-snow: #8c95d6;
+      --sc-hill-back1: #1f3a55; --sc-hill-back2: #18304a;
+      --sc-forest1: #153244; --sc-forest2: #0e2434;
+      --sc-hill-mid1: #1c4a50; --sc-hill-mid2: #153b44;
+      --sc-field1: #1f5a4b; --sc-field2: #0f3332; --sc-field-band: rgba(160, 220, 255, 0.05);
+      --sc-path1: #4b5a78; --sc-path2: #36415e;
+      --sc-fence: #7f8fb5; --sc-fence-shade: #3c4a6e;
+      --sc-trunk: #2e2a44; --sc-trunk2: #221f36;
+      --sc-leaf1: #1c5548; --sc-leaf2: #133f3a; --sc-leaf3: #2a705a; --sc-fruit: #b8475f;
+      --sc-wall: #5d6690; --sc-wall2: #434b72; --sc-roof: #6b3550; --sc-roof2: #4c2640;
+      --sc-door: #3a2c3f; --sc-window: #ffe58a; --sc-window-glow: rgba(255, 221, 110, 0.9);
+      --sc-water1: #3e5fae; --sc-water2: #16255e; --sc-water-edge: #2a5a55; --sc-lily: #1f6a52;
+      --sc-grass1: #0f3a35; --sc-grass2: #1f6352; --sc-rock1: #5b6687; --sc-rock2: #363f5e;
+      --sc-fl1: #b0668f; --sc-fl2: #b59a55; --sc-fl3: #aab4d8; --sc-fl4: #7d6cc0; --sc-fl-core: #c9973a;
+      --sc-smoke: rgba(190, 200, 240, 0.4); --sc-haze: rgba(90, 110, 200, 0.28);
+      --sc-ball1: #8f4560; --sc-ball2: #9aa5cc;
     }
 
+    /* ===== 사육장 풍경 레이어 ===== */
+    #terrarium-scenery svg { display: block; }
+    #terrarium-scenery *, #terrarium-foreground * { transition: fill 0.7s ease, stroke 0.7s ease, stop-color 0.7s ease, background-color 0.7s ease; }
+    .sc-layer { position: absolute; left: 0; width: 100%; }
+    .sc-mountains { top: 27%; height: 34%; }
+    .sc-haze { position: absolute; left: 0; width: 100%; top: 44%; height: 18%; background: linear-gradient(180deg, transparent, var(--sc-haze) 55%, transparent); }
+    .sc-hill-back { top: 43%; height: 30%; }
+    .sc-treeline {
+      position: absolute; left: 0; width: 100%; top: calc(47% - 30px); height: 56px;
+      background: linear-gradient(180deg, var(--sc-forest1), var(--sc-forest2));
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='56' viewBox='0 0 168 56'%3E%3Cpath d='M0 56V34c2-12 12-18 22-14 2-12 18-16 26-6 6-12 24-12 28 2 8-8 22-4 24 8 6-14 26-14 30 0 8-10 24-6 26 6 6-6 12-4 12 2v24z'/%3E%3Cpath d='M30 20l8-18 8 18zM112 22l7-16 7 16z'/%3E%3C/svg%3E") repeat-x left bottom / 168px 56px;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='56' viewBox='0 0 168 56'%3E%3Cpath d='M0 56V34c2-12 12-18 22-14 2-12 18-16 26-6 6-12 24-12 28 2 8-8 22-4 24 8 6-14 26-14 30 0 8-10 24-6 26 6 6-6 12-4 12 2v24z'/%3E%3Cpath d='M30 20l8-18 8 18zM112 22l7-16 7 16z'/%3E%3C/svg%3E") repeat-x left bottom / 168px 56px;
+    }
+    .sc-hill-mid { top: 50%; height: 30%; }
+    .sc-field { top: 55%; height: 45%; }
+    .sc-field-bands {
+      position: absolute; left: -10%; width: 120%; top: 63%; height: 37%;
+      background: repeating-linear-gradient(100deg, transparent 0 46px, var(--sc-field-band) 46px 92px);
+      -webkit-mask: linear-gradient(180deg, transparent, #000 30%); mask: linear-gradient(180deg, transparent, #000 30%);
+    }
+    .sc-fill-mt-far { fill: var(--sc-mt-far); } .sc-fill-mt-near { fill: var(--sc-mt-near); } .sc-fill-snow { fill: var(--sc-snow); }
+    .sc-fence-line { fill: none; stroke: var(--sc-fence); stroke-linecap: round; vector-effect: non-scaling-stroke; }
+    .sc-fence-shade { fill: none; stroke: var(--sc-fence-shade); stroke-linecap: round; vector-effect: non-scaling-stroke; }
+    .sc-trunk { fill: var(--sc-trunk); } .sc-trunk2 { fill: var(--sc-trunk2); }
+    .sc-leaf1 { fill: var(--sc-leaf1); } .sc-leaf2 { fill: var(--sc-leaf2); } .sc-leaf3 { fill: var(--sc-leaf3); }
+    .sc-fruit { fill: var(--sc-fruit); }
+    .sc-wall { fill: var(--sc-wall); } .sc-wall2 { fill: var(--sc-wall2); }
+    .sc-roof { fill: var(--sc-roof); } .sc-roof2 { fill: var(--sc-roof2); }
+    .sc-door { fill: var(--sc-door); } .sc-window { fill: var(--sc-window); }
+    .sc-grass1 { fill: var(--sc-grass1); } .sc-grass2 { fill: var(--sc-grass2); }
+    .sc-rock1 { fill: var(--sc-rock1); } .sc-rock2 { fill: var(--sc-rock2); }
+    .sc-lily { fill: var(--sc-lily); }
+    .sc-stem { fill: none; stroke: var(--sc-grass1); stroke-width: 1.6; stroke-linecap: round; }
+    .sc-fl-core { fill: var(--sc-fl-core); }
+    .sc-fl-c1 { fill: var(--sc-fl1); } .sc-fl-c2 { fill: var(--sc-fl2); } .sc-fl-c3 { fill: var(--sc-fl3); } .sc-fl-c4 { fill: var(--sc-fl4); }
+
+    .sc-prop { position: absolute; transform: translate(-50%, -100%); }
+    .sc-tree { left: 9%; top: 64.5%; width: 150px; }
+    .sc-tree-2 { left: 31%; top: 58.5%; width: 74px; }
+    .sc-hut { left: 86%; top: 65%; width: 168px; }
+    .sc-pond { position: absolute; left: 56%; top: 62.5%; width: clamp(120px, 19%, 230px); height: 5.6%; transform: translate(-50%, -50%); }
+    .sc-rock { left: 43%; top: 64.5%; width: 44px; }
+    .sc-bush { left: 71%; top: 61.5%; width: 70px; }
+    .sc-ball { left: 23%; top: 71%; width: 22px; animation: scBallRock 5s ease-in-out infinite; transform-origin: 50% 100%; }
+    @media (max-width: 640px) {
+      .sc-tree { left: 11%; width: 112px; }
+      .sc-tree-2 { left: 36%; width: 54px; }
+      .sc-hut { left: 84%; width: 122px; }
+      .sc-pond { left: 55%; }
+      .sc-bush { display: none; }
+    }
+    .sc-canopy { transform-box: fill-box; transform-origin: 50% 100%; animation: scCanopySway 6.5s ease-in-out infinite; }
+    .sc-canopy-b { animation-duration: 8s; animation-delay: -2s; }
+    @keyframes scCanopySway { 0%, 100% { transform: rotate(-1.4deg) scale(1, 1); } 50% { transform: rotate(1.6deg) scale(1.015, 0.99); } }
+    @keyframes scBallRock { 0%, 100% { transform: translate(-50%, -100%) rotate(-8deg); } 50% { transform: translate(-50%, -100%) rotate(8deg); } }
+    .sc-window-glow { fill: var(--sc-window-glow); animation: scWindowFlicker 4s ease-in-out infinite; }
+    @keyframes scWindowFlicker { 0%, 100% { opacity: 0.75; } 45% { opacity: 1; } 60% { opacity: 0.85; } }
+    .sc-smoke-puff { fill: var(--sc-smoke); transform-box: fill-box; transform-origin: center; animation: scSmoke 5s ease-out infinite; opacity: 0; }
+    @keyframes scSmoke {
+      0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+      15% { opacity: 0.9; }
+      100% { transform: translate(16px, -46px) scale(1.9); opacity: 0; }
+    }
+    .sc-pond-water {
+      position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
+      background: radial-gradient(ellipse at 40% 30%, var(--sc-water1), var(--sc-water2) 75%);
+      box-shadow: 0 0 0 3px var(--sc-water-edge), inset 0 3px 8px rgba(0, 0, 0, 0.18);
+    }
+    .sc-pond-shine { position: absolute; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.75); animation: scPondShine 3.6s ease-in-out infinite; }
+    @keyframes scPondShine { 0%, 100% { transform: translateX(-6px) scaleX(0.6); opacity: 0.2; } 50% { transform: translateX(8px) scaleX(1.1); opacity: 0.9; } }
+    .sc-pond-ripple { position: absolute; left: 62%; top: 55%; width: 26%; height: 44%; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.7); animation: scRipple 4.2s ease-out infinite; opacity: 0; }
+    @keyframes scRipple { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0.9; } 70%, 100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } }
+    .sc-flora-item { position: absolute; transform: translate(-50%, -100%); }
+    .sc-flora-item svg { transform-origin: 50% 100%; animation: scGrassSway 3.4s ease-in-out infinite; overflow: visible; }
+    @keyframes scGrassSway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(6deg); } }
+
+    /* 하늘 연출: 햇살, 구름, 나비, 새, 낙엽, 별똥별 */
+    .sc-sunrays {
+      position: absolute; inset: -90%; border-radius: 50%;
+      background: repeating-conic-gradient(from 0deg, rgba(255, 244, 190, 0.5) 0deg 7deg, transparent 7deg 22deg);
+      -webkit-mask: radial-gradient(circle, #000 18%, transparent 62%); mask: radial-gradient(circle, #000 18%, transparent 62%);
+      animation: scSpin 70s linear infinite;
+    }
+    @keyframes scSpin { to { transform: rotate(360deg); } }
+    .sc-cloud-track { position: absolute; left: 0; width: 100%; height: 0; animation: scCloudAcross linear infinite; }
+    @keyframes scCloudAcross { from { transform: translateX(-22%); } to { transform: translateX(104%); } }
+    .sc-butterfly { position: absolute; width: 16px; height: 14px; animation: scButterflyPath 17s ease-in-out infinite; }
+    .sc-butterfly i { position: absolute; top: 0; width: 8px; height: 13px; border-radius: 80% 20% 60% 40%; animation: scWingFlap 0.28s ease-in-out infinite alternate; }
+    .sc-butterfly i:first-child { left: 0; transform-origin: 100% 50%; }
+    .sc-butterfly i:last-child { right: 0; transform-origin: 0% 50%; border-radius: 20% 80% 40% 60%; }
+    @keyframes scWingFlap { from { transform: scaleX(1); } to { transform: scaleX(0.25); } }
+    @keyframes scButterflyPath {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(60px, -34px); }
+      40% { transform: translate(130px, 6px); }
+      60% { transform: translate(84px, -52px); }
+      80% { transform: translate(18px, -18px); }
+      100% { transform: translate(0, 0); }
+    }
+    .sc-leaf-fall { position: absolute; width: 9px; height: 6px; border-radius: 80% 10% 80% 10%; background: var(--sc-leaf3); opacity: 0; animation: scLeafFall 9s linear infinite; }
+    @keyframes scLeafFall {
+      0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+      10% { opacity: 0.95; }
+      50% { transform: translate(46px, 70px) rotate(200deg); }
+      90% { opacity: 0.9; }
+      100% { transform: translate(18px, 150px) rotate(420deg); opacity: 0; }
+    }
+    .sc-bird-flock { position: absolute; left: 0; width: 100%; height: 0; animation: scCloudAcross 26s linear infinite; }
+    .sc-bird { position: absolute; width: 20px; height: 9px; animation: scBirdBob 1.1s ease-in-out infinite alternate; }
+    @keyframes scBirdBob { from { transform: translateY(0) scaleY(1); } to { transform: translateY(-4px) scaleY(0.55); } }
+    .sc-shooting-star { position: absolute; top: 8%; left: 22%; width: 90px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff); opacity: 0; transform: rotate(18deg); animation: scShootingStar 11s ease-in infinite 3s; }
+    @keyframes scShootingStar {
+      0%, 88% { opacity: 0; transform: translate(0, 0) rotate(18deg); }
+      90% { opacity: 1; }
+      100% { opacity: 0; transform: translate(260px, 84px) rotate(18deg); }
+    }
+    .sc-night-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, transparent 45%, rgba(3, 6, 24, 0.45) 100%); }
+
+    /* ===== 사육장 포켓몬: 숨쉬기 · 걷기 · 깡충 · 낮잠 ===== */
+    .terrarium-creature-node {
+      position: absolute; cursor: pointer; user-select: none;
+      display: flex; flex-direction: column; align-items: center;
+      transform: translate(-50%, -100%) scale(var(--depth, 1)); transform-origin: 50% 100%;
+      transition-property: left, top, transform; transition-timing-function: linear; transition-duration: 0s;
+    }
+    .creature-hover { transition: transform 0.2s ease; transform-origin: 50% 100%; display: flex; flex-direction: column; align-items: center; }
+    .terrarium-creature-node:hover .creature-hover { transform: scale(1.08); }
+    .creature-flip { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .creature-body { transform-origin: 50% 94%; animation: creatureBreathe var(--breath, 3s) ease-in-out infinite; animation-delay: var(--breath-delay, 0s); }
+    .creature-shadow { width: 56px; height: 11px; margin-top: -8px; border-radius: 50%; background: rgba(0, 0, 0, 0.22); filter: blur(2px); }
+    @keyframes creatureBreathe {
+      0%, 100% { transform: scale(1, 1) rotate(-0.6deg); }
+      50% { transform: scale(1.035, 0.955) rotate(0.6deg); }
+    }
+    .creature-walking .creature-body { animation: creatureWalk 0.44s ease-in-out infinite; }
+    .creature-walking .creature-shadow { animation: creatureShadowPulse 0.44s ease-in-out infinite; }
+    @keyframes creatureWalk {
+      0%, 100% { transform: translateY(0) scale(1.05, 0.93) rotate(-3deg); }
+      50% { transform: translateY(-11px) scale(0.97, 1.05) rotate(3deg); }
+    }
+    @keyframes creatureShadowPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.72); opacity: 0.6; } }
+    .creature-act-hop .creature-body { animation: creatureHop 0.72s cubic-bezier(0.3, 0.6, 0.4, 1); }
+    .creature-act-hop .creature-shadow { animation: creatureShadowPulse 0.72s ease-in-out; }
+    @keyframes creatureHop {
+      0% { transform: translateY(0) scale(1, 1); }
+      18% { transform: translateY(2px) scale(1.14, 0.84); }
+      50% { transform: translateY(-30px) scale(0.93, 1.1); }
+      82% { transform: translateY(2px) scale(1.12, 0.87); }
+      100% { transform: translateY(0) scale(1, 1); }
+    }
+    .creature-act-wiggle .creature-body { animation: creatureWiggle 0.9s ease-in-out; }
+    @keyframes creatureWiggle {
+      0%, 100% { transform: rotate(0deg); }
+      15% { transform: rotate(-9deg) scale(1.03, 0.97); } 35% { transform: rotate(9deg); }
+      55% { transform: rotate(-7deg) scale(1.03, 0.97); } 75% { transform: rotate(6deg); }
+    }
+    .creature-act-stretch .creature-body { animation: creatureStretch 1.3s ease-in-out; }
+    @keyframes creatureStretch {
+      0%, 100% { transform: scale(1, 1); }
+      30% { transform: scale(1.1, 0.88); }
+      62% { transform: scale(0.92, 1.13); }
+      84% { transform: scale(1.04, 0.96); }
+    }
+    .creature-sleeping .creature-body { animation: creatureSleep 4.4s ease-in-out infinite; }
+    @keyframes creatureSleep {
+      0%, 100% { transform: scale(1.06, 0.9) rotate(5deg); }
+      50% { transform: scale(1.1, 0.86) rotate(5deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #terrarium-container *, #terrarium-container *::before { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+    }
+
+    @media (max-width: 640px) { .sc-fence-dense { display: none; } }
 
     /* Aurora Ribbon Layers */
     .aurora-layer-emerald {
@@ -1364,92 +1581,185 @@
         
         <!-- Sky Layer: Sun, Sunset Orb, Clouds, Aurora Waves, Stars -->
         <div id="terrarium-sky" class="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          
-          <!-- 1. Day Elements (Warm Pastel Sun & Drifting Clouds & Sun Motes) -->
+
+          <!-- 1. Day Elements (햇살이 도는 해 · 흘러가는 구름 · 빛 알갱이) -->
           <div id="sky-day-elements" class="absolute inset-0 transition-opacity duration-700">
-            <!-- Warm Sun with multi-layered glowing corona -->
-            <div class="absolute top-6 right-12 w-24 h-24 rounded-full bg-gradient-to-br from-amber-100 via-yellow-200 to-amber-400 shadow-[0_0_70px_rgba(251,191,36,0.6)] opacity-95 flex items-center justify-center">
-              <div class="w-16 h-16 rounded-full bg-white/50 filter blur-xs"></div>
+            <div class="absolute top-6 right-12 w-24 h-24">
+              <div class="sc-sunrays"></div>
+              <div class="absolute inset-0 rounded-full bg-gradient-to-br from-amber-100 via-yellow-200 to-amber-400 shadow-[0_0_70px_rgba(251,191,36,0.7)] flex items-center justify-center">
+                <div class="w-16 h-16 rounded-full bg-white/50 blur-sm"></div>
+              </div>
             </div>
-            <!-- Floating Sun Motes Container -->
             <div id="day-sun-motes-container" class="absolute inset-0 pointer-events-none"></div>
-            <!-- Cloud 1 (slow) -->
-            <div class="absolute top-10 left-10 opacity-70 filter drop-shadow-xs pointer-events-none" style="animation: cloudDriftSlow 34s linear infinite;">
-              <svg width="130" height="52" viewBox="0 0 120 50" fill="white">
-                <path d="M20 40 Q 20 20 40 22 Q 55 10 75 22 Q 95 15 105 32 Q 115 45 95 45 L 25 45 Q 15 45 20 40 Z" />
-              </svg>
+            <div class="sc-cloud-track" style="top: 5%; animation-duration: 70s; animation-delay: -12s;">
+              <svg width="150" height="62" viewBox="0 0 120 50" fill="white" style="opacity: 0.9;"><path d="M20 40 Q 20 20 40 22 Q 55 10 75 22 Q 95 15 105 32 Q 115 45 95 45 L 25 45 Q 15 45 20 40 Z" /></svg>
             </div>
-            <!-- Cloud 2 (fast) -->
-            <div class="absolute top-24 left-1/2 opacity-75 filter drop-shadow-xs pointer-events-none" style="animation: cloudDriftSlow 44s linear infinite 8s;">
-              <svg width="160" height="64" viewBox="0 0 150 60" fill="white">
-                <path d="M25 50 Q 25 25 50 28 Q 70 12 95 28 Q 120 18 130 40 Q 140 55 120 55 L 30 55 Q 18 55 25 50 Z" />
-              </svg>
+            <div class="sc-cloud-track" style="top: 15%; animation-duration: 96s; animation-delay: -50s;">
+              <svg width="190" height="76" viewBox="0 0 150 60" fill="white" style="opacity: 0.8;"><path d="M25 50 Q 25 25 50 28 Q 70 12 95 28 Q 120 18 130 40 Q 140 55 120 55 L 30 55 Q 18 55 25 50 Z" /></svg>
+            </div>
+            <div class="sc-cloud-track" style="top: 24%; animation-duration: 120s; animation-delay: -85s;">
+              <svg width="110" height="46" viewBox="0 0 120 50" fill="white" style="opacity: 0.65;"><path d="M20 40 Q 20 20 40 22 Q 55 10 75 22 Q 95 15 105 32 Q 115 45 95 45 L 25 45 Q 15 45 20 40 Z" /></svg>
+            </div>
+            <div class="sc-cloud-track" style="top: 9%; animation-duration: 140s; animation-delay: -30s;">
+              <svg width="90" height="36" viewBox="0 0 150 60" fill="white" style="opacity: 0.55;"><path d="M25 50 Q 25 25 50 28 Q 70 12 95 28 Q 120 18 130 40 Q 140 55 120 55 L 30 55 Q 18 55 25 50 Z" /></svg>
             </div>
           </div>
 
-          <!-- 2. Sunset Elements (Rose Gold & Magenta Sun, Violet Clouds) -->
+          <!-- 2. Sunset Elements (산 너머로 지는 해 · 물든 구름 · 귀가하는 새 떼) -->
           <div id="sky-sunset-elements" class="hidden absolute inset-0 transition-opacity duration-700">
-            <!-- Radiant Sunset Sun Orb sinking into horizon -->
-            <div class="absolute top-12 right-16 w-28 h-28 rounded-full bg-gradient-to-br from-rose-300 via-pink-400 to-amber-500 shadow-[0_0_80px_rgba(244,63,94,0.7)] opacity-90 flex items-center justify-center">
-              <div class="w-18 h-18 rounded-full bg-white/40 filter blur-xs"></div>
+            <div class="absolute left-[62%] top-[30%] w-32 h-32 rounded-full bg-gradient-to-b from-yellow-100 via-amber-300 to-rose-400 shadow-[0_0_110px_30px_rgba(255,170,90,0.65)]"></div>
+            <div class="sc-cloud-track" style="top: 8%; animation-duration: 84s; animation-delay: -20s;">
+              <svg width="170" height="71" viewBox="0 0 120 50" fill="#ffc9a3" style="opacity: 0.8;"><path d="M20 40 Q 20 20 40 22 Q 55 10 75 22 Q 95 15 105 32 Q 115 45 95 45 L 25 45 Q 15 45 20 40 Z" /></svg>
             </div>
-            <!-- Sunset Drifting Cloud 1 -->
-            <div class="absolute top-14 left-8 opacity-65 filter drop-shadow-xs pointer-events-none" style="animation: cloudDriftSlow 38s linear infinite;">
-              <svg width="140" height="55" viewBox="0 0 120 50" fill="#fed7aa">
-                <path d="M20 40 Q 20 20 40 22 Q 55 10 75 22 Q 95 15 105 32 Q 115 45 95 45 L 25 45 Q 15 45 20 40 Z" />
-              </svg>
+            <div class="sc-cloud-track" style="top: 18%; animation-duration: 110s; animation-delay: -70s;">
+              <svg width="200" height="80" viewBox="0 0 150 60" fill="#f58fb0" style="opacity: 0.7;"><path d="M25 50 Q 25 25 50 28 Q 70 12 95 28 Q 120 18 130 40 Q 140 55 120 55 L 30 55 Q 18 55 25 50 Z" /></svg>
             </div>
-            <!-- Sunset Drifting Cloud 2 -->
-            <div class="absolute top-28 left-2/3 opacity-60 filter drop-shadow-xs pointer-events-none" style="animation: cloudDriftSlow 48s linear infinite 12s;">
-              <svg width="150" height="60" viewBox="0 0 150 60" fill="#f472b6">
-                <path d="M25 50 Q 25 25 50 28 Q 70 12 95 28 Q 120 18 130 40 Q 140 55 120 55 L 30 55 Q 18 55 25 50 Z" />
-              </svg>
+            <div class="sc-cloud-track" style="top: 26%; animation-duration: 130s; animation-delay: -45s;">
+              <svg width="120" height="50" viewBox="0 0 120 50" fill="#ffd9a8" style="opacity: 0.6;"><path d="M20 40 Q 20 20 40 22 Q 55 10 75 22 Q 95 15 105 32 Q 115 45 95 45 L 25 45 Q 15 45 20 40 Z" /></svg>
+            </div>
+            <div class="sc-bird-flock" style="top: 16%;">
+              <svg class="sc-bird" style="left: 0px; top: 0px; width: 20px; animation-delay: 0s;" viewBox="0 0 20 9"><path d="M1 7 Q5 0 10 6 Q15 0 19 7" fill="none" stroke="#4a2a55" stroke-width="1.8" stroke-linecap="round"/></svg><svg class="sc-bird" style="left: 26px; top: 10px; width: 16px; animation-delay: -0.3s;" viewBox="0 0 20 9"><path d="M1 7 Q5 0 10 6 Q15 0 19 7" fill="none" stroke="#4a2a55" stroke-width="1.8" stroke-linecap="round"/></svg><svg class="sc-bird" style="left: -22px; top: 13px; width: 16px; animation-delay: -0.6s;" viewBox="0 0 20 9"><path d="M1 7 Q5 0 10 6 Q15 0 19 7" fill="none" stroke="#4a2a55" stroke-width="1.8" stroke-linecap="round"/></svg><svg class="sc-bird" style="left: 50px; top: 22px; width: 13px; animation-delay: -0.2s;" viewBox="0 0 20 9"><path d="M1 7 Q5 0 10 6 Q15 0 19 7" fill="none" stroke="#4a2a55" stroke-width="1.8" stroke-linecap="round"/></svg><svg class="sc-bird" style="left: -46px; top: 27px; width: 13px; animation-delay: -0.8s;" viewBox="0 0 20 9"><path d="M1 7 Q5 0 10 6 Q15 0 19 7" fill="none" stroke="#4a2a55" stroke-width="1.8" stroke-linecap="round"/></svg>
             </div>
           </div>
 
-          <!-- 3. Night & Aurora Elements (Midnight Navy, Crescent Moon, Aurora Waves, Twinkling Stars) -->
+          <!-- 3. Night & Aurora Elements (오로라 · 초승달 · 별 · 별똥별 · 반딧불이) -->
           <div id="sky-night-elements" class="hidden absolute inset-0 transition-opacity duration-700">
-            
-            <!-- Dynamic Flowing Aurora Wave Layers (Blur 40px~60px) -->
             <div class="absolute inset-0 pointer-events-none overflow-hidden">
-              <!-- Aurora Wave 1: Emerald / Mint Wave -->
               <div class="aurora-layer-emerald absolute -top-10 -left-20 w-[120%] h-64 bg-gradient-to-r from-emerald-400/35 via-teal-300/40 to-cyan-400/30 filter blur-[48px]"></div>
-              <!-- Aurora Wave 2: Cyan / Sky Blue Wave -->
               <div class="aurora-layer-cyan absolute top-8 -right-20 w-[120%] h-60 bg-gradient-to-r from-cyan-400/30 via-sky-400/35 to-indigo-400/25 filter blur-[52px]"></div>
-              <!-- Aurora Wave 3: Purple / Magenta Mystical Wave -->
               <div class="aurora-layer-purple absolute top-20 left-0 w-full h-56 bg-gradient-to-r from-indigo-500/25 via-purple-500/30 to-pink-500/20 filter blur-[60px]"></div>
             </div>
-
-            <!-- Golden Crescent Moon with Ethereal Glow -->
             <div class="absolute top-6 right-14 w-16 h-16 pointer-events-none filter drop-shadow-[0_0_25px_rgba(254,240,138,0.85)] z-10">
               <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
                 <path d="M38 10 C 24 16 20 34 30 48 C 34 53 40 56 46 56 C 24 58 10 40 16 24 C 20 14 28 10 38 10 Z" fill="#FEF08A" />
               </svg>
             </div>
-            <!-- Twinkling Stars Container (populated dynamically) -->
             <div id="night-stars-container" class="absolute inset-0 pointer-events-none z-10"></div>
-            <!-- Fireflies / Starry Glow Container -->
-            <div id="night-fireflies-container" class="absolute inset-0 pointer-events-none z-10"></div>
+            <div class="sc-shooting-star z-10"></div>
           </div>
 
         </div>
 
-        <!-- Pastel Meadow Hills Layer (2-Tier Gentle Rolling Hills, No Neon Grid/Blur Glass) -->
-        <div class="absolute bottom-0 inset-x-0 h-[48%] sm:h-[52%] pointer-events-none z-10 overflow-hidden">
-          <!-- Back Hill Layer (Day: #D1FAE5 / Night: #1E293B) -->
-          <div id="terrarium-hill-back" class="absolute inset-x-0 bottom-0 h-full transition-colors duration-700" style="color: #D1FAE5;">
-            <svg viewBox="0 0 1440 320" class="w-full h-full" preserveAspectRatio="none">
-              <path d="M0,130 C340,65, 580,180, 880,105 C1140,45, 1330,135, 1440,95 L1440,320 L0,320 Z" fill="currentColor" />
-            </svg>
+        <!-- Scenery Layer: 먼 산 → 숲 → 언덕 → 울타리 → 풀밭 · 오두막 · 나무 · 연못 -->
+        <div id="terrarium-scenery" class="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+          <svg class="sc-layer sc-mountains" viewBox="0 0 1440 300" preserveAspectRatio="none" aria-hidden="true">
+            <path class="sc-fill-mt-far" d="M0,300 L0,190 L120,120 L210,170 L330,70 L450,160 L560,110 L690,40 L820,150 L930,95 L1060,165 L1180,60 L1300,150 L1380,110 L1440,150 L1440,300 Z" />
+            <path class="sc-fill-snow" d="M690,40 L655,59 L668,66 L682,58 L694,70 L706,60 L722,67 Z M330,70 L303,92 L316,97 L328,88 L340,99 L352,87 Z M1180,60 L1150,86 L1164,91 L1178,81 L1190,93 L1204,80 Z" />
+            <path class="sc-fill-mt-near" d="M0,300 L0,230 L90,180 L200,235 L340,150 L470,230 L600,175 L740,240 L880,160 L1010,235 L1150,170 L1290,240 L1440,185 L1440,300 Z" />
+          </svg>
+          <div class="sc-haze"></div>
+          <div class="sc-treeline"></div>
+          <svg class="sc-layer sc-hill-back" viewBox="0 0 1440 300" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="scGradHillBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--sc-hill-back1)"/><stop offset="0.5" style="stop-color: var(--sc-hill-back2)"/></linearGradient></defs>
+            <path fill="url(#scGradHillBack)" d="M0,38 C260,6 520,50 800,22 C1060,0 1280,44 1440,18 L1440,300 L0,300 Z" />
+          </svg>
+          <svg class="sc-layer sc-hill-mid" viewBox="0 0 1440 300" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="scGradHillMid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--sc-hill-mid1)"/><stop offset="0.5" style="stop-color: var(--sc-hill-mid2)"/></linearGradient></defs>
+            <path fill="url(#scGradHillMid)" d="M0,20 C300,62 560,2 820,34 C1080,62 1260,8 1440,40 L1440,300 L0,300 Z" />
+          </svg>
+
+          <!-- 작은 나무 (언덕 위) -->
+          <svg class="sc-prop sc-tree-2" viewBox="0 0 74 96" aria-hidden="true">
+            <path class="sc-trunk" d="M33 96 L35 56 L40 56 L42 96 Z" />
+            <g class="sc-canopy sc-canopy-b">
+              <circle class="sc-leaf2" cx="37" cy="40" r="26" /><circle class="sc-leaf1" cx="26" cy="32" r="18" /><circle class="sc-leaf1" cx="48" cy="30" r="17" /><circle class="sc-leaf3" cx="34" cy="22" r="12" />
+            </g>
+          </svg>
+          <!-- 덤불 -->
+          <svg class="sc-prop sc-bush" viewBox="0 0 70 34" aria-hidden="true">
+            <circle class="sc-leaf2" cx="18" cy="22" r="14" /><circle class="sc-leaf1" cx="36" cy="17" r="17" /><circle class="sc-leaf2" cx="54" cy="23" r="13" /><circle class="sc-leaf3" cx="32" cy="12" r="8" />
+            <circle class="sc-fruit" cx="22" cy="20" r="2.4" /><circle class="sc-fruit" cx="44" cy="14" r="2.4" /><circle class="sc-fruit" cx="52" cy="24" r="2.4" />
+          </svg>
+
+          <!-- 풀밭 + 울타리 + 흙길 (울타리 굵기는 화면 폭과 무관하게 일정) -->
+          <svg class="sc-layer sc-field" viewBox="0 0 1440 400" preserveAspectRatio="none" style="overflow: visible;" aria-hidden="true">
+            <defs>
+              <linearGradient id="scGradField" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--sc-field1)"/><stop offset="1" style="stop-color: var(--sc-field2)"/></linearGradient>
+              <linearGradient id="scGradPath" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--sc-path1)"/><stop offset="1" style="stop-color: var(--sc-path2)"/></linearGradient>
+            </defs>
+            <g>
+              <path class="sc-fence-shade" stroke-width="6" d="M30,45.7 V3.7 M150,36.9 V-5.1 M270,38.4 V-3.6 M390,44.2 V2.2 M510,48.0 V6.0 M630,45.4 V3.4 M750,35.1 V-6.9 M870,29.1 V-12.9 M990,30.3 V-11.7 M1110,35.7 V-6.3 M1230,40.7 V-1.3 M1350,39.5 V-2.5" />
+              <path class="sc-fence-shade sc-fence-dense" stroke-width="6" d="M90,39.7 V-2.3 M210,36.7 V-5.3 M330,41.2 V-0.8 M450,46.6 V4.6 M570,47.7 V5.7 M690,41.0 V-1.0 M810,31.0 V-11.0 M930,29.0 V-13.0 M1050,32.7 V-9.3 M1170,38.6 V-3.4 M1290,41.3 V-0.7 M1410,34.2 V-7.8" />
+              <path class="sc-fence-line" stroke-width="4" transform="translate(0,-14)" d="M0,46 C240,8 430,66 720,34 C1000,4 1230,60 1440,26" />
+              <path class="sc-fence-line" stroke-width="4" transform="translate(0,-28)" d="M0,46 C240,8 430,66 720,34 C1000,4 1230,60 1440,26" />
+              <path class="sc-fence-line" stroke-width="3" d="M30,45.7 V3.7 M150,36.9 V-5.1 M270,38.4 V-3.6 M390,44.2 V2.2 M510,48.0 V6.0 M630,45.4 V3.4 M750,35.1 V-6.9 M870,29.1 V-12.9 M990,30.3 V-11.7 M1110,35.7 V-6.3 M1230,40.7 V-1.3 M1350,39.5 V-2.5" />
+              <path class="sc-fence-line sc-fence-dense" stroke-width="3" d="M90,39.7 V-2.3 M210,36.7 V-5.3 M330,41.2 V-0.8 M450,46.6 V4.6 M570,47.7 V5.7 M690,41.0 V-1.0 M810,31.0 V-11.0 M930,29.0 V-13.0 M1050,32.7 V-9.3 M1170,38.6 V-3.4 M1290,41.3 V-0.7 M1410,34.2 V-7.8" />
+            </g>
+            <path fill="url(#scGradField)" d="M0,46 C240,8 430,66 720,34 C1000,4 1230,60 1440,26 L1440,400 L0,400 Z" />
+            <path fill="url(#scGradPath)" opacity="0.9" d="M1212,96 C1176,150 1040,205 1004,400 L1156,400 C1156,236 1242,164 1266,96 Z" />
+          </svg>
+          <div class="sc-field-bands"></div>
+
+          <!-- 연못 -->
+          <div class="sc-pond">
+            <div class="sc-pond-water">
+              <div class="sc-pond-shine" style="left: 18%; top: 34%; width: 22%;"></div>
+              <div class="sc-pond-shine" style="left: 48%; top: 58%; width: 30%; animation-delay: -1.4s;"></div>
+              <div class="sc-pond-shine" style="left: 30%; top: 76%; width: 16%; animation-delay: -2.5s;"></div>
+              <div class="sc-pond-ripple"></div>
+              <div class="sc-pond-ripple" style="left: 30%; top: 45%; animation-delay: -2.1s;"></div>
+            </div>
+            <svg class="absolute" style="left: 8%; top: 46%; width: 22%;" viewBox="0 0 30 14" aria-hidden="true"><path class="sc-lily" d="M15 1 C24 1 29 4 29 7 C29 10 23 13 15 13 C7 13 1 10 1 7 C1 4 6 1 13 1 L15 7 Z" /><circle class="sc-fl-c1" cx="20" cy="6" r="2.6" /><circle class="sc-fl-core" cx="20" cy="6" r="1.1" /></svg>
+            <svg class="absolute" style="left: 70%; top: 14%; width: 15%;" viewBox="0 0 30 14" aria-hidden="true"><path class="sc-lily" d="M15 1 C24 1 29 4 29 7 C29 10 23 13 15 13 C7 13 1 10 1 7 C1 4 6 1 13 1 L15 7 Z" /></svg>
           </div>
 
-          <!-- Front Field Hill Layer (Day: #86EFAC / Night: #14532D) -->
-          <div id="terrarium-hill-front" class="absolute inset-x-0 bottom-0 h-[82%] transition-colors duration-700" style="color: #86EFAC;">
-            <svg viewBox="0 0 1440 280" class="w-full h-full" preserveAspectRatio="none">
-              <path d="M0,115 C280,165, 520,85, 760,125 C1020,165, 1220,95, 1440,135 L1440,280 L0,280 Z" fill="currentColor" />
-            </svg>
-            <!-- Gentle Soft Field Highlight Edge -->
-            <div class="absolute inset-x-0 top-0 h-1 bg-white/15 pointer-events-none"></div>
+          <!-- 바위 -->
+          <svg class="sc-prop sc-rock" viewBox="0 0 44 24" aria-hidden="true">
+            <path class="sc-rock2" d="M2 24 C0 14 8 4 18 5 C24 0 36 4 38 12 C44 15 44 22 42 24 Z" /><path class="sc-rock1" d="M8 18 C8 11 14 7 19 9 C24 5 32 8 32 13 C26 11 20 13 16 17 Z" />
+          </svg>
+
+          <!-- 풀·꽃 (JS로 한 번만 생성) -->
+          <div id="terrarium-flora" class="absolute inset-0"></div>
+
+          <!-- 큰 열매나무 -->
+          <svg class="sc-prop sc-tree" viewBox="0 0 150 190" aria-hidden="true">
+            <ellipse cx="78" cy="186" rx="46" ry="5" fill="rgba(0,0,0,0.16)" />
+            <path class="sc-trunk" d="M62 188 C66 160 66 132 60 106 L92 106 C86 132 86 160 92 188 Z" />
+            <path class="sc-trunk2" d="M78 188 C80 160 80 134 84 106 L92 106 C86 132 86 160 92 188 Z" />
+            <g class="sc-canopy">
+              <circle class="sc-leaf2" cx="76" cy="74" r="50" /><circle class="sc-leaf2" cx="38" cy="86" r="30" /><circle class="sc-leaf2" cx="114" cy="84" r="31" />
+              <circle class="sc-leaf1" cx="56" cy="58" r="34" /><circle class="sc-leaf1" cx="98" cy="54" r="33" /><circle class="sc-leaf1" cx="76" cy="38" r="30" />
+              <circle class="sc-leaf3" cx="60" cy="38" r="15" /><circle class="sc-leaf3" cx="94" cy="32" r="12" /><circle class="sc-leaf3" cx="40" cy="70" r="10" />
+              <circle class="sc-fruit" cx="44" cy="92" r="5" /><circle class="sc-fruit" cx="84" cy="76" r="5" /><circle class="sc-fruit" cx="112" cy="94" r="5" /><circle class="sc-fruit" cx="66" cy="104" r="4.5" /><circle class="sc-fruit" cx="104" cy="62" r="4.5" />
+            </g>
+          </svg>
+            <div class="sc-leaf-fall" style="left: calc(9% + -30px); top: 42%; animation-delay: 0s;"></div>
+            <div class="sc-leaf-fall" style="left: calc(9% + 20px); top: 46%; animation-delay: 3.2s;"></div>
+            <div class="sc-leaf-fall" style="left: calc(9% + 44px); top: 40%; animation-delay: 6.1s;"></div>
+
+          <!-- 오두막 (굴뚝 연기 · 밤이면 창문에 불빛) -->
+          <svg class="sc-prop sc-hut" viewBox="0 0 168 150" style="overflow: visible;" aria-hidden="true">
+            <ellipse cx="84" cy="146" rx="74" ry="5" fill="rgba(0,0,0,0.16)" />
+            <circle class="sc-smoke-puff" cx="122" cy="20" r="7" /><circle class="sc-smoke-puff" cx="122" cy="20" r="7" style="animation-delay: -1.7s;" /><circle class="sc-smoke-puff" cx="122" cy="20" r="7" style="animation-delay: -3.4s;" />
+            <rect class="sc-roof2" x="112" y="22" width="20" height="38" rx="2" />
+            <rect class="sc-wall" x="22" y="72" width="124" height="74" rx="4" />
+            <rect class="sc-wall2" x="22" y="72" width="124" height="12" /><rect class="sc-wall2" x="22" y="134" width="124" height="12" rx="3" />
+            <path class="sc-roof" d="M6 78 L84 22 L162 78 Q164 84 156 84 L12 84 Q4 84 6 78 Z" />
+            <path class="sc-roof2" d="M84 22 L162 78 Q164 84 156 84 L128 84 Z" />
+            <path class="sc-door" d="M70 146 V112 Q70 98 84 98 Q98 98 98 112 V146 Z" /><circle class="sc-wall" cx="92" cy="124" r="2.2" />
+            <circle class="sc-wall2" cx="84" cy="62" r="11" />
+            <g class="sc-door"><ellipse cx="84" cy="65" rx="4.6" ry="3.8" /><circle cx="78.4" cy="60.4" r="1.9" /><circle cx="82.2" cy="57.6" r="1.9" /><circle cx="86.4" cy="57.6" r="1.9" /><circle cx="89.8" cy="60.4" r="1.9" /></g>
+            <rect class="sc-window-glow" x="24" y="92" width="38" height="34" rx="8" /><rect class="sc-window-glow" x="106" y="92" width="38" height="34" rx="8" />
+            <rect class="sc-door" x="30" y="97" width="26" height="24" rx="4" /><rect class="sc-window" x="33" y="100" width="20" height="18" rx="2" />
+            <path class="sc-door" d="M42 100 h2 v18 h-2 z M33 108 h20 v2 h-20 z" />
+            <rect class="sc-door" x="112" y="97" width="26" height="24" rx="4" /><rect class="sc-window" x="115" y="100" width="20" height="18" rx="2" />
+            <path class="sc-door" d="M124 100 h2 v18 h-2 z M115 108 h20 v2 h-20 z" />
+          </svg>
+
+          <!-- 장난감 공 -->
+          <svg class="sc-prop sc-ball" viewBox="0 0 22 22" aria-hidden="true">
+            <circle cx="11" cy="11" r="10" style="fill: var(--sc-ball2);" /><path d="M11 1 A10 10 0 0 1 21 11 L11 11 Z M11 21 A10 10 0 0 1 1 11 L11 11 Z" style="fill: var(--sc-ball1);" /><circle cx="11" cy="11" r="10" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1" />
+          </svg>
+
+          <!-- 낮: 나비 / 밤: 반딧불이 · 비네트 -->
+          <div id="scenery-day-life" class="absolute inset-0">
+            <div class="sc-butterfly" style="left: 30%; top: 70%; animation-delay: 0s; animation-duration: 17s;"><i style="background: #ff9ec4;"></i><i style="background: #ff9ec4;"></i></div>
+            <div class="sc-butterfly" style="left: 62%; top: 78%; animation-delay: -6s; animation-duration: 21s;"><i style="background: #ffe07a;"></i><i style="background: #ffe07a;"></i></div>
+            <div class="sc-butterfly" style="left: 74%; top: 66%; animation-delay: -11s; animation-duration: 19s;"><i style="background: #b9a2ff;"></i><i style="background: #b9a2ff;"></i></div>
+          </div>
+          <div id="scenery-night-life" class="hidden absolute inset-0">
+            <div class="sc-night-vignette"></div>
+            <div id="night-fireflies-container" class="absolute inset-0 pointer-events-none"></div>
           </div>
         </div>
 
@@ -1457,6 +1767,9 @@
         <div id="terrarium-stage" class="absolute inset-0 z-20">
           <!-- Dynamically populated with wandering Pokemon! -->
         </div>
+
+        <!-- Foreground Grass (포켓몬보다 앞에 그려지는 풀숲) -->
+        <div id="terrarium-foreground" class="absolute inset-0 pointer-events-none overflow-hidden" style="z-index: 25;"></div>
 
         <!-- Empty State in Field (Shown when 0 Pokemon in habitat) -->
         <div id="terrarium-empty-state" class="hidden absolute inset-0 z-30 flex items-center justify-center p-4">
@@ -2194,7 +2507,10 @@
       </div>
 
       <!-- Main Petting Interactive Playground Area (All Solid Gray Background, Clean Minimalist Stage) -->
-      <div id="amie-pet-stage" class="relative flex-1 min-h-[280px] sm:min-h-[310px] flex items-center justify-center overflow-hidden bg-slate-100 select-none cursor-grab active:cursor-grabbing">
+      <div id="amie-pet-stage" class="relative flex-1 min-h-[320px] sm:min-h-[360px] flex items-center justify-center overflow-hidden bg-slate-100 select-none cursor-grab active:cursor-grabbing">
+
+        <!-- Living Puppet Canvas: 공식 일러스트를 실시간 변형해 숨쉬고 뛰게 만드는 레이어 -->
+        <canvas id="amie-puppet-canvas" class="absolute inset-0 z-10 pointer-events-none w-full h-full" style="opacity: 0;"></canvas>
 
         <!-- High-Performance Vector FX Canvas (Retina Crisp, Transparent Overlay) -->
         <canvas id="amie-vector-canvas" class="absolute inset-0 z-20 pointer-events-none w-full h-full"></canvas>
@@ -2221,7 +2537,7 @@
           </div>
         </div>
 
-        <!-- Pokemon Avatar Stand & Center Anchor (Rock Solid Center, Crisp Native Resolution) -->
+        <!-- Pokemon Artwork Loader (퍼펫 캔버스의 원본 이미지. 캔버스가 준비되면 투명해지고, 실패 시 그대로 보이는 폴백) -->
         <div class="relative z-10 flex flex-col items-center justify-center pointer-events-none select-none">
           <div class="relative flex flex-col items-center">
             <!-- Pokemon Artwork: Original Ratio, Crisp Resolution, Center Anchored -->
@@ -2232,11 +2548,6 @@
               class="w-56 h-56 sm:w-64 sm:h-64 object-contain filter drop-shadow-md select-none pointer-events-none transform-origin-bottom"
               style="image-rendering: -webkit-optimize-contrast; image-rendering: auto;"
             />
-            
-            <!-- Grounding Soft Radial Shadow -->
-            <div class="relative w-44 h-4 -mt-3 flex items-center justify-center pointer-events-none select-none">
-              <div class="w-36 h-2.5 bg-slate-900/15 rounded-full filter blur-[2px] transform scale-y-50"></div>
-            </div>
           </div>
         </div>
 
@@ -6490,9 +6801,9 @@
       if (amieTimeMode === 'night') return 'night';
       const now = new Date();
       const totalMinutes = now.getHours() * 60 + now.getMinutes();
-      // Day: 06:00 to 18:00 (360 to 1080 mins)
-      if (totalMinutes >= 360 && totalMinutes < 1080) return 'day';
-      // Night: 18:00 to 06:00
+      // Day 06:00~17:00 / Sunset 17:00~19:30 / Night 19:30~06:00 (버튼 안내 문구와 동일)
+      if (totalMinutes >= 360 && totalMinutes < 1020) return 'day';
+      if (totalMinutes >= 1020 && totalMinutes < 1170) return 'sunset';
       return 'night';
     }
 
@@ -6503,8 +6814,8 @@
       const skySunset = document.getElementById('sky-sunset-elements');
       const skyNight = document.getElementById('sky-night-elements');
       const timeBadge = document.getElementById('amie-time-badge');
-      const hillBack = document.getElementById('terrarium-hill-back');
-      const hillFront = document.getElementById('terrarium-hill-front');
+      const dayLife = document.getElementById('scenery-day-life');
+      const nightLife = document.getElementById('scenery-night-life');
       const petStage = document.getElementById('amie-pet-stage');
 
       const btnAuto = document.getElementById('btn-amie-time-auto');
@@ -6531,17 +6842,10 @@
         terrarium.classList.add(`terrarium-bg-${period}`);
       }
 
-      // Update 2-Tier Pastel Meadow Hill colors
-      if (period === 'day') {
-        if (hillBack) hillBack.style.color = '#D1FAE5'; // Pale Pistachio Green
-        if (hillFront) hillFront.style.color = '#86EFAC'; // Soft Apple Green
-      } else if (period === 'sunset') {
-        if (hillBack) hillBack.style.color = '#FED7AA';
-        if (hillFront) hillFront.style.color = '#F472B6';
-      } else {
-        if (hillBack) hillBack.style.color = '#1E293B'; // Deep Slate
-        if (hillFront) hillFront.style.color = '#14532D'; // Midnight Moss Green
-      }
+      // 풍경 색은 .terrarium-bg-* 의 CSS 변수로 한꺼번에 바뀐다
+      generateTerrariumFlora();
+      if (dayLife) dayLife.classList.toggle('hidden', period !== 'day');
+      if (nightLife) nightLife.classList.toggle('hidden', period !== 'night');
 
       if (skyDay) skyDay.classList.toggle('hidden', period !== 'day');
       if (skySunset) skySunset.classList.toggle('hidden', period !== 'sunset');
@@ -6614,8 +6918,8 @@
       if (!container || container.children.length > 0) return;
 
       let fliesHtml = '';
-      for (let i = 0; i < 8; i++) {
-        const top = 40 + Math.random() * 35;
+      for (let i = 0; i < 14; i++) {
+        const top = 52 + Math.random() * 40;
         const left = 5 + Math.random() * 90;
         const size = 4 + Math.random() * 4;
         const delay = Math.random() * 4;
@@ -6630,11 +6934,86 @@
       container.innerHTML = fliesHtml;
     }
 
+    // --- Terrarium Scenery: 풀·꽃 생성 (고정 시드라 매번 같은 자리에 핀다) ---
+    function generateTerrariumFlora() {
+      const flora = document.getElementById('terrarium-flora');
+      const fg = document.getElementById('terrarium-foreground');
+      if (!flora || flora.children.length > 0) return;
+
+      let seed = 20240527;
+      const rnd = () => {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+      const tuftSvg = `<svg viewBox="0 0 24 20"><path class="sc-grass1" d="M12 20 C11 12 8 6 3 2 C9 5 12.5 10 13 20 Z"/><path class="sc-grass2" d="M12 20 C12 10 13 5 14 0 C15.5 6 14.5 12 14 20 Z"/><path class="sc-grass1" d="M13 20 C14 13 17 8 22 5 C17.5 10 15.5 14 15 20 Z"/></svg>`;
+      const flowerSvg = (c) => `<svg viewBox="0 0 20 30"><path class="sc-stem" d="M10 30 C10 22 9.4 17 10 11"/><path class="sc-grass2" d="M10 24 C6 23 4 20 4 18 C7 18 9.5 20 10 24 Z"/><g class="sc-fl-c${c}"><circle cx="10" cy="4.2" r="3.3"/><circle cx="5.2" cy="7.6" r="3.3"/><circle cx="14.8" cy="7.6" r="3.3"/><circle cx="7" cy="12.6" r="3.3"/><circle cx="13" cy="12.6" r="3.3"/></g><circle class="sc-fl-core" cx="10" cy="8.6" r="2.6"/></svg>`;
+      const item = (x, y, w, svg) => {
+        const delay = (-rnd() * 3.4).toFixed(2);
+        const dur = (2.8 + rnd() * 1.8).toFixed(2);
+        return `<div class="sc-flora-item" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;width:${w.toFixed(0)}px;">${svg.replace('<svg ', `<svg style="animation-delay:${delay}s;animation-duration:${dur}s;" `)}</div>`;
+      };
+
+      let html = '';
+      // 뒤쪽은 작게, 앞쪽은 크게 (원근감)
+      for (let i = 0; i < 34; i++) {
+        const y = 64 + rnd() * 33;
+        const x = 2 + rnd() * 96;
+        const depth = 0.55 + ((y - 64) / 33) * 0.9;
+        html += item(x, y, 20 * depth, tuftSvg);
+      }
+      for (let i = 0; i < 16; i++) {
+        const y = 65 + rnd() * 30;
+        const x = 3 + rnd() * 94;
+        const depth = 0.6 + ((y - 65) / 30) * 0.8;
+        html += item(x, y, 15 * depth, flowerSvg(1 + Math.floor(rnd() * 4)));
+      }
+      flora.innerHTML = html;
+
+      if (fg) {
+        // 화면 맨 앞 풀숲: 포켓몬보다 앞에 그려져 깊이감을 준다
+        let fgHtml = '';
+        for (let i = 0; i < 13; i++) {
+          const x = i * 8.4 + rnd() * 5 - 2;
+          const big = (x < 16 || x > 84) ? 1.5 : 1;
+          fgHtml += item(x, 101.5 + rnd() * 2, (34 + rnd() * 20) * big, tuftSvg);
+        }
+        fgHtml += item(4, 100.5, 26, flowerSvg(2)) + item(95, 100.5, 28, flowerSvg(1)) + item(89, 101, 22, flowerSvg(4));
+        fg.innerHTML = fgHtml;
+      }
+    }
+
     // --- Terrarium Roaming & Rendering ---
+    const TERRARIUM_BOUNDS = { minX: 8, maxX: 92, minY: 67, maxY: 89 }; // 발 위치 기준(%)
+    let terrariumActors = [];
+
+    function getTerrariumDepthScale(p) {
+      const t = (p.y - TERRARIUM_BOUNDS.minY) / (TERRARIUM_BOUNDS.maxY - TERRARIUM_BOUNDS.minY);
+      const container = document.getElementById('terrarium-container');
+      const narrow = container && container.clientWidth > 0 && container.clientWidth < 520 ? 0.8 : 1; // 폰에서는 살짝 작게
+      return (0.74 + Math.max(0, Math.min(1, t)) * 0.44) * (p.scale || 1) * narrow;
+    }
+
+    // 예전 저장 데이터(머리 위 기준 좌표)를 발 기준 좌표로 한 번만 옮긴다
+    function normalizeHabitatSpot(p) {
+      const b = TERRARIUM_BOUNDS;
+      if (p.anchor !== 'foot') {
+        const oldY = Number.isFinite(p.y) ? p.y : 60;
+        p.y = Math.round(b.minY + Math.max(0, Math.min(1, (oldY - 48) / 24)) * (b.maxY - b.minY));
+        p.anchor = 'foot';
+      }
+      p.x = Math.max(b.minX, Math.min(b.maxX, Number.isFinite(p.x) ? p.x : 50));
+      p.y = Math.max(b.minY, Math.min(b.maxY, p.y));
+    }
+
     function renderTerrarium() {
       const stage = document.getElementById('terrarium-stage');
       const emptyState = document.getElementById('terrarium-empty-state');
       if (!stage) return;
+
+      terrariumActors.forEach(a => a && a.timers.forEach(clearTimeout));
+      terrariumActors = [];
 
       if (habitatList.length === 0) {
         stage.innerHTML = '';
@@ -6645,50 +7024,61 @@
       if (emptyState) emptyState.classList.add('hidden');
 
       stage.innerHTML = habitatList.map((p, idx) => {
+        normalizeHabitatSpot(p);
         const seal = sealDatabase.find(s => s.id === p.sealId);
         const artworkUrl = seal ? getSealImageUrl(seal) : getSealImageUrl(p);
         const formattedDex = formatDexNumber(p.pokedex_number);
         const affLevel = getAffectionLevel(p.affection);
-        const floatAnim = idx % 2 === 0 ? 'animate-amie-float' : 'animate-amie-bob';
+        const breath = (2.6 + ((idx * 37) % 10) / 8).toFixed(2);
 
         return `
           <div 
             id="terrarium-pokemon-${idx}" 
             data-index="${idx}"
-            class="terrarium-creature-node absolute group cursor-pointer transition-all duration-1000 ease-out flex flex-col items-center select-none"
-            style="left: ${p.x}%; top: ${p.y}%; z-index: ${Math.floor(p.y * 10)}; transform: scale(${p.scale || 1});"
+            class="terrarium-creature-node group"
+            style="left: ${p.x}%; top: ${p.y}%; z-index: ${Math.floor(p.y * 10)}; --depth: ${getTerrariumDepthScale(p).toFixed(3)}; --breath: ${breath}s; --breath-delay: -${(idx * 0.7).toFixed(1)}s;"
             title="클릭하여 1:1 교감 모드 시작"
           >
-            <!-- Emotion Emote Bubble -->
-            <div id="amie-bubble-${idx}" class="amie-emote-bubble hidden mb-1 bg-white/95 px-2 py-0.5 rounded-full shadow-md border border-pink-200 text-xs font-bold text-slate-800 flex items-center gap-1">
-              <span id="amie-bubble-text-${idx}">❤️</span>
-            </div>
+            <div class="creature-hover">
+              <!-- Emotion Emote Bubble -->
+              <div id="amie-bubble-${idx}" class="amie-emote-bubble animate-emote-bubble hidden mb-1 bg-white/95 px-2 py-0.5 rounded-full shadow-md border border-pink-200 text-xs font-bold text-slate-800 flex items-center gap-1">
+                <span id="amie-bubble-text-${idx}">❤️</span>
+              </div>
 
-            <!-- Nametag & Affection Level Pill -->
-            <div class="mb-1 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-full shadow-xs border border-slate-200/80 text-[10px] font-bold text-slate-700 flex items-center gap-1 group-hover:scale-105 transition-transform pointer-events-none">
-              <span class="font-mono text-slate-400">${formattedDex}</span>
-              <span class="text-slate-800 font-extrabold">${escapeHtml(p.pokemon_name)}</span>
-              <span class="text-pink-500 font-bold ml-0.5 flex items-center">
-                ${'❤️'.repeat(affLevel)}
-              </span>
-            </div>
+              <!-- Nametag & Affection Level Pill -->
+              <div class="mb-1 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-full shadow-xs border border-slate-200/80 text-[10px] font-bold text-slate-700 flex items-center gap-1 whitespace-nowrap pointer-events-none">
+                <span class="font-mono text-slate-400">${formattedDex}</span>
+                <span class="text-slate-800 font-extrabold">${escapeHtml(p.pokemon_name)}</span>
+                <span class="text-pink-500 font-bold ml-0.5 flex items-center">
+                  ${'❤️'.repeat(affLevel)}
+                </span>
+              </div>
 
-            <!-- Sprite with Shadow Container -->
-            <div class="relative flex flex-col items-center">
-              <img
-                src="${escapeHtml(artworkUrl)}"
-                alt="${escapeHtml(p.pokemon_name)}"
-                loading="lazy"
-                onerror="handleSealImageError(this, ${seal ? getTargetPokemonFormId(seal) : getTargetPokemonFormId(p)}, ${Number(p.pokedex_number) || 1})"
-                class="w-20 h-20 sm:w-24 sm:h-24 object-contain ${floatAnim} drop-shadow-md group-hover:drop-shadow-lg transition-transform"
-                style="transform: scaleX(${p.facing === 'left' ? -1 : 1});"
-              />
-              <!-- Floor Ground Shadow -->
-              <div class="w-14 h-3 bg-black/20 rounded-full blur-[2px] mt-[-6px]"></div>
+              <!-- Sprite (flip → body 애니메이션) + 바닥 그림자 -->
+              <div class="creature-flip" style="transform: scaleX(${p.facing === 'left' ? -1 : 1});">
+                <div class="creature-body">
+                  <img
+                    src="${escapeHtml(artworkUrl)}"
+                    alt="${escapeHtml(p.pokemon_name)}"
+                    loading="lazy"
+                    draggable="false"
+                    onerror="handleSealImageError(this, ${seal ? getTargetPokemonFormId(seal) : getTargetPokemonFormId(p)}, ${Number(p.pokedex_number) || 1})"
+                    class="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-md"
+                  />
+                </div>
+              </div>
+              <div class="creature-shadow"></div>
             </div>
           </div>
         `;
       }).join('');
+
+      const now = performance.now();
+      terrariumActors = habitatList.map((p, idx) => ({
+        busyUntil: now + 600 + idx * 700 + Math.random() * 1500,
+        sleeping: false,
+        timers: []
+      }));
 
       // Add click listeners to enter 1:1 play mode
       stage.querySelectorAll('.terrarium-creature-node').forEach(node => {
@@ -6699,43 +7089,159 @@
       });
     }
 
-    // Autonomous wandering timer
+    function setCreatureFacing(idx, facing) {
+      const p = habitatList[idx];
+      const el = document.getElementById(`terrarium-pokemon-${idx}`);
+      if (!p || !el) return;
+      p.facing = facing;
+      const flip = el.querySelector('.creature-flip');
+      if (flip) flip.style.transform = `scaleX(${facing === 'left' ? -1 : 1})`;
+    }
+
+    function playCreatureAct(idx, act, durationMs) {
+      const el = document.getElementById(`terrarium-pokemon-${idx}`);
+      const actor = terrariumActors[idx];
+      if (!el || !actor) return;
+      const cls = `creature-act-${act}`;
+      el.classList.remove(cls);
+      void el.offsetWidth;
+      el.classList.add(cls);
+      actor.timers.push(setTimeout(() => el.classList.remove(cls), durationMs));
+    }
+
+    // 걷기: 거리에 비례한 시간 동안 뒤뚱뒤뚱 이동
+    function walkCreatureTo(idx, targetX, targetY, onArrive) {
+      const p = habitatList[idx];
+      const el = document.getElementById(`terrarium-pokemon-${idx}`);
+      const actor = terrariumActors[idx];
+      const container = document.getElementById('terrarium-container');
+      if (!p || !el || !actor || !container) return 0;
+
+      const b = TERRARIUM_BOUNDS;
+      const nx = Math.max(b.minX, Math.min(b.maxX, targetX));
+      const ny = Math.max(b.minY, Math.min(b.maxY, targetY));
+      const rect = container.getBoundingClientRect();
+      const distPx = Math.hypot((nx - p.x) / 100 * rect.width, (ny - p.y) / 100 * rect.height * 2);
+      const duration = Math.max(700, Math.min(6500, distPx / 62 * 1000));
+
+      if (Math.abs(nx - p.x) > 0.5) setCreatureFacing(idx, nx >= p.x ? 'right' : 'left');
+      p.x = Math.round(nx * 10) / 10;
+      p.y = Math.round(ny * 10) / 10;
+
+      el.style.transitionDuration = `${duration}ms`;
+      el.style.left = `${p.x}%`;
+      el.style.top = `${p.y}%`;
+      el.style.zIndex = Math.floor(p.y * 10);
+      el.style.setProperty('--depth', getTerrariumDepthScale(p).toFixed(3));
+      el.classList.add('creature-walking');
+      actor.timers.push(setTimeout(() => {
+        el.classList.remove('creature-walking');
+        el.style.transitionDuration = '0s';
+        if (onArrive) onArrive();
+      }, duration));
+      return duration;
+    }
+
+    function wakeCreature(idx) {
+      const el = document.getElementById(`terrarium-pokemon-${idx}`);
+      const actor = terrariumActors[idx];
+      if (el) el.classList.remove('creature-sleeping');
+      if (actor) actor.sleeping = false;
+    }
+
+    function runCreatureBehavior(idx, now) {
+      const p = habitatList[idx];
+      const actor = terrariumActors[idx];
+      const el = document.getElementById(`terrarium-pokemon-${idx}`);
+      if (!p || !actor || !el) return;
+
+      if (actor.sleeping) {
+        wakeCreature(idx);
+        playCreatureAct(idx, 'stretch', 1300);
+        actor.busyUntil = now + 1800;
+        return;
+      }
+
+      const b = TERRARIUM_BOUNDS;
+      const period = getCurrentDayNight();
+      const energy = 0.8 + getAffectionLevel(p.affection) * 0.08;
+      const rest = () => (900 + Math.random() * 3200) / energy;
+      const roll = Math.random();
+      const sleepChance = period === 'night' ? 0.2 : ((p.fullness || 0) >= 5 ? 0.12 : 0.05);
+
+      if (roll < sleepChance) {
+        // 낮잠
+        actor.sleeping = true;
+        el.classList.add('creature-sleeping');
+        const napMs = 6000 + Math.random() * 6000;
+        showPokemonBubble(idx, '💤', Math.min(napMs, 4000));
+        actor.busyUntil = now + napMs;
+      } else if (roll < sleepChance + 0.46) {
+        // 산책 (가까운 곳 위주, 가끔 멀리)
+        const far = Math.random() < 0.25;
+        const tx = far ? b.minX + Math.random() * (b.maxX - b.minX) : p.x + (Math.random() - 0.5) * 36;
+        const ty = far ? b.minY + Math.random() * (b.maxY - b.minY) : p.y + (Math.random() - 0.5) * 12;
+        const dur = walkCreatureTo(idx, tx, ty, () => {
+          if (Math.random() < 0.3) playCreatureAct(idx, 'hop', 720);
+        });
+        actor.busyUntil = now + dur + rest();
+      } else if (roll < sleepChance + 0.58 && habitatList.length > 1) {
+        // 친구에게 놀러 가기
+        let other = Math.floor(Math.random() * habitatList.length);
+        if (other === idx) other = (other + 1) % habitatList.length;
+        const o = habitatList[other];
+        const side = p.x <= o.x ? -1 : 1;
+        const dur = walkCreatureTo(idx, o.x + side * 9, o.y + 0.6, () => {
+          setCreatureFacing(idx, side < 0 ? 'right' : 'left');
+          playCreatureAct(idx, 'hop', 720);
+          showPokemonBubble(idx, ['❤️', '🎵', '👋', '✨'][Math.floor(Math.random() * 4)], 2200);
+          const otherActor = terrariumActors[other];
+          const otherEl = document.getElementById(`terrarium-pokemon-${other}`);
+          if (otherActor && otherEl && !otherActor.sleeping && !otherEl.classList.contains('creature-walking')) {
+            setCreatureFacing(other, side < 0 ? 'left' : 'right');
+            otherActor.timers.push(setTimeout(() => {
+              playCreatureAct(other, 'hop', 720);
+              showPokemonBubble(other, ['🎶', '❤️', '😊'][Math.floor(Math.random() * 3)], 2000);
+            }, 350));
+            otherActor.busyUntil = Math.max(otherActor.busyUntil, performance.now() + 2200);
+          }
+        });
+        actor.busyUntil = now + dur + 1600 + rest();
+      } else if (roll < sleepChance + 0.70) {
+        playCreatureAct(idx, 'hop', 720);
+        if (Math.random() < 0.5) actor.timers.push(setTimeout(() => playCreatureAct(idx, 'hop', 720), 760));
+        actor.busyUntil = now + 1600 + rest();
+      } else if (roll < sleepChance + 0.80) {
+        playCreatureAct(idx, 'wiggle', 900);
+        if (Math.random() < 0.6) showPokemonBubble(idx, ['🎵', '✨', '🎶', '🐾'][Math.floor(Math.random() * 4)], 2200);
+        actor.busyUntil = now + 1000 + rest();
+      } else if (roll < sleepChance + 0.88) {
+        playCreatureAct(idx, 'stretch', 1300);
+        actor.busyUntil = now + 1400 + rest();
+      } else if (roll < sleepChance + 0.95) {
+        // 두리번두리번
+        setCreatureFacing(idx, p.facing === 'left' ? 'right' : 'left');
+        actor.timers.push(setTimeout(() => setCreatureFacing(idx, p.facing === 'left' ? 'right' : 'left'), 900));
+        actor.busyUntil = now + 1500 + rest();
+      } else {
+        const hungry = (p.fullness || 0) <= 1;
+        const bubbles = hungry ? ['🍞', '😋', '🍰'] : ['❤️', '🎵', '✨', '🐾', '🎶', '😊'];
+        showPokemonBubble(idx, bubbles[Math.floor(Math.random() * bubbles.length)], 2500);
+        actor.busyUntil = now + 1200 + rest();
+      }
+    }
+
+    // 각 포켓몬이 저마다의 타이밍으로 자율 행동한다
     function startTerrariumWanderTimer() {
       stopTerrariumWanderTimer();
       habitatWanderTimer = setInterval(() => {
-        if (currentNavTab !== 'amie' || habitatList.length === 0) return;
-
-        const randIdx = Math.floor(Math.random() * habitatList.length);
-        const p = habitatList[randIdx];
-        if (!p) return;
-
-        const newX = Math.floor(10 + Math.random() * 75);
-        const newY = Math.floor(48 + Math.random() * 24);
-        const deltaX = newX - p.x;
-        p.facing = deltaX >= 0 ? 'right' : 'left';
-        p.x = newX;
-        p.y = newY;
-
-        const el = document.getElementById(`terrarium-pokemon-${randIdx}`);
-        if (el) {
-          el.style.left = `${p.x}%`;
-          el.style.top = `${p.y}%`;
-          el.style.zIndex = Math.floor(p.y * 10);
-
-          const img = el.querySelector('img');
-          if (img) {
-            img.style.transform = `scaleX(${p.facing === 'left' ? -1 : 1})`;
-            img.classList.add('animate-amie-hop');
-            setTimeout(() => img.classList.remove('animate-amie-hop'), 700);
-          }
-
-          if (Math.random() < 0.35) {
-            const bubbles = ['❤️', '🎵', '✨', '💤', '🍰', '😋', '🐾', '🎶'];
-            const emote = bubbles[Math.floor(Math.random() * bubbles.length)];
-            showPokemonBubble(randIdx, emote, 2500);
-          }
+        if (currentNavTab !== 'amie' || habitatList.length === 0 || document.hidden) return;
+        const now = performance.now();
+        for (let idx = 0; idx < habitatList.length; idx++) {
+          const actor = terrariumActors[idx];
+          if (actor && now >= actor.busyUntil) runCreatureBehavior(idx, now);
         }
-      }, 4500);
+      }, 300);
     }
 
     function stopTerrariumWanderTimer() {
@@ -6751,7 +7257,8 @@
       if (bubble && bubbleText) {
         bubbleText.textContent = text;
         bubble.classList.remove('hidden');
-        setTimeout(() => {
+        clearTimeout(bubble._hideTimer);
+        bubble._hideTimer = setTimeout(() => {
           bubble.classList.add('hidden');
         }, duration);
       }
@@ -6894,6 +7401,13 @@
         sprite.classList.remove('animate-squash-stretch', 'animate-amie-munch', 'animate-amie-shake-head');
       }
 
+      // 살아 움직이는 퍼펫 시작 (모달이 보이는 동안만 rAF 루프 동작)
+      if (window.amiePuppet && sprite) {
+        window.amiePuppet.attach('amie-puppet-canvas', sprite);
+        syncAmiePuppetMood();
+        window.amiePuppet.start();
+      }
+
       // Initialize high-precision Vector Canvas Engine
       if (!window.amieVectorEngine) {
         window.amieVectorEngine = new AmieVectorEngine();
@@ -6928,6 +7442,7 @@
       if (window.amieVectorEngine) {
         window.amieVectorEngine.clear();
       }
+      if (window.amiePuppet) window.amiePuppet.stop();
       saveHabitat();
       if (currentNavTab === 'amie') {
         renderTerrarium();
@@ -6965,15 +7480,7 @@
       updatePettingGauge(1, true);
 
       // 3. Trigger Squash & Stretch Bounce Reaction Motion on Pokemon Sprite
-      const sprite = document.getElementById('play-pokemon-sprite');
-      if (sprite) {
-        sprite.classList.remove('animate-squash-stretch', 'animate-amie-munch', 'animate-amie-shake-head');
-        void sprite.offsetWidth; // Force CSS reflow
-        sprite.classList.add('animate-squash-stretch');
-        setTimeout(() => {
-          if (sprite) sprite.classList.remove('animate-squash-stretch');
-        }, 700);
-      }
+      playAmieReaction('joy');
 
       // 4. Trigger Visual FX: Sharp Gold Shockwave Ring & Radiating Geometric Sparkles
       const canvas = document.getElementById('amie-vector-canvas');
@@ -7063,6 +7570,8 @@
       }
       const fullnessTextEl = document.getElementById('play-fullness-text');
       if (fullnessTextEl) fullnessTextEl.textContent = `${p.fullness || 0}/5`;
+
+      syncAmiePuppetMood();
 
       const affBar = document.getElementById('play-affection-bar');
       if (affBar) affBar.style.width = `${Math.min(100, Math.max(0, p.affection || 0))}%`;
@@ -7590,6 +8099,487 @@
       }
     }
 
+    // =========================================================================
+    // AmiePuppetEngine: 고화질 공식 일러스트 한 장을 "살아 움직이게" 하는 퍼펫 엔진
+    //  - 저화질 GIF 대신 475px 원본 일러스트를 가로 띠(strip) 단위로 실시간 변형
+    //  - 발은 땅에 고정, 위로 갈수록 크게 흔들림 → 숨쉬기·기울이기·깡충·오물오물
+    //  - 스프링 물리로 손길(포인터)을 따라 몸을 기울이고 눌리며 반응
+    // =========================================================================
+    class AmiePuppetEngine {
+      constructor() {
+        this.canvas = null;
+        this.ctx = null;
+        this.img = null;
+        this.buffer = null;
+        this.bufferKey = '';
+        this.bbox = { x0: 0.05, y0: 0.04, x1: 0.95, y1: 0.97 };
+        this.running = false;
+        this.rafId = null;
+        this.lastTs = 0;
+        this.time = 0;
+        this.width = 0;
+        this.height = 0;
+        this.dpr = 1;
+        this.actions = [];
+        this.emotes = [];
+        this.nextIdleAt = 0;
+        this.nextEmoteAt = 0;
+        this.dozing = false;
+        this.mood = { energy: 1, full: false, night: false };
+        this.pointer = { x: 0, y: 0, inside: false, down: false, vx: 0, lastMove: 0 };
+        this.springs = {
+          lean: { x: 0, v: 0, k: 70, d: 7 },
+          squash: { x: 0, v: 0, k: 150, d: 9 },
+          push: { x: 0, v: 0, k: 110, d: 8 }
+        };
+        this.reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        this._frame = this._frame.bind(this);
+        this._onImgLoad = this._onImgLoad.bind(this);
+      }
+
+      attach(canvasId, imgEl) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !imgEl) return;
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        if (this.img !== imgEl) {
+          if (this.img) this.img.removeEventListener('load', this._onImgLoad);
+          this.img = imgEl;
+          imgEl.addEventListener('load', this._onImgLoad);
+        }
+        if (!this._resizeObserver && window.ResizeObserver) {
+          this._resizeObserver = new ResizeObserver(() => { this.resize(); this._buildBuffer(true); });
+          this._resizeObserver.observe(canvas);
+        }
+        this.resize();
+        if (imgEl.complete && imgEl.naturalWidth > 0) this._onImgLoad();
+      }
+
+      resize() {
+        if (!this.canvas) return;
+        const rect = this.canvas.getBoundingClientRect();
+        if (rect.width < 10 || rect.height < 10) return;
+        this.width = rect.width;
+        this.height = rect.height;
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.round(this.width * this.dpr);
+        const h = Math.round(this.height * this.dpr);
+        if (this.canvas.width !== w || this.canvas.height !== h) {
+          this.canvas.width = w;
+          this.canvas.height = h;
+        }
+      }
+
+      setMood(mood) { Object.assign(this.mood, mood); }
+
+      _onImgLoad() {
+        const img = this.img;
+        if (!img || !img.naturalWidth) return;
+        const key = img.currentSrc || img.src;
+        const isNew = key !== this.bufferKey;
+        if (!isNew && this.buffer) return;
+        this.bufferKey = key;
+        this.bbox = { x0: 0.05, y0: 0.04, x1: 0.95, y1: 0.97 };
+        this._buildBuffer(true);
+        this._probeBounds(key);
+        // 새 포켓몬 등장: 폴짝 인사
+        this.actions = [];
+        this.dozing = false;
+        this.play('enter');
+        this.nextIdleAt = this.time + 1.6;
+      }
+
+      // 실제 그림이 차지하는 영역(투명 여백 제외)을 찾아 발을 정확히 땅에 붙인다.
+      // CORS가 허용되지 않는 이미지는 조용히 기본 여백값으로 동작한다.
+      _probeBounds(key) {
+        const probe = new Image();
+        probe.crossOrigin = 'anonymous';
+        probe.onload = () => {
+          if (key !== this.bufferKey) return;
+          try {
+            const N = 128;
+            const c = document.createElement('canvas');
+            c.width = N; c.height = N;
+            const cx = c.getContext('2d', { willReadFrequently: true });
+            cx.drawImage(probe, 0, 0, N, N);
+            const data = cx.getImageData(0, 0, N, N).data;
+            let x0 = N, y0 = N, x1 = -1, y1 = -1;
+            for (let y = 0; y < N; y++) {
+              for (let x = 0; x < N; x++) {
+                if (data[(y * N + x) * 4 + 3] > 40) {
+                  if (x < x0) x0 = x;
+                  if (x > x1) x1 = x;
+                  if (y < y0) y0 = y;
+                  if (y > y1) y1 = y;
+                }
+              }
+            }
+            if (x1 - x0 > 8 && y1 - y0 > 8) {
+              this.bbox = { x0: x0 / N, y0: y0 / N, x1: (x1 + 1) / N, y1: (y1 + 1) / N };
+              this._buildBuffer(true);
+            }
+          } catch (err) { /* tainted canvas → 기본값 유지 */ }
+        };
+        probe.src = key;
+      }
+
+      // 화면 표시 크기에 맞춘 고해상도 버퍼(레티나 대응)를 한 번만 만들어 둔다
+      _buildBuffer(force) {
+        const img = this.img;
+        if (!img || !img.naturalWidth || this.width < 10) return;
+        if (this.buffer && !force) return;
+        const nw = img.naturalWidth, nh = img.naturalHeight;
+        const bb = this.bbox;
+        const bodyW = (bb.x1 - bb.x0) * nw, bodyH = (bb.y1 - bb.y0) * nh;
+        const maxH = Math.min(250, this.height - 124);
+        const maxW = Math.min(300, this.width * 0.72);
+        const cssScale = Math.min(maxH / bodyH, maxW / bodyW);
+        const scale = cssScale * this.dpr;
+        const bw = Math.max(2, Math.round(nw * scale)), bh = Math.max(2, Math.round(nh * scale));
+        const buf = document.createElement('canvas');
+        buf.width = bw; buf.height = bh;
+        const bctx = buf.getContext('2d');
+        bctx.imageSmoothingEnabled = true;
+        bctx.imageSmoothingQuality = 'high';
+        try {
+          bctx.drawImage(img, 0, 0, bw, bh);
+        } catch (err) { return; }
+        this.buffer = buf;
+        this.bufBody = { top: bb.y0 * bh, bottom: bb.y1 * bh, cx: (bb.x0 + bb.x1) / 2 * bw, h: bodyH * scale, w: bodyW * scale };
+        this.canvas.style.opacity = '1';
+        img.style.opacity = '0';
+      }
+
+      start() {
+        if (this.running) return;
+        this.running = true;
+        this.lastTs = 0;
+        this.rafId = requestAnimationFrame(this._frame);
+      }
+
+      stop() {
+        this.running = false;
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+        this.actions = [];
+        this.emotes = [];
+        this.dozing = false;
+        this.pointer.inside = false;
+        this.pointer.down = false;
+      }
+
+      // ---- 외부에서 부르는 반응 모션 ----
+      play(name) {
+        const defs = AmiePuppetEngine.ACTIONS;
+        const def = defs[name];
+        if (!def) return;
+        if (this.dozing && name !== 'doze') this.dozing = false;
+        if (this.reducedMotion && !def.gentle) return;
+        // 큰 동작끼리는 겹치지 않게 교체
+        this.actions = this.actions.filter(a => a.def.layer !== def.layer);
+        this.actions.push({ def, start: this.time, name });
+        this.nextIdleAt = this.time + def.dur + 1.2 + Math.random() * 2.2;
+        if (def.emote) this._spawnEmote(def.emote, def.emoteDelay || 0);
+      }
+
+      setPointer(x, y, inside, down) {
+        const p = this.pointer;
+        const now = performance.now();
+        if (inside && p.inside) {
+          const dt = Math.max(8, now - p.lastMove);
+          p.vx = p.vx * 0.6 + ((x - p.x) / dt) * 16 * 0.4;
+        } else {
+          p.vx = 0;
+        }
+        p.x = x; p.y = y; p.inside = inside; p.down = down; p.lastMove = now;
+        if (inside && this.dozing) {
+          // 자다가 손길에 깜짝 깨어남
+          this.dozing = false;
+          this.actions = this.actions.filter(a => a.name !== 'doze');
+          this.play('startle');
+        }
+      }
+
+      _spawnEmote(char, delay) {
+        this.emotes.push({ char, born: this.time + delay, life: 1.8, dx: (Math.random() - 0.5) * 30 });
+      }
+
+      _pickIdleAction() {
+        const m = this.mood;
+        if (this.reducedMotion) return null;
+        const sleepy = (m.night ? 0.16 : 0.04) + (m.full ? 0.08 : 0);
+        const r = Math.random();
+        if (r < sleepy && !this.pointer.inside) return 'doze';
+        const pool = m.energy >= 1.1
+          ? ['hop', 'hop', 'doubleHop', 'wiggle', 'lookAround', 'stretch', 'nod', 'sway', 'spinHop']
+          : ['hop', 'wiggle', 'lookAround', 'lookAround', 'stretch', 'nod', 'sway', 'sway'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      _stepSpring(s, target, dt) {
+        const a = (target - s.x) * s.k - s.v * s.d;
+        s.v += a * dt;
+        s.x += s.v * dt;
+      }
+
+      _frame(ts) {
+        if (!this.running) return;
+        this.rafId = requestAnimationFrame(this._frame);
+        const dt = this.lastTs ? Math.min(0.05, (ts - this.lastTs) / 1000) : 0.016;
+        this.lastTs = ts;
+        this.time += dt;
+        if (!this.ctx) return;
+        if (!this.buffer) { this._buildBuffer(false); if (!this.buffer) return; }
+
+        const t = this.time;
+        const m = this.mood;
+        const W = this.width, H = this.height, dpr = this.dpr;
+        const body = this.bufBody;
+        const bodyH = body.h / dpr;          // CSS px
+        const footX = W / 2;
+        const footY = H - 46;
+
+        // ---- 1) 자율 행동 스케줄러 ----
+        if (t >= this.nextIdleAt && !this.actions.some(a => a.def.layer === 'main')) {
+          const pick = this._pickIdleAction();
+          if (pick) this.play(pick);
+          this.nextIdleAt = Math.max(this.nextIdleAt, t + 1.5 + Math.random() * 3 / m.energy);
+        }
+
+        // ---- 2) 진행 중인 동작 합산 ----
+        const A = { jump: 0, sx: 0, sy: 0, lean: 0, rot: 0, tilt: 0, head: 0, shiver: 0, breathRate: 1, turn: 1 };
+        for (let i = this.actions.length - 1; i >= 0; i--) {
+          const a = this.actions[i];
+          const p = (t - a.start) / a.def.dur;
+          if (p >= 1) {
+            if (a.name === 'doze') this.dozing = false;
+            this.actions.splice(i, 1);
+            continue;
+          }
+          a.def.fn(p, A, this);
+        }
+
+        // ---- 3) 포인터(손길) 반응: 스프링 ----
+        const ptr = this.pointer;
+        const headY = footY - bodyH;
+        const overBody = ptr.inside && Math.abs(ptr.x - footX) < body.w / dpr * 0.6 && ptr.y > headY - 24 && ptr.y < footY + 10;
+        const petting = ptr.down && overBody;
+        let leanTarget = Math.sin(t * 0.55) * 0.012 + Math.sin(t * 0.23 + 1.3) * 0.008;
+        if (ptr.inside && !this.dozing) {
+          const dir = Math.max(-1, Math.min(1, (ptr.x - footX) / (W * 0.4)));
+          leanTarget += dir * (petting ? 0.085 : 0.05);
+        }
+        const squashTarget = petting ? 0.055 : 0;
+        const pushTarget = petting ? Math.max(-1, Math.min(1, ptr.vx / 14)) : 0;
+        this._stepSpring(this.springs.lean, leanTarget, dt);
+        this._stepSpring(this.springs.squash, squashTarget, dt);
+        this._stepSpring(this.springs.push, pushTarget, dt);
+        const pushU = Math.max(0.15, Math.min(1, (footY - ptr.y) / bodyH));
+
+        // 쓰다듬는 동안 기분 좋아 들썩들썩 + 하트
+        if (petting && !this.reducedMotion) {
+          A.sy += Math.abs(Math.sin(t * 9)) * 0.022;
+          A.rot += Math.sin(t * 7) * 0.012;
+          if (t >= this.nextEmoteAt) {
+            this._spawnEmote(Math.random() < 0.7 ? '💗' : '♪', 0);
+            this.nextEmoteAt = t + 0.7 + Math.random() * 0.5;
+          }
+        }
+        if (this.dozing && t >= this.nextEmoteAt) {
+          this._spawnEmote('💤', 0);
+          this.nextEmoteAt = t + 1.7;
+        }
+
+        // ---- 4) 숨쉬기 ----
+        const breathPeriod = (this.dozing ? 5.2 : 3.1 / (0.75 + m.energy * 0.25)) / A.breathRate;
+        this.breathPhase = (this.breathPhase || 0) + dt / breathPeriod * Math.PI * 2;
+        const b = Math.sin(this.breathPhase);
+        const breathAmp = this.dozing ? 0.034 : 0.022;
+
+        const lean = this.springs.lean.x + A.lean;
+        const squash = this.springs.squash.x;
+        const SY = (1 + A.sy - squash + b * breathAmp * 0.55) * (m.full ? 0.985 : 1);
+        const SX = (1 + A.sx + squash * 0.7 - b * breathAmp * 0.2) * (m.full ? 1.03 : 1);
+        const headK = 0.05 * b + A.head;
+        const push = this.springs.push.x * 9;      // CSS px
+        const jump = Math.max(0, A.jump) * bodyH;
+        const turn = A.turn;
+
+        // ---- 5) 그리기 ----
+        const ctx = this.ctx;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 바닥 조명 + 그림자 (점프 높이에 따라 작아지고 옅어진다)
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const jr = Math.min(1, jump / (bodyH * 0.5));
+        const floorGrad = ctx.createRadialGradient(footX, footY, 0, footX, footY, W * 0.42);
+        floorGrad.addColorStop(0, 'rgba(255,255,255,0.75)');
+        floorGrad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.save();
+        ctx.translate(footX, footY); ctx.scale(1, 0.22); ctx.translate(-footX, -footY);
+        ctx.fillStyle = floorGrad;
+        ctx.beginPath(); ctx.arc(footX, footY, W * 0.42, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        const shW = (body.w / dpr) * 0.36 * SX * (1 - jr * 0.45) * Math.abs(turn);
+        ctx.fillStyle = `rgba(15,23,42,${(0.2 * (1 - jr * 0.6)).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.ellipse(footX + lean * bodyH * 0.15, footY + 1, Math.max(4, shW), Math.max(2, shW * 0.16), 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 몸통: 가로 띠 단위 변형 (device px)
+        const buf = this.buffer;
+        const strip = Math.max(2, Math.round(dpr * 1.5));
+        const bodyHd = body.h;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.translate(footX * dpr, (footY - jump) * dpr);
+        ctx.rotate(A.rot + lean * 0.25);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        const shiverPx = A.shiver * dpr;
+        const yOf = (u) => {
+          if (u <= 0) return u * bodyHd * SY;
+          const uc = Math.min(u, 1);
+          const base = bodyHd * SY * (uc + headK * uc * uc) / (1 + headK);
+          return u > 1 ? base + (u - 1) * bodyHd * SY : base;
+        };
+        for (let sy0 = 0; sy0 < buf.height; sy0 += strip) {
+          const sh = Math.min(strip, buf.height - sy0);
+          const uTop = (body.bottom - sy0) / bodyHd;
+          const uBot = (body.bottom - (sy0 + sh)) / bodyHd;
+          const um = Math.max(0, Math.min(1, (uTop + uBot) / 2));
+          const bell = Math.exp(-((um - 0.42) * (um - 0.42)) / 0.08);
+          const rowScale = SX * (1 + breathAmp * b * bell) * turn;
+          const tiltU = um > 0.5 ? (um - 0.5) * 2 : 0;
+          const pg = (um - pushU) / 0.24;
+          let xOff = lean * bodyHd * Math.pow(um, 1.6)
+                   + A.tilt * bodyHd * tiltU * tiltU * 0.5
+                   + push * dpr * Math.exp(-pg * pg);
+          if (shiverPx) xOff += Math.sin(t * 70 + um * 9) * shiverPx;
+          const yT = -yOf(uTop);
+          const yB = -yOf(uBot);
+          const dw = buf.width * rowScale;
+          ctx.drawImage(buf, 0, sy0, buf.width, sh, xOff - body.cx * rowScale, yT, dw, (yB - yT) + 0.8);
+        }
+
+        // 이모트 (💤 ♪ 💗 …)
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (this.emotes.length) {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          for (let i = this.emotes.length - 1; i >= 0; i--) {
+            const e = this.emotes[i];
+            const p = (t - e.born) / e.life;
+            if (p < 0) continue;
+            if (p >= 1) { this.emotes.splice(i, 1); continue; }
+            const size = 16 + 10 * Math.min(1, p * 3);
+            ctx.globalAlpha = p < 0.15 ? p / 0.15 : 1 - Math.max(0, (p - 0.6) / 0.4);
+            ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+            const ex = footX + body.w / dpr * 0.34 + e.dx + Math.sin(p * 6 + e.dx) * 8;
+            const ey = footY - jump - bodyH * SY * 0.86 - p * 56;
+            ctx.fillStyle = '#ec4899';
+            ctx.fillText(e.char, ex, ey);
+          }
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    // 점프 한 번의 곡선: 움츠림 → 도약(늘어남) → 착지(찌부) → 출렁 복원
+    function amieHopCurve(p, A, height, power = 1) {
+      if (p < 0.2) {
+        const q = Math.sin((p / 0.2) * Math.PI / 2);
+        A.sy -= 0.11 * q * power; A.sx += 0.08 * q * power;
+      } else if (p < 0.7) {
+        const q = (p - 0.2) / 0.5;
+        const arc = 4 * q * (1 - q);
+        A.jump += height * arc;
+        const stretch = Math.cos(q * Math.PI);           // 오를 때 +, 내려올 때 -
+        A.sy += 0.085 * Math.abs(stretch) * power; A.sx -= 0.055 * Math.abs(stretch) * power;
+      } else {
+        const q = (p - 0.7) / 0.3;
+        const wob = Math.cos(q * Math.PI * 2.5) * (1 - q);
+        A.sy -= 0.12 * wob * power; A.sx += 0.085 * wob * power;
+      }
+    }
+    const amieEnv = (p) => Math.sin(Math.min(1, Math.max(0, p)) * Math.PI);
+
+    AmiePuppetEngine.ACTIONS = {
+      enter:      { dur: 0.9, layer: 'main', fn: (p, A) => { amieHopCurve(p, A, 0.16); } },
+      hop:        { dur: 0.8, layer: 'main', fn: (p, A) => { amieHopCurve(p, A, 0.2); } },
+      doubleHop:  { dur: 1.35, layer: 'main', fn: (p, A) => { const q = p * 2; amieHopCurve(q % 1, A, q < 1 ? 0.16 : 0.26); } },
+      spinHop:    { dur: 0.95, layer: 'main', fn: (p, A) => {
+        amieHopCurve(p, A, 0.26);
+        if (p > 0.2 && p < 0.7) A.turn = Math.cos(((p - 0.2) / 0.5) * Math.PI * 2);   // 공중에서 한 바퀴 빙글
+      } },
+      wiggle:     { dur: 1.3, layer: 'main', emote: '♪', emoteDelay: 0.2, fn: (p, A) => {
+        const e = amieEnv(p);
+        A.lean += Math.sin(p * Math.PI * 6) * 0.075 * e;
+        A.sy += Math.abs(Math.sin(p * Math.PI * 6)) * -0.03 * e; A.sx += Math.abs(Math.sin(p * Math.PI * 6)) * 0.02 * e;
+      } },
+      sway:       { dur: 3.2, layer: 'main', gentle: true, fn: (p, A) => { A.lean += Math.sin(p * Math.PI * 4) * 0.045 * amieEnv(p); A.head += 0.05 * amieEnv(p); } },
+      lookAround: { dur: 2.8, layer: 'main', gentle: true, fn: (p, A) => {
+        const s = Math.sin(p * Math.PI * 2);
+        A.tilt += Math.sign(s) * Math.pow(Math.abs(s), 0.45) * 0.13 * amieEnv(p * 1.0001);
+        A.lean += s * 0.02;
+      } },
+      stretch:    { dur: 2.0, layer: 'main', gentle: true, fn: (p, A) => {
+        if (p < 0.25) { const q = amieEnv(p / 0.5); A.sy -= 0.07 * q; A.sx += 0.05 * q; }
+        else if (p < 0.8) { const q = Math.sin(((p - 0.25) / 0.55) * Math.PI); A.sy += 0.1 * q; A.sx -= 0.06 * q; A.head += 0.12 * q; }
+        else { const q = (p - 0.8) / 0.2; const w = Math.cos(q * Math.PI * 2) * (1 - q); A.sy -= 0.04 * w; A.sx += 0.03 * w; }
+      } },
+      nod:        { dur: 1.0, layer: 'main', gentle: true, fn: (p, A) => { const n = Math.pow(Math.sin(p * Math.PI * 2), 2); A.head -= 0.16 * n; A.sy -= 0.03 * n; } },
+      talk:       { dur: 1.3, layer: 'main', gentle: true, fn: (p, A) => { A.tilt += 0.12 * amieEnv(p); A.head += 0.06 * Math.sin(p * Math.PI * 4) * amieEnv(p); } },
+      joy:        { dur: 1.7, layer: 'main', emote: '💖', emoteDelay: 0.25, fn: (p, A) => {
+        const q = p * 2; amieHopCurve(q % 1, A, q < 1 ? 0.3 : 0.22, 1.15);
+        A.rot += Math.sin(p * Math.PI * 4) * 0.05 * amieEnv(p);
+      } },
+      munch:      { dur: 1.5, layer: 'main', fn: (p, A) => {
+        const chew = Math.abs(Math.sin(p * Math.PI * 7)) * (1 - p * 0.3);
+        A.sy -= 0.055 * chew; A.sx += 0.045 * chew; A.head -= 0.12 * chew;
+        A.lean += Math.sin(p * Math.PI * 3.5) * 0.015;
+      } },
+      refuse:     { dur: 1.0, layer: 'main', fn: (p, A) => { A.tilt += Math.sin(p * Math.PI * 7) * 0.13 * amieEnv(p); A.sy -= 0.02 * amieEnv(p); } },
+      spicy:      { dur: 1.9, layer: 'main', emote: '💦', emoteDelay: 0.5, fn: (p, A) => {
+        if (p < 0.4) { A.shiver = 2.6 * amieEnv(p / 0.4); A.sy -= 0.04; A.sx += 0.03; }
+        else { amieHopCurve((p - 0.4) / 0.6, A, 0.42, 1.3); A.rot += Math.sin(p * 40) * 0.02; }
+      } },
+      startle:    { dur: 0.7, layer: 'main', emote: '❗', fn: (p, A) => { amieHopCurve(p, A, 0.12, 0.8); A.shiver = 1.2 * (1 - p); } },
+      doze:       { dur: 9, layer: 'main', gentle: true, fn: (p, A, eng) => {
+        eng.dozing = true;
+        const e = Math.min(1, p * 6) * Math.min(1, (1 - p) * 8);
+        A.lean += 0.055 * e + Math.sin(p * Math.PI * 5) * 0.012 * e;
+        A.sy -= 0.045 * e; A.sx += 0.035 * e; A.head -= 0.14 * e;
+      } }
+    };
+
+    window.amiePuppet = new AmiePuppetEngine();
+
+    // 포켓몬 반응 모션 재생 (퍼펫 엔진이 준비 안 됐을 때를 대비한 CSS 폴백 포함)
+    function playAmieReaction(name, fallbackClass = 'animate-squash-stretch', fallbackMs = 700) {
+      const puppet = window.amiePuppet;
+      if (puppet && puppet.running && puppet.buffer) {
+        puppet.play(name);
+        return;
+      }
+      const sprite = document.getElementById('play-pokemon-sprite');
+      if (!sprite) return;
+      sprite.classList.remove('animate-squash-stretch', 'animate-amie-munch', 'animate-amie-shake-head');
+      void sprite.offsetWidth;
+      sprite.classList.add(fallbackClass);
+      setTimeout(() => sprite.classList.remove(fallbackClass), fallbackMs);
+    }
+
+    function syncAmiePuppetMood() {
+      const p = habitatList[activePettingSealIndex];
+      if (!p || !window.amiePuppet) return;
+      window.amiePuppet.setMood({
+        energy: 0.85 + getAffectionLevel(p.affection) * 0.09,
+        full: (p.fullness || 0) >= 5,
+        night: getCurrentDayNight() === 'night'
+      });
+    }
+
     // Global Vector Engine Instance
     window.amieVectorEngine = new AmieVectorEngine();
 
@@ -7603,10 +8593,7 @@
       const centerY = canvas ? canvas.getBoundingClientRect().height / 2 : 140;
 
       if ((p.fullness || 0) >= 5) {
-        if (sprite) {
-          sprite.classList.add('animate-amie-shake-head');
-          setTimeout(() => sprite.classList.remove('animate-amie-shake-head'), 700);
-        }
+        playAmieReaction('refuse', 'animate-amie-shake-head', 700);
         setPlayDialogue(`${p.pokemon_name}: 배가 빵빵해요~ 더는 못 먹겠어요! 😋`, 3000);
         showToast('포만감이 가득 찼습니다! 쓰다듬으며 소화시켜주세요.', 'info');
         return;
@@ -7619,31 +8606,25 @@
 
       if (breadType === 'hotsauce') {
         if (sprite) {
-          sprite.classList.remove('animate-squash-stretch', 'animate-amie-munch', 'animate-amie-shake-head');
-          void sprite.offsetWidth;
-          sprite.classList.add('animate-amie-munch');
+          playAmieReaction('munch', 'animate-amie-munch', 800);
           setTimeout(() => {
-            sprite.classList.remove('animate-amie-munch');
+            playAmieReaction('spicy');
             if (window.amieVectorEngine) {
               window.amieVectorEngine.spawnFieryBurst(centerX, centerY);
             }
             setPlayDialogue(`${p.pokemon_name}: 앗 뜨거워어어! 불이 번쩍번쩍 매워요~! 🌶️🔥💦`, 2200);
 
             setTimeout(() => {
-              sprite.classList.add('animate-squash-stretch');
-              setTimeout(() => sprite.classList.remove('animate-squash-stretch'), 650);
               setPlayDialogue(`${p.pokemon_name}: 하아하아~ 은근히 중독되는 화끈한 맛! 😆💖`, 3500);
             }, 1400);
           }, 450);
         }
       } else {
         if (sprite) {
-          sprite.classList.remove('animate-squash-stretch', 'animate-amie-munch', 'animate-amie-shake-head');
-          void sprite.offsetWidth;
-          sprite.classList.add('animate-squash-stretch');
+          playAmieReaction('munch', 'animate-amie-munch', 800);
           setTimeout(() => {
-            if (sprite) sprite.classList.remove('animate-squash-stretch');
-          }, 650);
+            if (habitatList[activePettingSealIndex] === p) playAmieReaction('hop');
+          }, 1550);
           if (window.amieVectorEngine) {
             window.amieVectorEngine.spawnSweetBurst(centerX, centerY);
           }
@@ -8804,6 +9785,18 @@
         };
 
         petTouchpad.addEventListener('pointerdown', handlePointerStart);
+
+        // 퍼펫이 손길(포인터)을 바라보고, 눌리면 몸이 눌리며 반응하도록 좌표 전달
+        const feedPuppetPointer = (e, inside, down) => {
+          if (!window.amiePuppet || !window.amiePuppet.running) return;
+          const rect = petTouchpad.getBoundingClientRect();
+          window.amiePuppet.setPointer(e.clientX - rect.left, e.clientY - rect.top, inside, down);
+        };
+        petTouchpad.addEventListener('pointerdown', (e) => feedPuppetPointer(e, true, true));
+        petTouchpad.addEventListener('pointermove', (e) => feedPuppetPointer(e, true, e.buttons > 0 || (e.pointerType === 'touch' && e.pressure > 0)));
+        petTouchpad.addEventListener('pointerup', (e) => feedPuppetPointer(e, e.pointerType !== 'touch', false));
+        petTouchpad.addEventListener('pointerleave', (e) => feedPuppetPointer(e, false, false));
+        petTouchpad.addEventListener('pointercancel', (e) => feedPuppetPointer(e, false, false));
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerEnd);
         window.addEventListener('pointercancel', handlePointerEnd);
@@ -9067,13 +10060,7 @@
         setTalkInputEnabled(false);
 
         // 2. Trigger Squash & Stretch bounce motion on Pokemon Sprite
-        const sprite = document.getElementById('play-pokemon-sprite');
-        if (sprite) {
-          sprite.classList.remove('animate-squash-stretch', 'animate-amie-munch', 'animate-amie-shake-head');
-          void sprite.offsetWidth;
-          sprite.classList.add('animate-squash-stretch');
-          setTimeout(() => sprite.classList.remove('animate-squash-stretch'), 700);
-        }
+        playAmieReaction('talk');
 
         // 3. Show floating thinking bubble, then answer
         showFloatingThought('생각하는 중... ✨', true);
