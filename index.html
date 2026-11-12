@@ -2082,7 +2082,7 @@
           <!-- Form Type Selection (Mutual Exclusion / Radio) & Shiny Checkbox -->
           <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
             <!-- Form Type Radio Group (일반 / 메가진화 / 거다이맥스 / 리전폼) -->
-            <div class="sm:col-span-8 flex items-center gap-1 bg-white p-1 rounded-md border border-slate-200 text-xs shadow-2xs">
+            <div class="sm:col-span-12 flex items-center gap-1 bg-white p-1 rounded-md border border-slate-200 text-xs shadow-2xs">
               <label class="flex-1 text-center cursor-pointer">
                 <input type="radio" name="form_type" value="none" id="form-type-none" checked class="peer sr-only">
                 <span class="block py-1 px-1.5 rounded text-[11px] font-medium text-slate-600 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:font-bold transition-all select-none">
@@ -2107,10 +2107,16 @@
                   리전폼
                 </span>
               </label>
+              <label id="form-type-alt-label" class="flex-1 text-center cursor-pointer" title="오리진폼·스카이폼·암컷의 모습 등 폼체인지가 있는 포켓몬만 선택할 수 있습니다">
+                <input type="radio" name="form_type" value="alt" id="form-type-alt" class="peer sr-only">
+                <span id="form-type-alt-text" class="block py-1 px-1.5 rounded text-[11px] font-medium text-slate-600 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:font-bold transition-all select-none">
+                  폼체인지
+                </span>
+              </label>
             </div>
 
             <!-- Independent Shiny Checkbox (중복 선택 가능) -->
-            <div class="sm:col-span-4 flex items-center">
+            <div class="sm:col-span-12 flex items-center">
               <label for="form-is-shiny" class="w-full flex items-center justify-between px-2 py-1.5 rounded-md bg-white border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/40 transition-all select-none shadow-2xs">
                 <div class="flex items-center gap-1.5">
                   <input 
@@ -2156,6 +2162,16 @@
             </div>
             <div id="form-regional-chips-container" class="flex items-center gap-1 text-xs">
               <!-- Dynamically populated chips e.g. [가라르] [알로라] -->
+            </div>
+          </div>
+
+          <!-- Sub-options: Alt Form (폼체인지) chips / dropdown — 기라티나(오리진폼), 쉐이미(스카이폼), 냐오닉스(암컷의 모습) 등 -->
+          <div id="form-alt-options-box" class="hidden p-1.5 rounded-md bg-indigo-50/90 border border-indigo-200 flex flex-wrap items-center gap-1.5">
+            <div class="flex items-center gap-1 text-[10px] font-bold text-indigo-900">
+              <span>🔀</span> <span>폼 선택:</span>
+            </div>
+            <div id="form-alt-chips-container" class="flex flex-wrap items-center gap-1 text-xs flex-1 min-w-0 justify-end">
+              <!-- Dynamically populated chips e.g. [어나더폼] [오리진폼] / 폼이 많으면 드롭다운 -->
             </div>
           </div>
 
@@ -3425,6 +3441,98 @@
       892: 10226 // 우라오스
     };
 
+    // 4. 폼체인지 전용 테이블 (기라티나 오리진폼, 쉐이미 스카이폼, 냐오닉스 암컷의 모습 등)
+    //    label: 이름 옆 괄호에 표기되는 공식 한국어 폼명 / formId: PokeAPI 공식 아트워크 ID (생략 시 기본 도감번호 이미지)
+    //    이름 규칙: 기라티나(오리진폼), 이로치 기라티나(오리진폼)
+    const ALT_FORMS_MAP = {
+      25: [{ label: '록스타', formId: 10080 }, { label: '마담', formId: 10081 }, { label: '팝스타', formId: 10082 }, { label: '닥터', formId: 10083 }, { label: '마스크드', formId: 10084 }, { label: '코스프레', formId: 10085 }, { label: '오리지널캡', formId: 10094 }, { label: '호연캡', formId: 10095 }, { label: '신오캡', formId: 10096 }, { label: '하나캡', formId: 10097 }, { label: '칼로스캡', formId: 10098 }, { label: '알로라캡', formId: 10099 }, { label: '너로정했다캡', formId: 10148 }, { label: '월드캡', formId: 10160 }, { label: '파트너', formId: 10158 }], // 피카츄
+      128: [{ label: '팔데아 블레이즈종', formId: 10251 }, { label: '팔데아 워터종', formId: 10252 }], // 켄타로스
+      133: [{ label: '파트너', formId: 10159 }], // 이브이
+      172: [{ label: '삐죽귀' }], // 피츄
+      201: [{ label: 'A' }, { label: 'B' }, { label: 'C' }, { label: 'D' }, { label: 'E' }, { label: 'F' }, { label: 'G' }, { label: 'H' }, { label: 'I' }, { label: 'J' }, { label: 'K' }, { label: 'L' }, { label: 'M' }, { label: 'N' }, { label: 'O' }, { label: 'P' }, { label: 'Q' }, { label: 'R' }, { label: 'S' }, { label: 'T' }, { label: 'U' }, { label: 'V' }, { label: 'W' }, { label: 'X' }, { label: 'Y' }, { label: 'Z' }, { label: '!' }, { label: '?' }], // 안농
+      351: [{ label: '캐스퐁의 모습' }, { label: '태양의 모습', formId: 10013 }, { label: '빗방울의 모습', formId: 10014 }, { label: '설운의 모습', formId: 10015 }], // 캐스퐁
+      382: [{ label: '가이오가의 모습' }, { label: '원시회귀의 모습', formId: 10077 }], // 가이오가
+      383: [{ label: '그란돈의 모습' }, { label: '원시회귀의 모습', formId: 10078 }], // 그란돈
+      386: [{ label: '노말폼' }, { label: '어택폼', formId: 10001 }, { label: '디펜스폼', formId: 10002 }, { label: '스피드폼', formId: 10003 }], // 테오키스
+      412: [{ label: '초목도롱' }, { label: '모래땅도롱' }, { label: '슈레도롱' }], // 도롱충이
+      413: [{ label: '초목도롱' }, { label: '모래땅도롱', formId: 10004 }, { label: '슈레도롱', formId: 10005 }], // 도롱마담
+      414: [{ label: '초목도롱' }, { label: '모래땅도롱' }, { label: '슈레도롱' }], // 나메일
+      421: [{ label: '네거폼' }, { label: '포지폼' }], // 체리꼬
+      422: [{ label: '서쪽바다' }, { label: '동쪽바다' }], // 깝질무
+      423: [{ label: '서쪽바다' }, { label: '동쪽바다' }], // 트리토돈
+      479: [{ label: '로토무의 모습' }, { label: '히트로토무', formId: 10008 }, { label: '워시로토무', formId: 10009 }, { label: '프로스트로토무', formId: 10010 }, { label: '스핀로토무', formId: 10011 }, { label: '커트로토무', formId: 10012 }], // 로토무
+      483: [{ label: '어나더폼' }, { label: '오리진폼', formId: 10245 }], // 디아루가
+      484: [{ label: '어나더폼' }, { label: '오리진폼', formId: 10246 }], // 펄기아
+      487: [{ label: '어나더폼' }, { label: '오리진폼', formId: 10007 }], // 기라티나
+      492: [{ label: '랜드폼' }, { label: '스카이폼', formId: 10006 }], // 쉐이미
+      493: [{ label: '노말타입' }, { label: '격투타입' }, { label: '비행타입' }, { label: '독타입' }, { label: '땅타입' }, { label: '바위타입' }, { label: '벌레타입' }, { label: '고스트타입' }, { label: '강철타입' }, { label: '불꽃타입' }, { label: '물타입' }, { label: '풀타입' }, { label: '전기타입' }, { label: '에스퍼타입' }, { label: '얼음타입' }, { label: '드래곤타입' }, { label: '악타입' }, { label: '페어리타입' }, { label: '???타입' }], // 아르세우스
+      550: [{ label: '적색근의 모습' }, { label: '청색근의 모습', formId: 10016 }, { label: '백색근의 모습', formId: 10247 }], // 배쓰나이
+      555: [{ label: '노말모드' }, { label: '달마모드', formId: 10017 }], // 불비달마
+      585: [{ label: '봄의 모습' }, { label: '여름의 모습' }, { label: '가을의 모습' }, { label: '겨울의 모습' }], // 사철록
+      586: [{ label: '봄의 모습' }, { label: '여름의 모습' }, { label: '가을의 모습' }, { label: '겨울의 모습' }], // 바라철록
+      592: [{ label: '수컷의 모습' }, { label: '암컷의 모습' }], // 탱그릴
+      593: [{ label: '수컷의 모습' }, { label: '암컷의 모습' }], // 탱탱겔
+      641: [{ label: '화신폼' }, { label: '영물폼', formId: 10019 }], // 토네로스
+      642: [{ label: '화신폼' }, { label: '영물폼', formId: 10020 }], // 볼트로스
+      645: [{ label: '화신폼' }, { label: '영물폼', formId: 10021 }], // 랜드로스
+      646: [{ label: '큐레무의 모습' }, { label: '블랙큐레무', formId: 10022 }, { label: '화이트큐레무', formId: 10023 }], // 큐레무
+      647: [{ label: '평상시 모습' }, { label: '각오의 모습', formId: 10024 }], // 케르디오
+      648: [{ label: '보이스폼' }, { label: '스텝폼', formId: 10018 }], // 메로엣타
+      649: [{ label: '아쿠아카세트' }, { label: '번개카세트' }, { label: '블레이즈카세트' }, { label: '프리즈카세트' }], // 게노세크트
+      658: [{ label: '유대변화', formId: 10116 }, { label: '지우개굴닌자', formId: 10117 }], // 개굴닌자
+      664: [{ label: '빙설의 모양' }, { label: '설국의 모양' }, { label: '설원의 모양' }, { label: '대륙의 모양' }, { label: '정원의 모양' }, { label: '우아한 모양' }, { label: '화원의 모양' }, { label: '모던한 모양' }, { label: '마린의 모양' }, { label: '군도의 모양' }, { label: '황야의 모양' }, { label: '사진의 모양' }, { label: '대하의 모양' }, { label: '스콜의 모양' }, { label: '사바나의 모양' }, { label: '태양의 모양' }, { label: '오션의 모양' }, { label: '정글의 모양' }, { label: '팬시한 모양' }, { label: '볼의 모양' }], // 분이벌레
+      665: [{ label: '빙설의 모양' }, { label: '설국의 모양' }, { label: '설원의 모양' }, { label: '대륙의 모양' }, { label: '정원의 모양' }, { label: '우아한 모양' }, { label: '화원의 모양' }, { label: '모던한 모양' }, { label: '마린의 모양' }, { label: '군도의 모양' }, { label: '황야의 모양' }, { label: '사진의 모양' }, { label: '대하의 모양' }, { label: '스콜의 모양' }, { label: '사바나의 모양' }, { label: '태양의 모양' }, { label: '오션의 모양' }, { label: '정글의 모양' }, { label: '팬시한 모양' }, { label: '볼의 모양' }], // 분떠도리
+      666: [{ label: '화원의 모양' }, { label: '빙설의 모양' }, { label: '설국의 모양' }, { label: '설원의 모양' }, { label: '대륙의 모양' }, { label: '정원의 모양' }, { label: '우아한 모양' }, { label: '모던한 모양' }, { label: '마린의 모양' }, { label: '군도의 모양' }, { label: '황야의 모양' }, { label: '사진의 모양' }, { label: '대하의 모양' }, { label: '스콜의 모양' }, { label: '사바나의 모양' }, { label: '태양의 모양' }, { label: '오션의 모양' }, { label: '정글의 모양' }, { label: '팬시한 모양' }, { label: '볼의 모양' }], // 비비용
+      668: [{ label: '수컷의 모습' }, { label: '암컷의 모습' }], // 화염레오
+      669: [{ label: '빨간 꽃' }, { label: '노란 꽃' }, { label: '오렌지색 꽃' }, { label: '파란 꽃' }, { label: '하얀 꽃' }], // 플라베베
+      670: [{ label: '빨간 꽃' }, { label: '노란 꽃' }, { label: '오렌지색 꽃' }, { label: '파란 꽃' }, { label: '하얀 꽃' }, { label: '영원의 꽃', formId: 10061 }], // 플라엣테
+      671: [{ label: '빨간 꽃' }, { label: '노란 꽃' }, { label: '오렌지색 꽃' }, { label: '파란 꽃' }, { label: '하얀 꽃' }], // 플라제스
+      676: [{ label: '야생의 모습' }, { label: '하트컷' }, { label: '스타컷' }, { label: '다이아컷' }, { label: '레이디컷' }, { label: '마담컷' }, { label: '젠틀컷' }, { label: '퀸컷' }, { label: '가부키컷' }, { label: '킹덤컷' }], // 트리미앙
+      678: [{ label: '수컷의 모습' }, { label: '암컷의 모습', formId: 10025 }], // 냐오닉스
+      681: [{ label: '실드폼' }, { label: '블레이드폼', formId: 10026 }], // 킬가르도
+      710: [{ label: '보통 사이즈' }, { label: '작은 사이즈', formId: 10027 }, { label: '큰 사이즈', formId: 10028 }, { label: '특대 사이즈', formId: 10029 }], // 호바귀
+      711: [{ label: '보통 사이즈' }, { label: '작은 사이즈', formId: 10030 }, { label: '큰 사이즈', formId: 10031 }, { label: '특대 사이즈', formId: 10032 }], // 펌킨인
+      716: [{ label: '릴랙스모드' }, { label: '액티브모드' }], // 제르네아스
+      718: [{ label: '50%폼' }, { label: '10%폼', formId: 10181 }, { label: '퍼펙트폼', formId: 10120 }], // 지가르데
+      720: [{ label: '굴레에 빠진 후파' }, { label: '굴레를 벗어난 후파', formId: 10086 }], // 후파
+      741: [{ label: '이글이글스타일' }, { label: '파칙파칙스타일', formId: 10123 }, { label: '훌라훌라스타일', formId: 10124 }, { label: '하늘하늘스타일', formId: 10125 }], // 춤추새
+      744: [{ label: '마이페이스', formId: 10151 }], // 암멍이
+      745: [{ label: '한낮의 모습' }, { label: '한밤중의 모습', formId: 10126 }, { label: '황혼의 모습', formId: 10152 }], // 루가루암
+      746: [{ label: '단독의 모습' }, { label: '군집의 모습', formId: 10127 }], // 약어리
+      773: [{ label: '타입:노말' }, { label: '타입:파이팅' }, { label: '타입:플라잉' }, { label: '타입:포이즌' }, { label: '타입:그라운드' }, { label: '타입:락' }, { label: '타입:버그' }, { label: '타입:고스트' }, { label: '타입:스틸' }, { label: '타입:파이어' }, { label: '타입:워터' }, { label: '타입:그래스' }, { label: '타입:일렉트릭' }, { label: '타입:사이킥' }, { label: '타입:아이스' }, { label: '타입:드래곤' }, { label: '타입:다크' }, { label: '타입:페어리' }], // 실버디
+      774: [{ label: '유성의 모습' }, { label: '빨간색 코어', formId: 10136 }, { label: '주황색 코어', formId: 10137 }, { label: '노란색 코어', formId: 10138 }, { label: '초록색 코어', formId: 10139 }, { label: '옥색 코어', formId: 10140 }, { label: '파란색 코어', formId: 10141 }, { label: '보라색 코어', formId: 10142 }], // 메테노
+      778: [{ label: '둔갑한 모습' }, { label: '들킨 모습', formId: 10143 }], // 따라큐
+      800: [{ label: '황혼의 갈기', formId: 10155 }, { label: '새벽의 날개', formId: 10156 }, { label: '울트라네크로즈마', formId: 10157 }], // 네크로즈마
+      801: [{ label: '500년 전의 색', formId: 10147 }], // 마기아나
+      845: [{ label: '그대로 삼킨 모습', formId: 10182 }, { label: '통째로 삼킨 모습', formId: 10183 }], // 윽우지
+      849: [{ label: '하이한 모습' }, { label: '로우한 모습', formId: 10184 }], // 스트린더
+      854: [{ label: '위작의 모습' }, { label: '진품의 모습' }], // 데인차
+      855: [{ label: '위작의 모습' }, { label: '진품의 모습' }], // 포트데스
+      869: [{ label: '밀키바닐라 딸기장식' }, { label: '밀키루비 딸기장식' }, { label: '밀키말차 딸기장식' }, { label: '밀키민트 딸기장식' }, { label: '밀키레몬 딸기장식' }, { label: '밀키솔트 딸기장식' }, { label: '루비믹스 딸기장식' }, { label: '캐러멜믹스 딸기장식' }, { label: '트리플믹스 딸기장식' }, { label: '밀키바닐라 베리장식' }, { label: '밀키루비 베리장식' }, { label: '밀키말차 베리장식' }, { label: '밀키민트 베리장식' }, { label: '밀키레몬 베리장식' }, { label: '밀키솔트 베리장식' }, { label: '루비믹스 베리장식' }, { label: '캐러멜믹스 베리장식' }, { label: '트리플믹스 베리장식' }, { label: '밀키바닐라 러브장식' }, { label: '밀키루비 러브장식' }, { label: '밀키말차 러브장식' }, { label: '밀키민트 러브장식' }, { label: '밀키레몬 러브장식' }, { label: '밀키솔트 러브장식' }, { label: '루비믹스 러브장식' }, { label: '캐러멜믹스 러브장식' }, { label: '트리플믹스 러브장식' }, { label: '밀키바닐라 스타장식' }, { label: '밀키루비 스타장식' }, { label: '밀키말차 스타장식' }, { label: '밀키민트 스타장식' }, { label: '밀키레몬 스타장식' }, { label: '밀키솔트 스타장식' }, { label: '루비믹스 스타장식' }, { label: '캐러멜믹스 스타장식' }, { label: '트리플믹스 스타장식' }, { label: '밀키바닐라 클로버장식' }, { label: '밀키루비 클로버장식' }, { label: '밀키말차 클로버장식' }, { label: '밀키민트 클로버장식' }, { label: '밀키레몬 클로버장식' }, { label: '밀키솔트 클로버장식' }, { label: '루비믹스 클로버장식' }, { label: '캐러멜믹스 클로버장식' }, { label: '트리플믹스 클로버장식' }, { label: '밀키바닐라 꽃장식' }, { label: '밀키루비 꽃장식' }, { label: '밀키말차 꽃장식' }, { label: '밀키민트 꽃장식' }, { label: '밀키레몬 꽃장식' }, { label: '밀키솔트 꽃장식' }, { label: '루비믹스 꽃장식' }, { label: '캐러멜믹스 꽃장식' }, { label: '트리플믹스 꽃장식' }, { label: '밀키바닐라 리본장식' }, { label: '밀키루비 리본장식' }, { label: '밀키말차 리본장식' }, { label: '밀키민트 리본장식' }, { label: '밀키레몬 리본장식' }, { label: '밀키솔트 리본장식' }, { label: '루비믹스 리본장식' }, { label: '캐러멜믹스 리본장식' }, { label: '트리플믹스 리본장식' }], // 마휘핑
+      875: [{ label: '아이스페이스' }, { label: '나이스페이스', formId: 10185 }], // 빙큐보
+      876: [{ label: '수컷의 모습' }, { label: '암컷의 모습', formId: 10186 }], // 에써르
+      877: [{ label: '배부른 모양' }, { label: '배고픈 모양', formId: 10187 }], // 모르페코
+      888: [{ label: '역전의 용사' }, { label: '검왕', formId: 10188 }], // 자시안
+      889: [{ label: '역전의 용사' }, { label: '방패왕', formId: 10189 }], // 자마젠타
+      892: [{ label: '일격의 태세' }, { label: '연격의 태세', formId: 10191 }], // 우라오스
+      893: [{ label: '아빠', formId: 10192 }], // 자루도
+      898: [{ label: '백마 탄 모습', formId: 10193 }, { label: '흑마 탄 모습', formId: 10194 }], // 버드렉스
+      901: [{ label: '붉은 달', formId: 10272 }], // 다투곰
+      902: [{ label: '수컷의 모습' }, { label: '암컷의 모습', formId: 10248 }], // 대쓰여너
+      905: [{ label: '화신폼' }, { label: '영물폼', formId: 10249 }], // 러브로스
+      916: [{ label: '수컷의 모습' }, { label: '암컷의 모습', formId: 10254 }], // 퍼퓨돈
+      925: [{ label: '네 식구의 모습' }, { label: '세 식구의 모습', formId: 10257 }], // 파밀리쥐
+      931: [{ label: '초록깃털' }, { label: '파랑깃털', formId: 10260 }, { label: '노랑깃털', formId: 10261 }, { label: '하양깃털', formId: 10262 }], // 시비꼬
+      964: [{ label: '나이브폼' }, { label: '마이티폼', formId: 10256 }], // 돌핀맨
+      978: [{ label: '젖힌 모습' }, { label: '늘어진 모습', formId: 10258 }, { label: '뻗은 모습', formId: 10259 }], // 싸리용
+      982: [{ label: '두 마디 모습' }, { label: '세 마디 모습', formId: 10255 }], // 노고고치
+      999: [{ label: '상자폼' }, { label: '도보폼', formId: 10263 }], // 모으령
+      1012: [{ label: '가짜배기의 모습' }, { label: '알짜배기의 모습' }], // 차데스
+      1013: [{ label: '범작의 모습' }, { label: '걸작의 모습' }], // 그우린차
+      1017: [{ label: '벽록의가면' }, { label: '우물의가면', formId: 10273 }, { label: '화덕의가면', formId: 10274 }, { label: '주춧돌의가면', formId: 10275 }], // 오거폰
+      1024: [{ label: '노말폼' }, { label: '테라스탈폼', formId: 10276 }, { label: '스텔라폼', formId: 10277 }], // 테라파고스
+    };
+
     /**
      * HTML 이스케이프 (가져온 JSON 등 사용자 데이터를 innerHTML 템플릿에 넣을 때 사용)
      */
@@ -3477,10 +3585,11 @@
      * 2. 거다이맥스 (Gigantamax): 접두사 뒤에 1칸 띄어쓰기 (ex. 피카츄 -> 거다이맥스 피카츄)
      * 3. 이로치 (Shiny): 접두사 뒤에 1칸 띄어쓰기 (ex. 루카리오 -> 이로치 루카리오)
      * 4. 리전폼 (Regional): 해당 지역명 뒤에 1칸 띄어쓰기 (ex. 포니타 -> 가라르 포니타)
-     * 5. 복합 적용 규칙: 이로치가 항상 최우선 접두사 (ex. 이로치 메가루카리오, 이로치 가라르 포니타)
+     * 5. 폼체인지 (Alt Form): 이름 뒤에 괄호로 폼명 표기 (ex. 기라티나(오리진폼), 냐오닉스(암컷의 모습))
+     * 6. 복합 적용 규칙: 이로치가 항상 최우선 접두사 (ex. 이로치 메가루카리오, 이로치 가라르 포니타, 이로치 기라티나(오리진폼))
      */
     function formatSpecialPokemonName(options) {
-      const { baseName, isShiny, formType, megaVariant, regionalForm, pokedexNumber } = options;
+      const { baseName, isShiny, formType, megaVariant, regionalForm, altForm, pokedexNumber } = options;
       if (!baseName) return '';
 
       let name = baseName.trim();
@@ -3501,6 +3610,8 @@
         name = `거다이맥스 ${name}`;
       } else if (formType === 'regional' && regionalForm) {
         name = `${regionalForm} ${name}`;
+      } else if (formType === 'alt' && altForm) {
+        name = `${name}(${altForm})`;
       }
 
       if (isShiny) {
@@ -3508,6 +3619,18 @@
       }
 
       return name;
+    }
+
+    /**
+     * 폼체인지 유틸: 도감 번호에 해당하는 폼 목록 / 라벨 유효성 검사
+     */
+    function getAltFormList(dexNum) {
+      return ALT_FORMS_MAP[Number(dexNum)] || [];
+    }
+
+    function findAltForm(dexNum, label) {
+      if (!label) return null;
+      return getAltFormList(dexNum).find(item => item.label === label) || null;
     }
 
     /**
@@ -3544,7 +3667,13 @@
         if (gmaxId) return gmaxId;
       }
 
-      // 4. Standard
+      // 4. 폼체인지 (오리진폼, 스카이폼, 암컷의 모습 등 — 별도 아트워크가 없으면 기본 도감번호 이미지)
+      if (params.alt_form) {
+        const match = findAltForm(id, params.alt_form);
+        if (match && match.formId) return match.formId;
+      }
+
+      // 5. Standard
       return id;
     }
 
@@ -3592,7 +3721,8 @@
 
     /**
      * 순수 기본 포켓몬 이름 추출
-     * 접두사("이로치 ", "메가", "거다이맥스 ", "알로라 ", "가라르 ", "히스이 ", "팔데아 ")를 제거하여 baseName 확보
+     * 접두사("이로치 ", "메가", "거다이맥스 ", "알로라 ", "가라르 ", "히스이 ", "팔데아 ")와
+     * 폼체인지 괄호 표기("(오리진폼)")를 제거하여 baseName 확보
      */
     function extractBasePokemonName(name) {
       if (!name) return '';
@@ -3600,6 +3730,7 @@
       clean = clean.replace(/^이로치\s+/, '');
       clean = clean.replace(/^거다이맥스\s+/, '');
       clean = clean.replace(/^(?:알로라|가라르|히스이|팔데아)\s+/, '');
+      clean = clean.replace(/\s*\([^)]*\)\s*$/, ''); // 폼체인지 표기: 기라티나(오리진폼) → 기라티나
       if (isMegaFormName(clean)) {
         clean = clean.substring(2);
         clean = clean.replace(/[XY]$/i, '');
@@ -3672,6 +3803,21 @@
         changed = true;
       }
 
+      // 폼체인지 표기 인식: 이름 끝 괄호 폼명(예: 기라티나(오리진폼)) → alt_form 태그 동기화
+      const altNameMatch = formPartName.match(/\(([^)]+)\)\s*$/);
+      if (altNameMatch && !seal.is_mega && !seal.is_gmax && !seal.regional_form) {
+        const matchedAlt = findAltForm(pokedexNum, altNameMatch[1].trim());
+        if (matchedAlt && seal.alt_form !== matchedAlt.label) {
+          seal.alt_form = matchedAlt.label;
+          changed = true;
+        }
+      }
+      // 해당 도감 번호에 없는 폼이거나 다른 특수 폼과 중복된 폼체인지 태그 해제
+      if (seal.alt_form && (!findAltForm(pokedexNum, seal.alt_form) || seal.is_mega || seal.is_gmax || seal.regional_form)) {
+        seal.alt_form = null;
+        changed = true;
+      }
+
       // 2. 순수 기본 이름(baseName) 추출
       let baseName = extractBasePokemonName(rawName);
       if (!baseName) {
@@ -3713,6 +3859,9 @@
       } else if (seal.regional_form) {
         // 리전폼 체크 시: ${seal.regional_form} ${baseName} 적용 (1칸 공백).
         formName = `${seal.regional_form} ${baseName}`;
+      } else if (seal.alt_form) {
+        // 폼체인지 체크 시: ${baseName}(${폼명}) 적용 (괄호 표기).
+        formName = `${baseName}(${seal.alt_form})`;
       }
 
       // 이로치 체크 시: 완성된 이름 맨 앞에 이로치 추가 (1칸 공백).
@@ -3721,7 +3870,7 @@
         expectedName = `이로치 ${formName}`;
       }
 
-      // 4. 고화질 이미지 URL(image_url) 재매핑 규칙 (우선순위: 메가 > 리전폼 > 거다이맥스)
+      // 4. 고화질 이미지 URL(image_url) 재매핑 규칙 (우선순위: 메가 > 리전폼 > 거다이맥스 > 폼체인지)
       let targetFormId = pokedexNum;
       if (seal.is_mega) {
         targetFormId = getTargetPokemonFormId({ pokedex_number: pokedexNum, is_mega: true, mega_variant: seal.mega_variant });
@@ -3729,6 +3878,8 @@
         targetFormId = getTargetPokemonFormId({ pokedex_number: pokedexNum, regional_form: seal.regional_form });
       } else if (seal.is_gmax) {
         targetFormId = getTargetPokemonFormId({ pokedex_number: pokedexNum, is_gmax: true });
+      } else if (seal.alt_form) {
+        targetFormId = getTargetPokemonFormId({ pokedex_number: pokedexNum, alt_form: seal.alt_form });
       }
 
       // 이로치 여부에 따른 PokeAPI 고화질 공식 일러스트 URL 결정
@@ -3768,7 +3919,8 @@
         is_mega: seal.is_mega,
         mega_variant: seal.mega_variant,
         is_gmax: seal.is_gmax,
-        regional_form: seal.regional_form
+        regional_form: seal.regional_form,
+        alt_form: seal.alt_form
       });
     }
 
@@ -3818,7 +3970,7 @@
 
       // 4. Regional Form Badge
       let reg = seal.regional_form;
-      if (!reg && seal.pokemon_name) {
+      if (!reg && !seal.alt_form && seal.pokemon_name) {
         if (seal.pokemon_name.includes('알로라')) reg = '알로라';
         else if (seal.pokemon_name.includes('가라르')) reg = '가라르';
         else if (seal.pokemon_name.includes('히스이')) reg = '히스이';
@@ -3835,6 +3987,15 @@
         badges.push(`
           <span class="inline-flex flex-row items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${styleClass} shadow-2xs select-none whitespace-nowrap shrink-0">
             <span class="shrink-0">🏝️</span><span class="whitespace-nowrap">${escapeHtml(reg)}</span>
+          </span>
+        `);
+      }
+
+      // 5. Alt Form (폼체인지) Badge
+      if (seal.alt_form) {
+        badges.push(`
+          <span class="inline-flex flex-row items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-300 shadow-2xs select-none whitespace-nowrap shrink-0">
+            <span class="text-[8px] shrink-0">🔀</span><span class="whitespace-nowrap">${escapeHtml(seal.alt_form)}</span>
           </span>
         `);
       }
@@ -5866,9 +6027,13 @@
 
     // --- 11. Modal Handlers & Form Logic (v3.2: Special Forms System) ---
     let currentSelectedRegionalForm = null;
+    let currentSelectedAltForm = null;
 
     function resetSpecialFormsModalState() {
       currentSelectedRegionalForm = null;
+      currentSelectedAltForm = null;
+      const altOptionsBoxReset = document.getElementById('form-alt-options-box');
+      if (altOptionsBoxReset) altOptionsBoxReset.classList.add('hidden');
       const noneRadio = document.getElementById('form-type-none');
       if (noneRadio) noneRadio.checked = true;
       const shinyCheckbox = document.getElementById('form-is-shiny');
@@ -5881,7 +6046,7 @@
       if (ineligHint) ineligHint.classList.add('hidden');
 
       // Reset Mega / Gmax / Regional labels and radios to active state
-      ['form-type-mega', 'form-type-gmax', 'form-type-regional'].forEach(id => {
+      ['form-type-mega', 'form-type-gmax', 'form-type-regional', 'form-type-alt'].forEach(id => {
         const radio = document.getElementById(id);
         if (radio) radio.disabled = false;
         const label = document.getElementById(id + '-label');
@@ -6029,6 +6194,91 @@
         currentSelectedRegionalForm = null;
       }
 
+      // 3-2. Alt Form (폼체인지) Availability based on ALT_FORMS_MAP
+      const altList = getAltFormList(num);
+      const altRadio = document.getElementById('form-type-alt');
+      const altLabel = document.getElementById('form-type-alt-label');
+      const altText = document.getElementById('form-type-alt-text');
+      const altBox = document.getElementById('form-alt-options-box');
+      const altChipsContainer = document.getElementById('form-alt-chips-container');
+      if (altList.length > 0) {
+        if (altRadio) altRadio.disabled = false;
+        if (altLabel) {
+          altLabel.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+          altLabel.classList.add('cursor-pointer');
+          altLabel.title = `지원 폼: ${altList.slice(0, 6).map(r => r.label).join(', ')}${altList.length > 6 ? ` 외 ${altList.length - 6}개` : ''}`;
+        }
+        if (altText) altText.textContent = `폼체인지 (${altList.length})`;
+
+        // 이전 선택이 유효하지 않으면 첫 번째 폼으로 지정
+        if (!currentSelectedAltForm || !altList.some(r => r.label === currentSelectedAltForm)) {
+          currentSelectedAltForm = altList[0].label;
+        }
+
+        // 도감 번호·선택값이 그대로면 다시 그리지 않음 (입력창 blur → change 이벤트가 칩을 재생성해 첫 클릭이 유실되는 것을 방지)
+        const altSig = `${num}|${currentSelectedAltForm}`;
+        if (altChipsContainer && altChipsContainer.dataset.sig !== altSig) {
+          altChipsContainer.dataset.sig = altSig;
+          if (altList.length <= 8) {
+            altChipsContainer.innerHTML = altList.map(af => {
+              const isSelected = currentSelectedAltForm === af.label;
+              return `
+                <button
+                  type="button"
+                  data-alt="${escapeHtml(af.label)}"
+                  class="alt-chip-btn px-2.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-indigo-700 text-white shadow-xs ring-1 ring-indigo-500'
+                      : 'bg-white text-indigo-800 border border-indigo-300 hover:bg-indigo-100'
+                  }"
+                >
+                  ${escapeHtml(af.label)}
+                </button>
+              `;
+            }).join('');
+            altChipsContainer.querySelectorAll('.alt-chip-btn').forEach(btn => {
+              btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentSelectedAltForm = btn.getAttribute('data-alt');
+                const altRadioEl = document.getElementById('form-type-alt');
+                if (altRadioEl && !altRadioEl.checked) altRadioEl.checked = true;
+                updateSpecialFormsUIForPokemon(num, { preserveForm: true, updateName: true });
+              });
+            });
+          } else {
+            // 폼이 많은 포켓몬(안농·비비용·마휘핑 등)은 드롭다운으로 표시
+            altChipsContainer.innerHTML = `
+              <select id="form-alt-select" class="w-full max-w-[220px] text-[11px] font-bold py-1 px-1.5 bg-white text-indigo-900 border border-indigo-300 rounded focus:ring-1 focus:ring-indigo-500">
+                ${altList.map(af => `<option value="${escapeHtml(af.label)}"${af.label === currentSelectedAltForm ? ' selected' : ''}>${escapeHtml(af.label)}</option>`).join('')}
+              </select>
+            `;
+            const altSelectEl = document.getElementById('form-alt-select');
+            if (altSelectEl) {
+              altSelectEl.addEventListener('change', () => {
+                currentSelectedAltForm = altSelectEl.value;
+                updateSpecialFormsUIForPokemon(num, { preserveForm: true, updateName: true });
+              });
+            }
+          }
+        }
+      } else {
+        if (altRadio) {
+          altRadio.disabled = true;
+          if (altRadio.checked && noneRadio) {
+            noneRadio.checked = true;
+          }
+        }
+        if (altLabel) {
+          altLabel.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+          altLabel.classList.remove('cursor-pointer');
+          altLabel.title = '이 포켓몬은 폼체인지가 존재하지 않습니다.';
+        }
+        if (altText) altText.textContent = '폼체인지';
+        if (altBox) altBox.classList.add('hidden');
+        if (altChipsContainer) altChipsContainer.dataset.sig = '';
+        currentSelectedAltForm = null;
+      }
+
       // 4. Active Form Type
       const formType = document.querySelector('input[name="form_type"]:checked')?.value || 'none';
 
@@ -6050,6 +6300,13 @@
         if (regionalBox) regionalBox.classList.add('hidden');
       }
 
+      // 6-2. Alt form options box toggle
+      if (formType === 'alt' && altList.length > 0) {
+        if (altBox) altBox.classList.remove('hidden');
+      } else {
+        if (altBox) altBox.classList.add('hidden');
+      }
+
       // 7. Active Summary Label
       const isShiny = document.getElementById('form-is-shiny')?.checked || false;
       const summaryEl = document.getElementById('form-form-active-summary');
@@ -6066,6 +6323,8 @@
           parts.push('거다이맥스');
         } else if (formType === 'regional' && currentSelectedRegionalForm) {
           parts.push(`${currentSelectedRegionalForm} 폼`);
+        } else if (formType === 'alt' && currentSelectedAltForm) {
+          parts.push(`🔀 ${currentSelectedAltForm}`);
         }
         summaryEl.textContent = parts.length > 0 ? parts.join(' · ') : '기본 폼';
       }
@@ -6090,6 +6349,7 @@
       const rawMegaVariant = document.querySelector('input[name="mega_variant"]:checked')?.value || 'mega';
       const validMegaVariant = formType === 'mega' ? getValidMegaVariant(num, rawMegaVariant) : null;
       const regional = formType === 'regional' ? currentSelectedRegionalForm : null;
+      const altForm = formType === 'alt' ? currentSelectedAltForm : null;
 
       const formattedName = formatSpecialPokemonName({
         baseName,
@@ -6097,6 +6357,7 @@
         formType,
         megaVariant: validMegaVariant,
         regionalForm: regional,
+        altForm,
         pokedexNumber: num
       });
 
@@ -6112,7 +6373,8 @@
           is_mega: formType === 'mega',
           mega_variant: validMegaVariant,
           is_gmax: formType === 'gmax',
-          regional_form: regional
+          regional_form: regional,
+          alt_form: altForm
         });
 
         const targetId = getTargetPokemonFormId({
@@ -6120,7 +6382,8 @@
           is_mega: formType === 'mega',
           mega_variant: validMegaVariant,
           is_gmax: formType === 'gmax',
-          regional_form: regional
+          regional_form: regional,
+          alt_form: altForm
         });
 
         imgEl.onerror = function() {
@@ -6158,6 +6421,8 @@
 
         // Restore Special Form selection state
         currentSelectedRegionalForm = sealToEdit.regional_form || null;
+        currentSelectedAltForm = sealToEdit.alt_form || null;
+        const formTypeAlt = document.getElementById('form-type-alt');
         const formTypeNone = document.getElementById('form-type-none');
         const formTypeMega = document.getElementById('form-type-mega');
         const formTypeGmax = document.getElementById('form-type-gmax');
@@ -6180,6 +6445,8 @@
           }
         } else if (sealToEdit.is_gmax || (sealToEdit.pokemon_name && sealToEdit.pokemon_name.includes('거다이맥스'))) {
           if (formTypeGmax) formTypeGmax.checked = true;
+        } else if (sealToEdit.alt_form && findAltForm(sealToEdit.pokedex_number, sealToEdit.alt_form)) {
+          if (formTypeAlt) formTypeAlt.checked = true;
         } else if (sealToEdit.regional_form || (sealToEdit.pokemon_name && /(알로라|가라르|히스이|팔데아)/.test(sealToEdit.pokemon_name))) {
           if (formTypeRegional) formTypeRegional.checked = true;
           if (!currentSelectedRegionalForm && sealToEdit.pokemon_name) {
@@ -6491,6 +6758,7 @@
           is_gmax: !!item.is_gmax,
           is_shiny: !!item.is_shiny,
           regional_form: ['알로라', '가라르', '히스이', '팔데아'].includes(item.regional_form) ? item.regional_form : null,
+          alt_form: findAltForm(num, item.alt_form) ? item.alt_form : null,
           image_url: null, // 이미지 URL은 normalizeSealData가 폼 정보로 다시 계산
           created_at: (item.created_at && !isNaN(new Date(item.created_at))) ? item.created_at : new Date().toISOString()
         };
@@ -6601,7 +6869,7 @@
       const before = habitatList.length;
       habitatList = habitatList.filter(h => sealDatabase.some(s => s.id === h.sealId));
       let changed = habitatList.length !== before;
-      const syncKeys = ['pokedex_number', 'pokemon_name', 'is_mega', 'mega_variant', 'is_gmax', 'is_shiny', 'regional_form', 'image_url'];
+      const syncKeys = ['pokedex_number', 'pokemon_name', 'is_mega', 'mega_variant', 'is_gmax', 'is_shiny', 'regional_form', 'alt_form', 'image_url'];
       habitatList.forEach(h => {
         const seal = sealDatabase.find(s => s.id === h.sealId);
         syncKeys.forEach(key => {
@@ -6711,6 +6979,7 @@
           is_gmax: seal.is_gmax,
           is_shiny: seal.is_shiny,
           regional_form: seal.regional_form,
+          alt_form: seal.alt_form,
           image_url: seal.image_url,
           affection: 30,
           fullness: 2,
@@ -8764,6 +9033,7 @@
           is_gmax: seal.is_gmax,
           is_shiny: seal.is_shiny,
           regional_form: seal.regional_form,
+          alt_form: seal.alt_form,
           image_url: seal.image_url,
           affection: 40 + (i * 10),
           fullness: 2 + (i % 2),
@@ -9242,13 +9512,15 @@
         const megaVariant = isMega ? getValidMegaVariant(pokedexNumber, rawMegaVariant) : null;
         const isGmax = formType === 'gmax';
         const regionalForm = (formType === 'regional' && currentSelectedRegionalForm) ? currentSelectedRegionalForm : null;
+        const altForm = (formType === 'alt' && currentSelectedAltForm && findAltForm(pokedexNumber, currentSelectedAltForm)) ? currentSelectedAltForm : null;
         const specialImageUrl = getSealSpecialImageUrl({
           pokedex_number: pokedexNumber,
           is_shiny: isShiny,
           is_mega: isMega,
           mega_variant: megaVariant,
           is_gmax: isGmax,
-          regional_form: regionalForm
+          regional_form: regionalForm,
+          alt_form: altForm
         });
 
         const primaryType = document.getElementById('form-primary-type') ? document.getElementById('form-primary-type').value : '노말';
@@ -9295,6 +9567,7 @@
               is_gmax: isGmax,
               is_shiny: isShiny,
               regional_form: regionalForm,
+              alt_form: altForm,
               image_url: specialImageUrl
             };
             showToast(`${pokemonName} 띠부씰 정보가 수정되었습니다.`, 'success');
@@ -9317,6 +9590,7 @@
             is_gmax: isGmax,
             is_shiny: isShiny,
             regional_form: regionalForm,
+            alt_form: altForm,
             image_url: specialImageUrl,
             created_at: new Date().toISOString()
           };
