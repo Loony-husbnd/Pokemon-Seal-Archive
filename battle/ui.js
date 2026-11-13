@@ -38,7 +38,8 @@
 
   // ───────────── 공통 도우미 ─────────────
   const $ = (sel, el) => (el || root).querySelector(sel);
-  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const escFallback = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc = v => (typeof escapeHtml === 'function' ? escapeHtml(v) : escFallback(v));   // index.html 의 escapeHtml 재사용
   const D = () => window.BATTLE_DATA;
   const fmt = n => Number(n).toLocaleString('ko-KR');
   const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t || 'info'); };
@@ -95,7 +96,12 @@
     return D().pokemon[id] ? id : null;
   }
 
-  function candidates() {
+  let candCache = null;
+  const invalidateCandidates = () => { candCache = null; };
+  /** 같은 렌더 사이클 안에서는 한 번만 계산한다 (탭 진입/컬렉션 변경 시 무효화) */
+  const candidates = () => candCache || (candCache = buildCandidates());
+
+  function buildCandidates() {
     const seals = typeof sealDatabase !== 'undefined' && Array.isArray(sealDatabase) ? sealDatabase : [];
     const out = [];
     for (const seal of seals) {
@@ -276,16 +282,19 @@
     save(); renderParty(); renderPicker();
   }
 
-  /** 종족값 합계가 상한 이하에서 가장 큰 서로 다른 3마리 */
+  /** 종족값 합계가 상한 이하에서 가장 큰 서로 다른 3마리 (전체 후보 대상 투 포인터 탐색) */
   function autoParty() {
     const best = new Map();
     for (const c of candidates()) { const k = c.sp; if (!best.has(k) || c.p.bst > best.get(k).p.bst) best.set(k, c); }
-    const pool = [...best.values()].sort((a, b) => b.p.bst - a.p.bst).slice(0, 60);
-    if (pool.length < 3) return toast('서로 다른 포켓몬 띠부씰이 3종 이상 필요해요.', 'warning');
+    const arr = [...best.values()].sort((a, b) => a.p.bst - b.p.bst);
+    if (arr.length < 3) return toast('서로 다른 포켓몬 띠부씰이 3종 이상 필요해요.', 'warning');
     let top = null;
-    for (let i = 0; i < pool.length; i++) for (let j = i + 1; j < pool.length; j++) for (let k = j + 1; k < pool.length; k++) {
-      const t = pool[i].p.bst + pool[j].p.bst + pool[k].p.bst;
-      if (t <= PRT.cap && (!top || t > top.t)) top = { t, set: [pool[i], pool[j], pool[k]] };
+    for (let i = 0; i < arr.length - 2; i++) {
+      let j = i + 1, k = arr.length - 1;
+      while (j < k) {
+        const t = arr[i].p.bst + arr[j].p.bst + arr[k].p.bst;
+        if (t <= PRT.cap) { if (!top || t > top.t) top = { t, set: [arr[i], arr[j], arr[k]] }; j++; } else k--;
+      }
     }
     if (!top) return toast(`종족값 합계 ${PRT.cap} 이하로 만들 수 있는 조합이 없어요.`, 'warning');
     S.party = top.set.map(c => c.seal.id);
@@ -357,7 +366,7 @@
     renderBattleShell();
     renderSide(0, true); renderSide(1, true);
     const intro = S.battle.start();
-    playEvents(intro).then(() => beginTurn());
+    playEvents(intro).then(() => beginTurn()).catch(recover);
   }
 
   function renderBattleShell() {
@@ -508,7 +517,7 @@
     const U = S.U;
     const mon = si => U.side[si].party[U.side[si].active];
     switch (ev.t) {
-      case 'turn': U.turn = ev.turn; $('#bt-turn').textContent = `${ev.turn}턴`; S.log.push({ turn: ev.turn, text: ev.text }); break;
+      case 'turn': U.turn = ev.turn; $('#bt-turn').textContent = `${ev.turn}턴`; break;
       case 'switch': {
         const side = U.side[ev.side];
         if (!ev.initial) { const old = side.party[side.active]; old.stages = {}; old.confusion = false; }
@@ -597,18 +606,25 @@
     }
   }
 
-  async function playEvents(events) {
-    for (const ev of events) await handleEvent(ev);
-    // 안전장치: 재생이 끝나면 엔진 상태와 화면을 한 번 맞춘다
-    if (S.battle) {
-      const snap = S.battle.snapshot();
-      snap.sides.forEach((s, si) => s.party.forEach((m, i) => {
+  /** 화면용 미러(S.U)를 엔진의 실제 상태에 맞춘다 */
+  function syncFromEngine(withSprite) {
+    if (!S.battle || !S.U) return;
+    const snap = S.battle.snapshot();
+    snap.sides.forEach((side, si) => {
+      S.U.side[si].active = side.active;
+      side.party.forEach((m, i) => {
         const u = S.U.side[si].party[i];
         u.hp = m.hp; u.fainted = m.fainted; u.status = m.status; u.confusion = m.confusion > 0;
-      }));
-      renderSide(0, false); renderSide(1, false);
-      updateHp(0, false); updateHp(1, false);
-    }
+        if (m.fainted) u.stages = {};
+      });
+    });
+    renderSide(0, withSprite); renderSide(1, withSprite);
+    updateHp(0, false); updateHp(1, false);
+  }
+
+  async function playEvents(events) {
+    for (const ev of events) await handleEvent(ev);
+    syncFromEngine(false);                     // 안전장치: 재생이 끝나면 엔진 상태와 화면을 한 번 맞춘다
     S.skip = false;
   }
 
@@ -652,18 +668,41 @@
     if (host) host.innerHTML = '<div class="text-center text-xs text-slate-400 font-bold py-4">…</div>';
   }
 
+  /** 재생·진행 중 예외가 나도 화면이 영구히 잠기지 않도록 상태를 되돌린다 */
+  function recover(err) {
+    console.error('[battle]', err);
+    S.skip = false;
+    const B = S.battle;
+    if (!B) { S.busy = false; return; }
+    try { syncFromEngine(true); } catch (e) { /* 화면이 이미 사라졌다면 무시 */ }
+    if (B.phase === 'ended') { S.busy = false; return finishBattle(); }
+    if (B.phase === 'switch' && !S.recovering) {
+      S.recovering = true;
+      return afterTurn().catch(recover).finally(() => { S.recovering = false; });
+    }
+    S.busy = false;
+    toast('화면 처리 중 문제가 생겼어요.', 'error');
+    if (B.phase === 'move') renderControls(); else renderSelect();
+  }
+
   async function submit(action) {
     if (S.busy || !S.battle) return;
     S.busy = true;
     lockControls();
     const B = S.battle;
-    const oppAction = brain.chooseAction(B, 1, S.level);
-    delete oppAction.reason;
     let events;
-    try { events = B.playTurn(action, oppAction); }
-    catch (e) { console.error(e); S.busy = false; renderControls(); return toast('행동을 처리하지 못했어요.', 'error'); }
-    await playEvents(events);
-    await afterTurn();
+    try {
+      const oppAction = brain.chooseAction(B, 1, S.level);
+      delete oppAction.reason;
+      events = B.playTurn(action, oppAction);
+    } catch (e) {
+      console.error(e); S.busy = false; renderControls();
+      return toast('행동을 처리하지 못했어요.', 'error');
+    }
+    try {
+      await playEvents(events);
+      await afterTurn();
+    } catch (e) { recover(e); }
   }
 
   async function afterTurn() {
@@ -801,13 +840,18 @@
   }
 
   function onInput(e) {
-    if (e.target.id === 'bt-q') { S.q = e.target.value; renderPicker(); }
+    if (e.target.id === 'bt-q') { S.q = e.target.value; clearTimeout(S.qTimer); S.qTimer = setTimeout(renderPicker, 120); }
   }
   function onChange(e) {
     if (e.target.id === 'bt-sort') { S.sort = e.target.value; renderPicker(); }
   }
   function onKey(e) {
-    if (!mounted || S.screen !== 'battle' || S.busy || !S.battle || root.classList.contains('hidden')) return;
+    if (!mounted || S.screen !== 'battle' || S.busy || S.finished || !S.battle || root.classList.contains('hidden')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;      // 입력 중에는 단축키 무시
+    // 앱 모달이 실제로 화면에 열려 있으면 무시 (숨겨진 모달 안쪽 요소는 렌더되지 않으므로 제외된다)
+    if ([...document.querySelectorAll('[id^="modal-"]')].some(m => !m.classList.contains('hidden') && m.getClientRects().length > 0)) return;
     if (/^[1-4]$/.test(e.key)) {
       const btn = $(`[data-act="move"][data-i="${Number(e.key) - 1}"]`);
       if (btn && !btn.disabled) btn.click();
@@ -835,12 +879,16 @@
 
   function show() {
     if (!mounted && !mount()) return;
+    invalidateCandidates();
     if (S.screen === 'battle' && S.battle && !S.finished) return;    // 진행 중인 배틀은 그대로 둔다
     if (S.screen === 'preview' && S.opp.length === 3 && partyEntries().length === 3) return renderPreview();
     renderSelect();
   }
   function hide() { /* 진행 상태 유지 */ }
-  function refresh() { if (mounted && S.screen === 'select') { renderParty(); renderPicker(); } }
+  function refresh() {
+    invalidateCandidates();
+    if (mounted && S.screen === 'select') { renderParty(); renderPicker(); }
+  }
 
   window.BattleUI = { show, hide, refresh, _state: S };
 })();

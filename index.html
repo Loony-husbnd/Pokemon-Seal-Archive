@@ -6805,7 +6805,7 @@
     // --- 13. Poke-Amie (띠부파를레) Habitat System Core Logic ---
     const HABITAT_STORAGE_KEY = 'pokemon_seal_habitat_v2';
     let habitatList = [];
-    let currentNavTab = 'archive'; // 'archive' | 'amie'
+    let currentNavTab = 'archive'; // 'archive' | 'amie' | 'battle'
     let amieTimeMode = 'auto'; // 'auto' | 'day' | 'sunset' | 'night'
     let activePettingSealIndex = 0;
     let habitatWanderTimer = null;
@@ -9217,6 +9217,9 @@
       if (currentNavTab === 'amie') {
         renderTerrarium();
         renderHabitatRoster();
+      }
+      if (currentNavTab === 'battle' && window.BattleUI) {
+        BattleUI.refresh();
       }
       if (window.lucide) {
         lucide.createIcons();

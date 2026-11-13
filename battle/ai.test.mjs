@@ -145,7 +145,9 @@ test('파티 검증: 3마리·종 중복 없음·종족값 상한', () => {
   assert.match(P.validate([25, 25, 7]).errors.join(), /같은 종류/);
   assert.match(P.validate([25, 7]).errors.join(), /3마리/);
   assert.match(P.validate([150, 249, 483]).errors.join(), /상한/);
-  assert.equal(P.validate([6, 10034, 7]).ok === false || true, true);
+  const sameSpecies = P.validate([6, 10034, 7]);                        // 리자몽 + 메가리자몽X = 같은 종
+  assert.equal(sameSpecies.ok, false);
+  assert.match(sameSpecies.errors.join(), /같은 종류/);
 });
 
 test('표시 이름: 메가/리전폼', () => {
