@@ -640,6 +640,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="battle/battle.css">
 </head>
 <body class="bg-slate-100/70 text-slate-800 antialiased min-h-screen flex flex-col font-sans text-xs">
 
@@ -670,6 +671,10 @@
             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-pink-400"></i>
             <span>띠부파를레</span>
             <span id="nav-habitat-count-badge" class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30 font-mono">0/6</span>
+          </button>
+          <button id="nav-tab-battle" type="button" class="nav-tab-btn px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all text-slate-400 hover:text-indigo-300 hover:bg-slate-900 cursor-pointer">
+            <i data-lucide="swords" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>배틀</span>
           </button>
         </nav>
 
@@ -1518,6 +1523,9 @@
     </div><!-- End of #view-archive -->
 
     <!-- ==================== TAB 2: POKE-AMIE HABITAT (띠부파를레) ==================== -->
+    <!-- 배틀 (battle/ui.js 가 내용을 그린다) -->
+    <div id="view-battle" class="hidden"></div>
+
     <div id="view-poke-amie" class="hidden space-y-4">
 
       <!-- Habitat Header Bar (Floating Frosted Glass) -->
@@ -7003,31 +7011,40 @@
     // --- Tab Navigation Switcher ---
     function switchNavTab(tab) {
       currentNavTab = tab;
-      const viewArchive = document.getElementById('view-archive');
-      const viewPokeAmie = document.getElementById('view-poke-amie');
-      const tabArchiveBtn = document.getElementById('nav-tab-archive');
-      const tabAmieBtn = document.getElementById('nav-tab-amie');
+      const TAB_VIEWS = { archive: 'view-archive', amie: 'view-poke-amie', battle: 'view-battle' };
+      const TAB_BTNS = { archive: 'nav-tab-archive', amie: 'nav-tab-amie', battle: 'nav-tab-battle' };
+      const base = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ';
+      const ACTIVE = {
+        archive: base + 'bg-slate-800 text-white shadow-xs',
+        amie: base + 'bg-pink-600 text-white shadow-sm ring-1 ring-pink-400',
+        battle: base + 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400'
+      };
+      const IDLE = {
+        archive: base + 'text-slate-400 hover:text-red-300 hover:bg-slate-900',
+        amie: base + 'text-slate-400 hover:text-pink-300 hover:bg-slate-900',
+        battle: base + 'text-slate-400 hover:text-indigo-300 hover:bg-slate-900'
+      };
+
+      for (const key of Object.keys(TAB_VIEWS)) {
+        const view = document.getElementById(TAB_VIEWS[key]);
+        if (view) view.classList.toggle('hidden', key !== tab);
+        const btn = document.getElementById(TAB_BTNS[key]);
+        if (btn) btn.className = key === tab ? ACTIVE[key] : IDLE[key];
+      }
 
       if (tab === 'amie') {
-        viewArchive.classList.add('hidden');
-        viewPokeAmie.classList.remove('hidden');
-
-        tabAmieBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap bg-pink-600 text-white shadow-sm ring-1 ring-pink-400';
-        tabArchiveBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap text-slate-400 hover:text-red-300 hover:bg-slate-900';
-
         applyTerrariumDayNight();
         renderTerrarium();
         renderHabitatRoster();
         startTerrariumWanderTimer();
       } else {
-        viewArchive.classList.remove('hidden');
-        viewPokeAmie.classList.add('hidden');
-
-        tabArchiveBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap bg-slate-800 text-white shadow-xs';
-        tabAmieBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap text-slate-400 hover:text-pink-300 hover:bg-slate-900';
-
         stopTerrariumWanderTimer();
-        renderCollection();
+        if (tab === 'battle') {
+          if (window.BattleUI) BattleUI.show();
+        } else {
+          if (window.BattleUI) BattleUI.hide();
+          renderCollection();
+        }
       }
 
       if (window.lucide) lucide.createIcons();
@@ -9849,6 +9866,9 @@
       const tabAmie = document.getElementById('nav-tab-amie');
       if (tabAmie) tabAmie.addEventListener('click', () => switchNavTab('amie'));
 
+      const tabBattle = document.getElementById('nav-tab-battle');
+      if (tabBattle) tabBattle.addEventListener('click', () => switchNavTab('battle'));
+
       // Day/Sunset/Night time toggles
       const btnTimeAuto = document.getElementById('btn-amie-time-auto');
       if (btnTimeAuto) btnTimeAuto.addEventListener('click', () => { amieTimeMode = 'auto'; applyTerrariumDayNight(); });
@@ -10502,5 +10522,12 @@
       });
     });
   </script>
+
+  <!-- 배틀: 데이터 → 엔진 → AI → 파티 규칙 → UI (모두 file:// 에서도 동작하는 일반 스크립트) -->
+  <script src="battle/data/battle-data.js"></script>
+  <script src="battle/engine.js"></script>
+  <script src="battle/ai.js"></script>
+  <script src="battle/party.js"></script>
+  <script src="battle/ui.js"></script>
 </body>
 </html>
