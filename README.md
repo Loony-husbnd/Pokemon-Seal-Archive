@@ -13,10 +13,14 @@
   2. `npm run dev` → http://localhost:3000
 - **배포용 빌드:** `npm run build` → `dist/` 폴더를 정적 호스팅에 올리면 됩니다.
 
-## 배틀 데이터 (개발 중)
+## 배틀 (개발 중)
 
-3:3 배틀용 데이터(종족값, Lv100 능력치, 포켓몬별 대표 공격기 4개)는 `battle/data/battle-data.js`에 들어 있으며 생성 스크립트로 다시 만들 수 있습니다.
+3:3 턴제 배틀 기능을 단계적으로 만드는 중입니다. 현재는 데이터(1단계)와 엔진(2단계)까지 구현되어 있고, 화면은 아직 연결되지 않았습니다.
 
-- `node tools/build-battle-data.mjs` — PokeAPI/Showdown 데이터를 내려받아 생성 (`--sample`, `--show 6,25`, `--explain=25` 옵션으로 결과 확인)
-- `node tools/validate-battle-data.mjs` — 생성된 데이터 무결성 검증
-- 능력치 가정: Lv100 · 개체값 31 · 노력치 0 · 성격 보정 없음
+- **데이터** `battle/data/battle-data.js` — 종족값, Lv100 능력치(개체값 31 · 노력치 0 · 성격 보정 없음), 포켓몬별 대표 공격기 4개, 상성표
+  - `npm run battle:data` 로 PokeAPI/Showdown 데이터를 내려받아 다시 생성 (`--sample`, `--show 6,25`, `--explain=25` 옵션)
+  - `npm run battle:validate` 로 무결성 검증
+- **엔진** `battle/engine.js` — 화면과 무관한 순수 로직 (`BattleEngine.createBattle(...)`). 사용법은 파일 상단 주석 참고
+  - 데미지(Gen 9, Lv100), 상성, 급소, 명중, 다단 히트, 상태이상, 혼란, 능력 단계, 흡수/반동, 교체, 발버둥
+  - 특성·도구·날씨·변화기는 미지원
+  - `npm run test:battle` 로 테스트 실행, `npm run sim:battle` 로 대량 시뮬레이션(대칭성·밸런스 통계)
