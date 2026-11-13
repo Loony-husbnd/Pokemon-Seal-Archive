@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "battle:data": "node tools/build-battle-data.mjs",
+    "battle:validate": "node tools/validate-battle-data.mjs",
+    "test:battle": "node --test battle/engine.test.mjs battle/ai.test.mjs",
+    "sim:battle": "node tools/simulate-battles.mjs",
+    "sim:ai": "node tools/simulate-ai.mjs"
   },
   "devDependencies": {
     "vite": "^6.2.3"
