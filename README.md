@@ -12,3 +12,11 @@
   1. `npm install`
   2. `npm run dev` → http://localhost:3000
 - **배포용 빌드:** `npm run build` → `dist/` 폴더를 정적 호스팅에 올리면 됩니다.
+
+## 배틀 데이터 (개발 중)
+
+3:3 배틀용 데이터(종족값, Lv100 능력치, 포켓몬별 대표 공격기 4개)는 `battle/data/battle-data.js`에 들어 있으며 생성 스크립트로 다시 만들 수 있습니다.
+
+- `node tools/build-battle-data.mjs` — PokeAPI/Showdown 데이터를 내려받아 생성 (`--sample`, `--show 6,25`, `--explain=25` 옵션으로 결과 확인)
+- `node tools/validate-battle-data.mjs` — 생성된 데이터 무결성 검증
+- 능력치 가정: Lv100 · 개체값 31 · 노력치 0 · 성격 보정 없음
