@@ -11,8 +11,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 export function loadBattle() {
   const sandbox = {};
   vm.createContext(sandbox);
-  for (const f of ['battle/data/battle-data.js', 'battle/engine.js']) {
+  for (const f of ['battle/data/battle-data.js', 'battle/engine.js', 'battle/ai.js', 'battle/party.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
   }
-  return { data: sandbox.BATTLE_DATA, engine: sandbox.BattleEngine, createEngine: sandbox.createBattleEngine };
+  return {
+    data: sandbox.BATTLE_DATA, engine: sandbox.BattleEngine, createEngine: sandbox.createBattleEngine,
+    ai: sandbox.BattleAI, party: sandbox.BattleParty,
+  };
 }
