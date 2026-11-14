@@ -144,7 +144,7 @@ test('파티 검증: 3마리·종 중복 없음·종족값 상한', () => {
   assert.equal(P.validate([25, 133, 7]).ok, true);
   assert.match(P.validate([25, 25, 7]).errors.join(), /같은 종류/);
   assert.match(P.validate([25, 7]).errors.join(), /3마리/);
-  assert.match(P.validate([150, 249, 483]).errors.join(), /상한/);
+  assert.equal(P.validate([150, 249, 483]).ok, true, '종족값 합계 상한은 없다');
   const sameSpecies = P.validate([6, 10034, 7]);                        // 리자몽 + 메가리자몽X = 같은 종
   assert.equal(sameSpecies.ok, false);
   assert.match(sameSpecies.errors.join(), /같은 종류/);
@@ -157,20 +157,42 @@ test('표시 이름: 메가/리전폼', () => {
   assert.equal(P.displayName(10091), '알로라 꼬렛');
 });
 
-test('상대 파티: 난이도별 종족값 합계 목표·제약 충족', () => {
+test('상대 파티: 난이도별 종족값 합계 목표·제약 충족 (상한 없이 내 팀에 맞춘다)', () => {
   const player = [6, 9, 3];                                   // 합계 1589
   const base = P.total(player);
   const rnd = E.mulberry32(11);
   for (let i = 0; i < 80; i++) {
-    for (const [level, lo, hi] of [['easy', base - 120 - 60, base - 120 + 60], ['normal', P.cap - 60, P.cap], ['hard', P.cap + 90 - 60, P.cap + 90]]) {
+    for (const [level, off] of [['easy', -120], ['normal', 0], ['hard', 90]]) {
       const ids = P.generateOpponent({ playerIds: player, level, rng: rnd });
       const total = P.total(ids);
-      assert.ok(total >= lo - 10 && total <= hi + 10, `${level}: ${total} (기대 ${lo}~${hi})`);
+      assert.ok(Math.abs(total - (base + off)) <= 200, `${level}: ${total} (기대 ${base + off} 근처)`);
       assert.equal(new Set(ids.map(id => data.pokemon[id].sp)).size, 3, '종 중복');
       assert.ok(new Set(ids.map(id => data.pokemon[id].t[0])).size >= 2, '속성 다양성');
       assert.ok(ids.every(id => !data.pokemon[id].leg), '전설은 플레이어에게 없으면 상대도 없음');
     }
   }
+});
+
+test('상대 파티: 아주 강한 팀을 짜도 상한 없이 그에 맞춘 상대가 나온다', () => {
+  const rnd = E.mulberry32(21);
+  const strong = [150, 384, 483].map(id => data.pokemon[id]).length === 3 ? [150, 384, 483] : null;   // 뮤츠·레쿠쟈·디아루가
+  const base = P.total(strong);
+  assert.ok(base > 1900, `테스트 팀이 충분히 강해야 한다 (${base})`);
+  let sum = 0;
+  for (let i = 0; i < 60; i++) {
+    const ids = P.generateOpponent({ playerIds: strong, level: 'normal', rng: rnd });
+    const t = P.total(ids);
+    sum += t;
+    assert.ok(t > 1500, `1500 이하로 떨어지면 안 된다: ${t}`);
+    assert.ok(Math.abs(t - base) <= 260, `내 팀(${base})과 너무 다르다: ${t}`);
+  }
+  // 내 팀이 맞출 수 있는 한계를 넘어도(예: 종족값 1125 짜리 셋) 가장 강한 쪽으로 최대한 맞춘다
+  const monster = Object.keys(data.pokemon).map(Number).filter(id => data.pokemon[id].bst >= 1000).slice(0, 3);
+  if (monster.length === 3) {
+    const t = P.total(P.generateOpponent({ playerIds: monster, level: 'normal', rng: rnd }));
+    assert.ok(t > 1900, `극단적인 팀에도 강한 상대가 나와야 한다: ${t}`);
+  }
+  assert.ok(sum / 60 > base - 120, '평균적으로도 내 팀에 맞춘다');
 });
 
 test('상대 파티: 플레이어에게 전설이 있으면 상대도 허용, 시드 재현', () => {
