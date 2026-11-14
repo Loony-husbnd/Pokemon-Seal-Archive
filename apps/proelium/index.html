@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proelium</title>
+  <style>
+    :root { --bg:#0b1020; --fg:#e8ecf8; --mute:#93a0c0; --accent:#818cf8; --card:#141b33; }
+    @media (prefers-color-scheme: light) { :root { --bg:#f4f6fc; --fg:#12172b; --mute:#58637f; --card:#fff; } }
+    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; }
+    main { max-width:640px; margin:0 auto; padding:48px 16px; }
+    h1 { margin:0 0 4px; letter-spacing:.04em; }
+    .sub { color:var(--mute); margin:0 0 24px; }
+    .card { background:var(--card); border-radius:12px; padding:16px 20px; margin-bottom:12px; }
+    .ok { color:#34d399; } .ng { color:#f87171; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Proelium</h1>
+    <p class="sub">포켓몬 배틀 중심 앱 · Rembrandt 엔진 탑재 (기초 구조)</p>
+    <div class="card" id="status">엔진 확인 중…</div>
+    <div class="card"><a href="../">← Holo (띠부씰 아카이브)</a></div>
+  </main>
+
+  <!-- 엔진: 두 앱이 함께 쓰는 packages/rembrandt (dev: /packages, 배포: ../packages) -->
+  <script src="../packages/rembrandt/data/battle-data.js"></script>
+  <script src="../packages/rembrandt/engine.js"></script>
+  <script src="../packages/rembrandt/ai.js"></script>
+  <script src="../packages/rembrandt/party.js"></script>
+  <script src="./src/storage.js"></script>
+  <script src="./src/main.js"></script>
+</body>
+</html>

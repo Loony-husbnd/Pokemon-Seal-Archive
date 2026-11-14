@@ -1,7 +1,7 @@
 /**
  * 포켓몬 배틀 엔진 (2단계) — 화면과 무관한 순수 로직
  *
- * 로드 순서: battle/data/battle-data.js → battle/engine.js
+ * 로드 순서: packages/rembrandt/data/battle-data.js → packages/rembrandt/engine.js
  *   브라우저: window.BattleEngine (기본 데이터로 만든 엔진), window.createBattleEngine(data)
  *   Node(vm): tools/lib/load-battle.mjs 참고
  *

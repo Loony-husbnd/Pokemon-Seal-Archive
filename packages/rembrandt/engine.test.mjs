@@ -1,7 +1,7 @@
-// 배틀 엔진 테스트:  node --test battle/
+// 배틀 엔진 테스트:  node --test packages/rembrandt/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadBattle } from '../tools/lib/load-battle.mjs';
+import { loadBattle } from '../../tools/lib/load-battle.mjs';
 
 const { engine: E, data, createEngine } = loadBattle();
 const T = name => data.types.find(t => t.e === name).id;

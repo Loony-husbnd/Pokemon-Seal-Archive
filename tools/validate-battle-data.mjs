@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * battle/data/battle-data.js 무결성 검증
+ * packages/rembrandt/data/battle-data.js 무결성 검증
  *   node tools/validate-battle-data.mjs
  */
 import fs from 'node:fs';
@@ -9,7 +9,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const file = path.join(ROOT, 'battle', 'data', 'battle-data.js');
+const file = path.join(ROOT, 'packages', 'rembrandt', 'data', 'battle-data.js');
 const sandbox = {};
 vm.runInNewContext(fs.readFileSync(file, 'utf8'), sandbox); // 브라우저와 같은 방식(전역 BATTLE_DATA)으로 로드
 const d = sandbox.BATTLE_DATA;

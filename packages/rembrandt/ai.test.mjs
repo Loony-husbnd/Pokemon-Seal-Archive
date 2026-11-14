@@ -1,7 +1,7 @@
-// AI / 파티 생성 테스트:  node --test battle/ai.test.mjs
+// AI / 파티 생성 테스트:  node --test packages/rembrandt/ai.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadBattle } from '../tools/lib/load-battle.mjs';
+import { loadBattle } from '../../tools/lib/load-battle.mjs';
 
 const { engine: E, data, ai: AI, party: PT } = loadBattle();
 const T = name => data.types.find(t => t.e === name).id;
