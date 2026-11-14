@@ -9,12 +9,11 @@ img { display: block; max-width: 100%; }
 
 /* ───────── 배경 ───────── */
 .bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: radial-gradient(120% 90% at 50% 0%, var(--bg2) 0%, var(--bg1) 45%, var(--bg0) 100%); }
+/* 배경 빛: 움직이지 않는 고정 그라데이션. (예전에는 큰 블러 레이어를 18초 내내 움직였는데, 거의 안 보이면서 가장 무거운 효과였다) */
 .bg-aurora { position: absolute; inset: -20%; background:
   radial-gradient(38% 34% at 18% 22%, rgba(42, 98, 255, .30), transparent 70%),
   radial-gradient(34% 38% at 82% 18%, rgba(255, 178, 31, .20), transparent 70%),
-  radial-gradient(46% 40% at 52% 78%, rgba(42, 98, 255, .24), transparent 70%);
-  filter: blur(34px); animation: aurora 18s ease-in-out infinite alternate; }
-@keyframes aurora { to { transform: translate3d(4%, 3%, 0) rotate(6deg) scale(1.08); } }
+  radial-gradient(46% 40% at 52% 78%, rgba(42, 98, 255, .24), transparent 70%); }
 .bg-stars { position: absolute; inset: 0; opacity: .7; background-image:
   radial-gradient(1.4px 1.4px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 33% 62%, #cfd8ff, transparent),
   radial-gradient(1.6px 1.6px at 58% 12%, #fff, transparent), radial-gradient(1px 1px at 76% 44%, #cfe0ff, transparent),
