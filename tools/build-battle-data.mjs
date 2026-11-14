@@ -2,12 +2,12 @@
 /**
  * 배틀용 데이터 생성 스크립트 (1단계)
  *
- *   node tools/build-battle-data.mjs            # battle/data/battle-data.js 생성
+ *   node tools/build-battle-data.mjs            # packages/rembrandt/data/battle-data.js 생성
  *   node tools/build-battle-data.mjs --sample   # 대표 포켓몬 검수 표 출력
  *   node tools/build-battle-data.mjs --show 6,25,150   # 지정한 도감번호/폼 ID 출력
  *
  * 입력 : PokeAPI CSV (종족값·타입·기술·습득 기술) + Showdown 랜덤배틀 세트(기술 선정 가중치)
- * 출력 : battle/data/battle-data.js  (window.BATTLE_DATA 로 로드, file:// 에서도 동작)
+ * 출력 : packages/rembrandt/data/battle-data.js  (window.BATTLE_DATA 로 로드, file:// 에서도 동작)
  *
  * 규칙
  *  - 능력치: Lv100, 개체값 31, 노력치 0, 성격 보정 없음
@@ -33,7 +33,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = path.join(ROOT, 'tools', '.cache');
-const OUT = path.join(ROOT, 'battle', 'data', 'battle-data.js');
+const OUT = path.join(ROOT, 'packages', 'rembrandt', 'data', 'battle-data.js');
 const CSV_BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv';
 const SETS_URL = 'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/random-battles/gen9/sets.json';
 const CSV_FILES = [

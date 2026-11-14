@@ -3,7 +3,7 @@
 포켓몬 띠부씰의 세대·속성·등급 정보를 기록하고, 실시간 통계와 도감 완성 예측을 보여주는 웹앱입니다.
 수집한 씰은 **바인더**처럼 펼쳐 볼 수 있고, **띠부파를레 사육장**에서 포켓몬과 교감하거나 **3:3 배틀**로 겨뤄 볼 수 있습니다.
 
-`index.html` 한 파일(+ `battle/` 폴더)로 동작하며, 데이터는 브라우저 저장소(localStorage)에 보관됩니다. 별도 서버와 외부 API 키는 필요 없습니다.
+`apps/holo/index.html` 한 파일(+ `packages/` 폴더)로 동작하며, 데이터는 브라우저 저장소(localStorage)에 보관됩니다. 별도 서버와 외부 API 키는 필요 없습니다.
 
 ## 목차
 
@@ -145,7 +145,7 @@
 - 구성: 순수 HTML/CSS/JavaScript 단일 페이지 앱 (빌드 도구는 Vite, 선택 사항)
 - UI: Tailwind CSS(CDN) · Chart.js(차트) · Lucide(아이콘) · Pretendard(글꼴)
 - 이미지: PokeAPI 공식 일러스트·스프라이트
-- 배틀 모듈(`battle/`)은 일반 `<script>`로 불러오며, 빌드 시 `dist/battle/`로 복사됩니다.
+- 배틀 모듈(`packages/`)은 일반 `<script>`로 불러오며, 빌드 시 `dist/packages/`로 복사됩니다.
 
 ## 개발자용
 
@@ -153,11 +153,11 @@
 
 | 파일 | 역할 |
 |---|---|
-| `battle/data/battle-data.js` | 종족값·Lv100 능력치·기술·상성표 (생성 파일) |
-| `battle/engine.js` | 화면과 무관한 배틀 엔진 (데미지·상성·상태이상·교체 등). 사용법은 파일 상단 주석 |
-| `battle/ai.js` | 규칙 기반 AI |
-| `battle/party.js` | 파티 규칙 검증, 난이도별 상대 파티 생성 |
-| `battle/ui.js`, `battle/battle.css` | 화면 (파티 편성, VS, 경기장, 결과) |
+| `packages/rembrandt/data/battle-data.js` | 종족값·Lv100 능력치·기술·상성표 (생성 파일) |
+| `packages/rembrandt/engine.js` | 화면과 무관한 배틀 엔진 (데미지·상성·상태이상·교체 등). 사용법은 파일 상단 주석 |
+| `packages/rembrandt/ai.js` | 규칙 기반 AI |
+| `packages/rembrandt/party.js` | 파티 규칙 검증, 난이도별 상대 파티 생성 |
+| `packages/battle-ui/ui.js`, `packages/battle-ui/battle.css` | 화면 (파티 편성, VS, 경기장, 결과) |
 | `tools/` | 데이터 생성·검증·시뮬레이션 스크립트 |
 
 ### 스크립트
@@ -167,4 +167,19 @@
 - `npm run test:battle` — 엔진·AI·파티 테스트 (44개)
 - `npm run sim:battle` / `npm run sim:ai` — 대량 시뮬레이션(대칭성·밸런스 / 난이도 매트릭스)
 - 시뮬레이션 결과 승패는 AI 판단보다 파티 능력치·상성의 영향이 커서, 난이도의 핵심은 상대 파티 강도입니다.
-- `npm run build` 시 `battle/` 폴더가 `dist/battle/`로 복사됩니다.
+- `npm run build` 시 `packages/` 폴더가 `dist/packages/`로 복사됩니다.
+
+## 저장소 구조 (Holo · Proelium · Rembrandt)
+
+```
+packages/rembrandt/   배틀 엔진·AI·데이터 (화면 없음, 테스트 포함)
+packages/battle-ui/   전투 화면 (두 앱 공유)
+apps/holo/            띠부씰 아카이브      → 배포 /
+apps/proelium/        배틀 중심 앱         → 배포 /proelium/
+tools/                데이터 생성·검증·시뮬레이터·경계 검사
+```
+
+- `npm run dev:holo` (3000) / `npm run dev:proelium` (3001) / `npm run build` (두 앱을 `dist/` 와 `dist/proelium/` 로)
+- `npm run check:boundaries` — Rembrandt 가 화면·저장소에 의존하지 않는지 검사
+- GitHub Pages 는 Settings → Pages → Source 를 **GitHub Actions** 로 두면 `.github/workflows/deploy-pages.yml` 이 배포합니다.
+- 같은 도메인을 공유하므로 Proelium 저장 키는 `proelium:` 접두어를 씁니다 (Holo 기존 키는 호환 유지).

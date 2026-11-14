@@ -11,7 +11,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 export function loadBattle() {
   const sandbox = {};
   vm.createContext(sandbox);
-  for (const f of ['battle/data/battle-data.js', 'battle/engine.js', 'battle/ai.js', 'battle/party.js']) {
+  for (const f of ['packages/rembrandt/data/battle-data.js', 'packages/rembrandt/engine.js', 'packages/rembrandt/ai.js', 'packages/rembrandt/party.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
   }
   return {
