@@ -18,11 +18,12 @@
  *   battle.phase === 'ended' → battle.winner (0 | 1 | 'draw')
  *
  * 이벤트: { t, text, ... } 배열을 돌려준다. UI 는 t 로 연출을, text 로 한국어 메시지를 쓴다.
- *   turn switch move miss damage effective crit hits heal recoil status stage faint text needSwitch end
+ *   turn switch move(cls: phys|spec|status) miss damage(cause: confusion|recoil|cost|상태이상) effective crit hits heal recoil status stage faint text needSwitch end
  *
  * 구현 범위(1차): 데미지 공식(Gen 9, Lv100), 상성, 자속, 급소, 명중/회피, 다단 히트,
  *   풀죽음, 상태이상(화상·마비·독·맹독·잠듦·얼음), 혼란, 능력 단계, 흡수/반동, 발버둥, 교체.
- *   특성·도구·날씨·변화기는 없다.
+ *   변화기 1단계(cls 'status'): 상대에게 상태이상·능력 하락, 자신의 능력 상승, 체력 회복(잠자기·뱃대띠 포함).
+ *   특성·도구·날씨·필드·보호·대타 등 몇 턴 지속되는 효과는 아직 없다.
  *
  * 난수 소비 순서(테스트에서 rng 를 고정할 때 참고): 선공 동률 → [행동 전 판정] → 명중 →
  *   (히트마다: 급소 → 데미지 난수) → 추가효과(풀죽음 → 상태이상 → 능력 변화 순, 확률 판정마다 1회)
@@ -32,7 +33,30 @@
 
   const STAT_KO = { atk: '공격', def: '방어', spa: '특수공격', spd: '특수방어', spe: '스피드', acc: '명중률', eva: '회피율' };
   const STAT_KEYS = ['atk', 'def', 'spa', 'spd', 'spe', 'acc', 'eva'];
-  const FIRE = 10, ELECTRIC = 13, ICE = 15, POISON = 4, STEEL = 9;
+  const FIRE = 10, GRASS = 12, ELECTRIC = 13, ICE = 15, POISON = 4, STEEL = 9;
+  const STAT_SHORT = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중', eva: '회피' };
+  const AIL_KO = { par: '마비', slp: '잠듦', brn: '화상', psn: '독', tox: '맹독', frz: '얼음', cnf: '혼란' };
+
+  /** 타입 때문에 걸리지 않는 상태이상 (전기=마비, 불꽃=화상, 얼음=얼음, 독·강철=독) */
+  function statusImmune(mon, kind) {
+    if (kind === 'par') return mon.types.includes(ELECTRIC);
+    if (kind === 'brn') return mon.types.includes(FIRE);
+    if (kind === 'frz') return mon.types.includes(ICE);
+    if (kind === 'psn' || kind === 'tox') return mon.types.includes(POISON) || mon.types.includes(STEEL);
+    return false;
+  }
+
+  /** 변화기 효과를 한 줄로 요약한다 (화면용). 예: '상대 마비' · '공격 +2' · '체력 50% 회복' */
+  function describeEffect(move) {
+    const fx = move.fx || {}, out = [];
+    if (fx.rest) out.push('체력 전부 회복 · 잠듦');
+    if (fx.heal) out.push(`체력 ${fx.heal}% 회복`);
+    if (fx.hpCost) out.push(`체력 ${fx.hpCost}% 소모`);
+    (fx.tgt || []).forEach(c => out.push(`상대 ${STAT_SHORT[c.stat]} ${c.change > 0 ? '+' : ''}${c.change}`));
+    if (fx.ail) out.push(`상대 ${AIL_KO[fx.ail.kind]}`);
+    (fx.self || []).forEach(c => out.push(`${STAT_SHORT[c.stat]} ${c.change > 0 ? '+' : ''}${c.change}`));
+    return out.join(' · ');
+  }
 
   // ───────────── 한국어 조사 ─────────────
   function hasBatchim(word) {
@@ -98,6 +122,7 @@
      */
     function calcDamage(att, def, move, o) {
       o = o || {};
+      if (move.cls === 'status') return { damage: 0, eff: 1, crit: false };   // 변화기는 데미지가 없다
       const phys = move.cls === 'phys';
       const atkKey = phys ? 'atk' : 'spa';
       const defKey = (phys || move.fx.useDef) ? 'def' : 'spd';
@@ -116,6 +141,7 @@
 
     /** AI/UI 용 데미지 추정 (급소 제외, 평균 난수) */
     function estimateDamage(att, def, move) {
+      if (move.cls === 'status') return { min: 0, max: 0, avg: 0, expected: 0, eff: 1 };
       const lo = calcDamage(att, def, move, { roll: 85 }).damage;
       const hi = calcDamage(att, def, move, { roll: 100 }).damage;
       const eff = typeMultiplier(move.type, def.types);
@@ -130,7 +156,7 @@
     function makeMove(id) {
       const m = data.moves[id];
       if (!m) throw new Error(`알 수 없는 기술 ID: ${id}`);
-      return { id: Number(id), name: m.k, type: m.t, cls: m.c === 'p' ? 'phys' : 'spec', power: m.pw, acc: m.ac, pp: m.pp, maxPp: m.pp, pri: m.pr, fx: m.fx || {} };
+      return { id: Number(id), name: m.k, type: m.t, cls: m.c === 'p' ? 'phys' : m.c === 'n' ? 'status' : 'spec', power: m.pw, acc: m.ac, pp: m.pp, maxPp: m.pp, pri: m.pr, fx: m.fx || {} };
     }
 
     function makeCustomMon(spec) {
@@ -230,13 +256,7 @@
       }
 
       // ───────── 상태이상 / 능력 단계 ─────────
-      function immuneToStatus(mon, kind) {
-        if (kind === 'par') return mon.types.includes(ELECTRIC);
-        if (kind === 'brn') return mon.types.includes(FIRE);
-        if (kind === 'frz') return mon.types.includes(ICE);
-        if (kind === 'psn' || kind === 'tox') return mon.types.includes(POISON) || mon.types.includes(STEEL);
-        return false;
-      }
+      const immuneToStatus = statusImmune;
       const STATUS_TEXT = {
         par: m => `${J(m, '은/는')} 마비되어 기술이 나오기 어려워졌다!`,
         brn: m => `${J(m, '은/는')} 화상을 입었다!`,
@@ -341,12 +361,63 @@
         return lo + Math.floor(rng() * (hi - lo + 1));
       }
 
+      /** 변화기 사용. 상태이상·능력 변화·회복 (공격기와 같은 부품을 재사용) */
+      function runStatusMove(si, move, user) {
+        const foe = 1 - si, target = active(foe), fx = move.fx;
+        const fail = () => emit({ t: 'text', text: '하지만 실패했다...' });
+        const noEffect = () => emit({ t: 'effective', side: foe, eff: 0, text: `${nm(foe, target)}에게는 효과가 없는 것 같다...` });
+
+        if (fx.ail || fx.tgt) {                       // ── 상대에게 거는 기술 ──
+          if (target.fainted) return fail();
+          // 명중 (독 타입이 쓴 맹독은 필중)
+          const sure = move.acc === null || (fx.ail && fx.ail.kind === 'tox' && user.types.includes(POISON));
+          if (!sure) {
+            const stage = clamp(user.stages.acc - target.stages.eva, -6, 6);
+            if (rng() * 100 >= move.acc * accStageMult(stage)) {
+              emit({ t: 'miss', side: si, text: `${nm(si, user)}의 공격은 빗나갔다!` });
+              return;
+            }
+          }
+          if (fx.powder && target.types.includes(GRASS)) return noEffect();
+          if (fx.typeImmune && typeMultiplier(move.type, target.types) === 0) return noEffect();
+          if (fx.ail && !fx.tgt) {                     // 상태이상만 거는 기술은 이미 걸려 있거나 면역이면 실패
+            const kind = fx.ail.kind;
+            if (kind === 'cnf' ? target.confusion > 0 : target.status) return fail();
+            if (kind !== 'cnf' && immuneToStatus(target, kind)) return noEffect();
+          }
+          (fx.tgt || []).forEach(c => changeStage(foe, target, c.stat, c.change));
+          if (fx.ail) inflict(foe, target, fx.ail.kind);
+          return;
+        }
+
+        // ── 자신에게 쓰는 기술 ──
+        if (fx.rest) {
+          if (user.hp >= user.maxHp || user.status === 'slp') return fail();
+          heal(si, user, user.maxHp - user.hp, `${nm(si, user)}의 체력이 전부 회복되었다!`);
+          user.status = 'slp'; user.sleepTurns = 3; user.toxCount = 1;   // 잠듦 2턴 (3번째 턴에 눈을 뜬다)
+          emit({ t: 'status', side: si, kind: 'slp', text: `${J(nm(si, user), '은/는')} 잠들어서 건강해졌다!` });
+          return;
+        }
+        if (fx.hpCost) {
+          const cost = Math.floor(user.maxHp * fx.hpCost / 100);
+          if (user.hp <= cost || (fx.self || []).some(c => c.change > 0 && user.stages[c.stat] >= 6)) return fail();
+          const dealt = applyDamage(si, user, cost);
+          emitDamage(si, user, dealt, { cause: 'cost', text: `${J(nm(si, user), '은/는')} 체력을 깎아서 힘을 끌어올렸다!` });
+        }
+        if (fx.heal) {
+          if (user.hp >= user.maxHp) return fail();
+          heal(si, user, Math.max(1, Math.floor(user.maxHp * fx.heal / 100)), `${J(nm(si, user), '은/는')} 체력을 회복했다!`);
+        }
+        (fx.self || []).forEach(c => changeStage(si, user, c.stat, c.change));
+      }
+
       function runMove(si, move, struggle, acted) {
         const foe = 1 - si;
         const user = active(si);
         if (!canAct(si, user)) return;
         if (!struggle) move.pp--;
-        emit({ t: 'move', side: si, name: move.name, type: move.type, text: `${nm(si, user)}의 ${move.name}!` });
+        emit({ t: 'move', side: si, name: move.name, type: move.type, cls: move.cls, text: `${nm(si, user)}의 ${move.name}!` });
+        if (move.cls === 'status') return runStatusMove(si, move, user);
 
         const target = active(foe);
         if (target.fainted) { emit({ t: 'text', text: '하지만 실패했다...' }); return; }
@@ -536,7 +607,7 @@
 
     return {
       createBattle, makeMon, makeCustomMon, makeMove, calcDamage, estimateDamage,
-      typeMultiplier, effectiveStat, STRUGGLE, josa, mulberry32, data,
+      typeMultiplier, effectiveStat, describeEffect, statusImmune, STRUGGLE, josa, mulberry32, data,
     };
   }
 

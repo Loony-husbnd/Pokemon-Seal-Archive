@@ -1,0 +1,461 @@
+{
+ "_doc": "1단계 변화기 50개. 키 = PokeAPI identifier. 이름·타입·명중·PP·우선도는 PokeAPI 에서, 효과(fx)는 여기서 정의한다. 스키마는 tools/build-battle-data.mjs 상단 참고.",
+ "moves": {
+  "poison-powder": {
+   "ail": {
+    "kind": "psn",
+    "chance": 100
+   },
+   "powder": true
+  },
+  "toxic": {
+   "ail": {
+    "kind": "tox",
+    "chance": 100
+   }
+  },
+  "will-o-wisp": {
+   "ail": {
+    "kind": "brn",
+    "chance": 100
+   }
+  },
+  "thunder-wave": {
+   "ail": {
+    "kind": "par",
+    "chance": 100
+   },
+   "typeImmune": true
+  },
+  "stun-spore": {
+   "ail": {
+    "kind": "par",
+    "chance": 100
+   },
+   "powder": true
+  },
+  "glare": {
+   "ail": {
+    "kind": "par",
+    "chance": 100
+   }
+  },
+  "sleep-powder": {
+   "ail": {
+    "kind": "slp",
+    "chance": 100
+   },
+   "powder": true
+  },
+  "spore": {
+   "ail": {
+    "kind": "slp",
+    "chance": 100
+   },
+   "powder": true
+  },
+  "hypnosis": {
+   "ail": {
+    "kind": "slp",
+    "chance": 100
+   }
+  },
+  "sing": {
+   "ail": {
+    "kind": "slp",
+    "chance": 100
+   }
+  },
+  "lovely-kiss": {
+   "ail": {
+    "kind": "slp",
+    "chance": 100
+   }
+  },
+  "supersonic": {
+   "ail": {
+    "kind": "cnf",
+    "chance": 100
+   }
+  },
+  "confuse-ray": {
+   "ail": {
+    "kind": "cnf",
+    "chance": 100
+   }
+  },
+  "sweet-kiss": {
+   "ail": {
+    "kind": "cnf",
+    "chance": 100
+   }
+  },
+  "swagger": {
+   "tgt": [
+    {
+     "stat": "atk",
+     "change": 2,
+     "chance": 100
+    }
+   ],
+   "ail": {
+    "kind": "cnf",
+    "chance": 100
+   }
+  },
+  "flatter": {
+   "tgt": [
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    }
+   ],
+   "ail": {
+    "kind": "cnf",
+    "chance": 100
+   }
+  },
+  "growl": {
+   "tgt": [
+    {
+     "stat": "atk",
+     "change": -1,
+     "chance": 100
+    }
+   ]
+  },
+  "tail-whip": {
+   "tgt": [
+    {
+     "stat": "def",
+     "change": -1,
+     "chance": 100
+    }
+   ]
+  },
+  "leer": {
+   "tgt": [
+    {
+     "stat": "def",
+     "change": -1,
+     "chance": 100
+    }
+   ]
+  },
+  "screech": {
+   "tgt": [
+    {
+     "stat": "def",
+     "change": -2,
+     "chance": 100
+    }
+   ]
+  },
+  "charm": {
+   "tgt": [
+    {
+     "stat": "atk",
+     "change": -2,
+     "chance": 100
+    }
+   ]
+  },
+  "sand-attack": {
+   "tgt": [
+    {
+     "stat": "acc",
+     "change": -1,
+     "chance": 100
+    }
+   ]
+  },
+  "smokescreen": {
+   "tgt": [
+    {
+     "stat": "acc",
+     "change": -1,
+     "chance": 100
+    }
+   ]
+  },
+  "scary-face": {
+   "tgt": [
+    {
+     "stat": "spe",
+     "change": -2,
+     "chance": 100
+    }
+   ]
+  },
+  "string-shot": {
+   "tgt": [
+    {
+     "stat": "spe",
+     "change": -2,
+     "chance": 100
+    }
+   ]
+  },
+  "metal-sound": {
+   "tgt": [
+    {
+     "stat": "spd",
+     "change": -2,
+     "chance": 100
+    }
+   ]
+  },
+  "swords-dance": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "dragon-dance": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spe",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "nasty-plot": {
+   "self": [
+    {
+     "stat": "spa",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "calm-mind": {
+   "self": [
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "bulk-up": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "iron-defense": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "amnesia": {
+   "self": [
+    {
+     "stat": "spd",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "agility": {
+   "self": [
+    {
+     "stat": "spe",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "rock-polish": {
+   "self": [
+    {
+     "stat": "spe",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "quiver-dance": {
+   "self": [
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spe",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "shell-smash": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spe",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "def",
+     "change": -1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": -1,
+     "chance": 100
+    }
+   ]
+  },
+  "growth": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "harden": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "cotton-guard": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 3,
+     "chance": 100
+    }
+   ]
+  },
+  "coil": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "acc",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "belly-drum": {
+   "hpCost": 50,
+   "self": [
+    {
+     "stat": "atk",
+     "change": 6,
+     "chance": 100
+    }
+   ]
+  },
+  "double-team": {
+   "self": [
+    {
+     "stat": "eva",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "recover": {
+   "heal": 50
+  },
+  "soft-boiled": {
+   "heal": 50
+  },
+  "slack-off": {
+   "heal": 50
+  },
+  "moonlight": {
+   "heal": 50
+  },
+  "synthesis": {
+   "heal": 50
+  },
+  "morning-sun": {
+   "heal": 50
+  },
+  "rest": {
+   "rest": true
+  }
+ },
+ "_weights_doc": "Holo 무작위 기술 구성에서 각 변화기가 뽑히는 비중(기본 1). tools/simulate-status-moves.mjs 의 측정값(공격기 4번째 칸을 이 기술로 바꿨을 때의 승률 변화)을 바탕으로 한다.",
+ "weights": {
+  "belly-drum": 0.2,
+  "poison-powder": 0.5,
+  "metal-sound": 0.5,
+  "string-shot": 0.5,
+  "cotton-guard": 0.7,
+  "screech": 0.7,
+  "calm-mind": 0.8,
+  "nasty-plot": 0.8,
+  "harden": 0.8,
+  "spore": 1.5,
+  "shell-smash": 1.3,
+  "glare": 1.2,
+  "moonlight": 1.2
+ }
+}

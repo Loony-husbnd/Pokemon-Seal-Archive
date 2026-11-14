@@ -5,6 +5,8 @@
  *   P.validate([6, 25, 9])                    → { ok, total, cap, errors:[] }   (3마리·종 중복 없음·종족값 합계 ≤ 상한)
  *   P.generateOpponent({ playerIds, level, rng })   → 포켓몬 데이터 ID 3개 (플레이어 파티 종족값 합계에 맞춤)
  *   P.displayName(id)                         → '메가리자몽X', '알로라 라이츄' 등 표시 이름
+ *   P.pickMoveset(id, rng)                    → 기술 ID 최대 4개 (공격기 2~3 + 변화기 1~2, 무작위)  ※ Holo 용
+ *                                               변화기를 못 배우는 포켓몬은 공격기 그대로. 엔진에는 makeMon(id, { moves }) 로 넘긴다.
  *
  * 상대 파티의 종족값 합계 목표 = 내 파티 합계 + 난이도 보정 (시뮬레이션: 100 차이 ≈ 승률 72%)
  *   쉬움 −120 / 보통 0 / 어려움 +90 (어려움은 상한을 최대 90까지 넘을 수 있다)
@@ -83,7 +85,65 @@
       return [pick(), pick(), pick()];
     }
 
-    return { validate, generateOpponent, displayName, speciesLabel, total, cap, pool, OFFSET };
+    // ───────────── 기술 구성 (변화기 포함) ─────────────
+    const clamp01 = v => Math.max(0, Math.min(1, v));
+
+    /** 이 포켓몬에게 이 변화기가 얼마나 어울리는지 (0이면 뽑히지 않는다) */
+    function statusFit(p, mv) {
+      const fx = mv.fx;
+      let w;
+      if (fx.heal) w = 1;
+      else if (fx.rest) w = 0.6;
+      else if (fx.self) {
+        const rel = { atk: clamp01(p.b[1] / Math.max(p.b[1], p.b[3])) ** 3, spa: clamp01(p.b[3] / Math.max(p.b[1], p.b[3])) ** 3,
+          def: 0.6, spd: 0.6, spe: 0.7, acc: 0.3, eva: 0.2 };
+        const ups = fx.self.filter(c => c.change > 0);
+        w = ups.length ? 1.1 * ups.reduce((a, c) => a + rel[c.stat], 0) / ups.length : 0;
+        if (fx.hpCost) w *= 0.5;                                   // 뱃대띠
+        if (mv.e === 'growth' || mv.e === 'harden') w *= 0.5;      // 효과가 약한 기술
+      } else if (fx.ail && fx.tgt) w = 0.7;                        // 뽐내기·치켜세우기
+      else if (fx.ail) w = { slp: 1.1, tox: 1.2, par: 1, brn: 1, psn: 0.7, cnf: 0.5 }[fx.ail.kind] || 0.5;
+      else w = 0.35;                                               // 상대 능력을 깎는 기술은 약한 편
+      return w;
+    }
+
+    /** 같은 역할의 변화기가 한 포켓몬에게 겹치지 않도록 하는 표식 (회복 / 같은 상태이상 / 같은 능력) */
+    function roleTokens(mv) {
+      const fx = mv.fx, t = [];
+      if (fx.heal || fx.rest) t.push('heal');
+      if (fx.ail) t.push('ail:' + fx.ail.kind);
+      (fx.tgt || []).forEach(c => t.push('foe:' + c.stat));
+      (fx.self || []).forEach(c => { if (c.change > 0) t.push('my:' + c.stat); });
+      return t;
+    }
+
+    function pickMoveset(id, rng) {
+      rng = rng || Math.random;
+      const p = P[id];
+      const attacks = p.m.slice();
+      const pool = (p.sm || []).filter(mid => data.moves[mid]);
+      if (!pool.length) return attacks;
+
+      const rec = new Set(p.ss || []);                              // Showdown 랜덤배틀 세트에 나오는 기술은 3배 잘 뽑힌다
+      let cand = pool.map(mid => ({ mid, mv: data.moves[mid], w: statusFit(p, data.moves[mid]) * (data.moves[mid].w === undefined ? 1 : data.moves[mid].w) * (rec.has(mid) ? 3 : 1) })).filter(c => c.w > 0);
+      if (!cand.length) return attacks;
+
+      // 변화기 칸 수: 1~2칸. 공격기가 모자라는 포켓몬(예: 마자용)은 변화기로 채운다
+      let slots = rng() < 0.6 ? 1 : 2;
+      slots = Math.max(slots, 4 - attacks.length);
+      const chosen = [], used = new Set();
+      while (chosen.length < slots && cand.length) {
+        const total = cand.reduce((a, c) => a + c.w, 0);
+        let r = rng() * total, pick = cand[cand.length - 1];
+        for (const c of cand) { r -= c.w; if (r <= 0) { pick = c; break; } }
+        chosen.push(pick.mid);
+        roleTokens(pick.mv).forEach(t => used.add(t));
+        cand = cand.filter(c => c !== pick && !roleTokens(c.mv).some(t => used.has(t)));
+      }
+      return attacks.slice(0, Math.max(0, 4 - chosen.length)).concat(chosen);
+    }
+
+    return { validate, generateOpponent, displayName, speciesLabel, pickMoveset, total, cap, pool, OFFSET };
   }
 
   global.BattleParty = { create, CAP, OFFSET };

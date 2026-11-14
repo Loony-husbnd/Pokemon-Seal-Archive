@@ -30,6 +30,7 @@
     level: 'normal',
     party: [],                 // 씰 ID 3개
     opp: [],                   // 상대 데이터 ID 3개
+    sets: { mine: {}, opp: [] }, // 이번 배틀의 기술 구성(공격기+변화기). mine = { 씰ID: [기술ID…] }, opp = [[…], […], […]]
     q: '', sort: 'bst',
     speed: 1, skip: false, hints: true, showHistory: false,
     record: { w: 0, l: 0, d: 0, byLevel: { easy: [0, 0, 0], normal: [0, 0, 0], hard: [0, 0, 0] } },
@@ -64,10 +65,17 @@
   const typeColor = id => TYPE_COLORS[id] || '#64748b';
   const typeChip = id => `<span class="bt-type${LIGHT_TEXT.has(id) ? ' light' : ''}" style="background:${typeColor(id)}">${esc(D().types[id - 1].k)}</span>`;
   const typeChips = ids => ids.map(typeChip).join(' ');
-  const moveChips = p => `<div class="bt-movechips">${p.m.map(mid => {
-    const m = D().moves[mid];
-    return `<span class="bt-movechip" style="background:${typeColor(m.t)}${LIGHT_TEXT.has(m.t) ? ';color:#1e293b' : ''}">${esc(m.k)}</span>`;
-  }).join('')}</div>`;
+  /** 기술 칩. ids 를 주면 그 구성을, 안 주면 대표 공격기 + '변화기 무작위' 표시(기술은 VS 화면에서 정해진다) */
+  const moveChips = (p, ids) => {
+    const list = ids || p.m;
+    const chips = list.map(mid => {
+      const m = D().moves[mid];
+      if (m.c === 'n') return `<span class="bt-movechip st" style="--c:${typeColor(m.t)}" title="${esc(E.describeEffect({ fx: m.fx }))}">${esc(m.k)}</span>`;
+      return `<span class="bt-movechip" style="background:${typeColor(m.t)}${LIGHT_TEXT.has(m.t) ? ';color:#1e293b' : ''}">${esc(m.k)}</span>`;
+    }).join('');
+    const more = !ids && p.sm && p.sm.length ? '<span class="bt-movechip more" title="변화기는 배틀마다 무작위로 정해져요">+변화기</span>' : '';
+    return `<div class="bt-movechips">${chips}${more}</div>`;
+  };
 
   function artworkUrl(id) {
     if (typeof getArtworkUrlById === 'function') return getArtworkUrlById(id);
@@ -306,13 +314,19 @@
   function newOpponent() {
     const ids = partyEntries().map(e => e.id);
     S.opp = PRT.generateOpponent({ playerIds: ids, level: S.level, rng: Math.random });
+    // 이번 배틀에서 쓸 기술 구성을 양쪽 모두 무작위로 정한다 (공격기 2~3 + 변화기 1~2)
+    const rng = E.mulberry32(Math.floor(Math.random() * 2 ** 31));
+    S.sets = { mine: {}, opp: [] };
+    partyEntries().forEach(e => { S.sets.mine[e.seal.id] = PRT.pickMoveset(e.id, rng); });
+    S.opp.forEach(id => S.sets.opp.push(PRT.pickMoveset(id, rng)));
   }
+  const setOf = (kind, key, id) => (kind === 'mine' ? S.sets.mine[key] : S.sets.opp[key]) || PRT.pickMoveset(id, Math.random);
 
   function renderPreview() {
     S.screen = 'preview';
     const mine = partyEntries();
     const myTotal = mine.reduce((s, e) => s + e.p.bst, 0), oppTotal = PRT.total(S.opp);
-    const card = (name, img, p) => `<div class="bt-vs-card">${img}<div class="text-xs font-black text-slate-900 mt-1">${esc(name)}</div><div class="mt-1">${typeChips(p.t)}</div><div class="text-[10px] text-slate-500 font-bold mt-1">종족값 ${p.bst}</div>${moveChips(p)}</div>`;
+    const card = (name, img, p, ids) => `<div class="bt-vs-card">${img}<div class="text-xs font-black text-slate-900 mt-1">${esc(name)}</div><div class="mt-1">${typeChips(p.t)}</div><div class="text-[10px] text-slate-500 font-bold mt-1">종족값 ${p.bst}</div>${moveChips(p, ids)}</div>`;
     root.innerHTML = `
       <div class="max-w-3xl mx-auto space-y-4">
         <div class="bt-card p-4 sm:p-5">
@@ -320,12 +334,12 @@
           <div class="grid grid-cols-[1fr_auto_1fr] gap-3 items-start">
             <div>
               <div class="text-xs font-black text-slate-700 mb-2 text-center">내 파티 <span class="text-slate-400 font-bold">· ${fmt(myTotal)}</span></div>
-              <div class="grid gap-2">${mine.map(e => card(e.name, imgTag(e.img, e.id, e.dex, e.name), e.p)).join('')}</div>
+              <div class="grid gap-2">${mine.map(e => card(e.name, imgTag(e.img, e.id, e.dex, e.name), e.p, setOf('mine', e.seal.id, e.id))).join('')}</div>
             </div>
             <div class="bt-vs self-center">VS</div>
             <div>
               <div class="text-xs font-black text-slate-700 mb-2 text-center">상대 파티 <span class="text-slate-400 font-bold">· ${fmt(oppTotal)}</span></div>
-              <div class="grid gap-2">${S.opp.map(id => card(PRT.displayName(id), imgTag(artworkUrl(id), id, D().pokemon[id].sp, PRT.displayName(id)), D().pokemon[id])).join('')}</div>
+              <div class="grid gap-2">${S.opp.map((id, i) => card(PRT.displayName(id), imgTag(artworkUrl(id), id, D().pokemon[id].sp, PRT.displayName(id)), D().pokemon[id], setOf('opp', i, id))).join('')}</div>
             </div>
           </div>
           <p class="text-center text-[11px] text-slate-400 font-bold mt-3">선봉(맨 위)이 가장 먼저 나가요 · 상대 파티 종족값 ${oppTotal - myTotal >= 0 ? '+' : '−'}${Math.abs(oppTotal - myTotal)}</p>
@@ -341,13 +355,13 @@
 
   // ═════════════════════ 배틀 화면 ═════════════════════
   function sealToMon(entry) {
-    return E.makeMon(entry.id, { name: entry.name, tag: entry.seal.id });
+    return E.makeMon(entry.id, { name: entry.name, tag: entry.seal.id, moves: setOf('mine', entry.seal.id, entry.id) });
   }
 
   function startBattle() {
     const mine = partyEntries();
     if (mine.length !== 3 || S.opp.length !== 3) return;
-    const parties = [mine.map(sealToMon), S.opp.map(id => E.makeMon(id, { name: PRT.displayName(id) }))];
+    const parties = [mine.map(sealToMon), S.opp.map((id, i) => E.makeMon(id, { name: PRT.displayName(id), moves: setOf('opp', i, id) }))];
     const seed = Math.floor(Math.random() * 2 ** 31);
     S.battle = E.createBattle({ parties, names: ['나', '상대'], seed });
     brain = AIlib.create(E, { seed: seed ^ 0x9e3779b9 });
@@ -538,7 +552,10 @@
         const c = centerOf(ev.side, -0.05);
         const col = typeColor(ev.type);
         spawn('bt-banner' + (LIGHT_TEXT.has(ev.type) ? ' light' : ''), esc(ev.name), { x: c.x, y: c.y - 6 }, `--c:${col}`);
-        await pulse(spr, ev.side === 0 ? 'atk-me' : 'atk-foe', 460);
+        if (ev.cls === 'status') {                      // 변화기: 돌진하지 않고 제자리에서 기운을 모은다
+          spawn('bt-burst ring', '', centerOf(ev.side), `--c:${col}`);
+          await pulse(spr, 'cast', 520);
+        } else await pulse(spr, ev.side === 0 ? 'atk-me' : 'atk-foe', 460);
         await wait(80);
         break;
       }
@@ -646,11 +663,16 @@
       : me.moves.map((m, i) => {
         const col = typeColor(m.type), eff = E.typeMultiplier(m.type, foe.types);
         const hint = S.hints ? (eff === 0 ? ['im', '무효'] : eff >= 4 ? ['se', '×4'] : eff > 1 ? ['se', '×2'] : eff < 1 ? ['nve', eff <= 0.25 ? '×¼' : '×½'] : null) : null;
-        return `<button class="bt-move${LIGHT_TEXT.has(m.type) ? ' light' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${m.pp <= 0 ? 'disabled' : ''} title="${i + 1}번 키">
-          ${hint ? `<span class="hint ${hint[0]}">${hint[1]}</span>` : ''}
+        const isStatus = m.cls === 'status';
+        const clsKo = m.cls === 'phys' ? '물리' : m.cls === 'spec' ? '특수' : '변화';
+        // 변화기는 위력 대신 효과를 보여 준다. 자신에게 쓰는 기술은 명중 판정이 없다
+        const line1 = isStatus ? `<span class="fxdesc">${esc(E.describeEffect(m))}</span>` : `<span>위력 ${m.power}</span>`;
+        const line2 = m.acc === null || (m.fx && m.fx.neverMiss) ? '필중' : '명중 ' + m.acc;
+        return `<button class="bt-move${LIGHT_TEXT.has(m.type) ? ' light' : ''}${isStatus ? ' status' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${m.pp <= 0 ? 'disabled' : ''} title="${i + 1}번 키">
+          ${hint && !isStatus ? `<span class="hint ${hint[0]}">${hint[1]}</span>` : ''}
           <span class="nm">${esc(m.name)}</span>
-          <span class="meta"><span>${esc(D().types[m.type - 1].k)} · ${m.cls === 'phys' ? '물리' : '특수'}</span><span>위력 ${m.power}</span></span>
-          <span class="meta"><span>PP ${m.pp}/${m.maxPp}</span><span>${m.acc === null || (m.fx && m.fx.neverMiss) ? '필중' : '명중 ' + m.acc}</span></span>
+          <span class="meta"><span>${esc(D().types[m.type - 1].k)} · ${clsKo}</span>${line1}</span>
+          <span class="meta"><span>PP ${m.pp}/${m.maxPp}</span><span>${line2}</span></span>
         </button>`;
       }).join('');
     host.innerHTML = `
