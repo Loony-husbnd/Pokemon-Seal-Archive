@@ -84,7 +84,7 @@
         if (fx.weather === 'sand') {
           v += (foe.types.some(t => GROUND_ROCK_STEEL.includes(t)) ? 0 : foe.maxHp / 16 * 3) - (me.types.some(t => GROUND_ROCK_STEEL.includes(t)) ? 0 : me.maxHp / 16 * 3);
         }
-        return Math.max(0, v);
+        return Math.max(0, v) * 0.6;           // 평균 7턴짜리 배틀에서는 준비하는 한 턴이 아깝다
       }
       if (fx.terrain) {
         if (field.terrain === fx.terrain) return -1;
@@ -96,7 +96,7 @@
         if (t === 'grassy') v += (myG ? me.maxHp / 16 * 3 : 0) - (foeG ? foe.maxHp / 16 * 3 : 0);
         if (t === 'electric' && foeG && foe.moves.some(m => m.fx.ail && m.fx.ail.kind === 'slp')) v += me.maxHp * 0.1;
         if (t === 'misty' && myG && foe.moves.some(m => m.fx.ail)) v += me.maxHp * 0.1;
-        return Math.max(0, v);
+        return Math.max(0, v) * 0.6;
       }
       if (fx.room) return meFaster ? -1 : me.maxHp * 0.35;
       if (fx.hazard) {
@@ -105,7 +105,7 @@
         const k = fx.hazard;
         if ((k === 'rocks' && theirs.rocks) || (k === 'web' && theirs.web) || (k === 'spikes' && theirs.spikes >= 3) || (k === 'tspikes' && theirs.tspikes >= 2)) return -1;
         const per = { rocks: 0.14, spikes: 0.1 - (theirs.spikes || 0) * 0.015, tspikes: 0.11, web: 0.07 }[k];
-        return rs * per * foe.maxHp * turnFactor;
+        return rs * per * foe.maxHp * turnFactor * 0.55;
       }
       if (fx.defog) {
         const val = (c, mon) => ((c.rocks ? 0.14 : 0) + (c.spikes || 0) * 0.08 + (c.tspikes || 0) * 0.09 + (c.web ? 0.07 : 0)) * mon.maxHp;
@@ -127,7 +127,7 @@
       }
       if (fx.seed) {
         if (foe.types.includes(12) || foe.seeded || foe.fainted) return -1;
-        return Math.min(foe.hp, foe.maxHp * 0.5) * 0.7 * accOf(mv);
+        return Math.min(foe.hp, foe.maxHp * 0.5) * 0.4 * accOf(mv);
       }
       if (fx.taunt) {
         const n = foe.moves.filter(m => m.cls === 'status' && m.pp > 0).length;
