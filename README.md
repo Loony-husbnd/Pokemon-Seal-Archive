@@ -162,7 +162,7 @@
 
 ### 스크립트
 
-- `npm run battle:data` — PokeAPI/Showdown 데이터로 `battle-data.js` 재생성 (`--sample`, `--show 6,25`, `--explain=25`)
+- `npm run battle:data` — PokeAPI/Showdown 데이터로 `battle-data.js`·`battle-learnsets.js` 재생성 (`--sample`, `--show 6,25`, `--explain=25`)
 - `npm run battle:validate` — 데이터 무결성 검증
 - `npm run test:battle` — 엔진·AI·파티·변화기 테스트 (102개)
 - `npm run sim:battle` / `npm run sim:ai` — 대량 시뮬레이션(대칭성·밸런스 / 난이도 매트릭스)

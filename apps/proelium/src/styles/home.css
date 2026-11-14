@@ -1,0 +1,44 @@
+/* ───────── 홈 ───────── */
+.home { min-height: 100dvh; display: flex; flex-direction: column; }
+.home-top { display: flex; align-items: center; padding: 14px 16px; }
+.home-top .sp { flex: 1; }
+.hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; padding: 0 16px 36px; text-align: center; }
+.logo-wrap { position: relative; padding: 8px 0 0; }
+.spot { position: absolute; left: 50%; top: -80px; width: 140%; height: 300px; transform: translateX(-50%); z-index: -1;
+  background: conic-gradient(from 180deg at 50% 0%, transparent 38%, rgba(255, 255, 255, .13) 46%, transparent 54%, transparent 100%);
+  -webkit-mask-image: linear-gradient(#000, transparent 85%); mask-image: linear-gradient(#000, transparent 85%); animation: sweep 7s ease-in-out infinite alternate; }
+@keyframes sweep { from { transform: translateX(-50%) rotate(-9deg); } to { transform: translateX(-50%) rotate(9deg); } }
+.logo { margin: 0; display: flex; justify-content: center; align-items: baseline; font-size: clamp(54px, 15vw, 128px); line-height: .9; transform: skewX(-8deg); filter: drop-shadow(0 8px 30px rgba(122, 77, 255, .65)); }
+.logo span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 2px rgba(255, 255, 255, .15); animation: logoPop .9s var(--spring) both; }
+.logo span:first-child { background: linear-gradient(120deg, #ffffff, #ffd6f0 60%, #ff7ab8); -webkit-background-clip: text; background-clip: text; font-size: .62em; margin-right: .06em; }
+.logo span:last-child { animation-delay: .12s; }
+@keyframes logoPop { from { transform: translateY(40px) scale(.8); opacity: 0; } }
+.tagline { margin: 10px 0 0; color: var(--mute); font-size: clamp(14px, 3.6vw, 18px); letter-spacing: .02em; animation: screenIn .8s .35s both; }
+.tagline b { color: var(--ink); }
+
+/* 팀 카드 부채꼴 */
+.fan { display: flex; justify-content: center; align-items: flex-end; gap: clamp(0px, 1.5vw, 14px); perspective: 900px; min-height: 230px; }
+.fan-card { --rx: 0deg; --ry: 0deg; position: relative; width: clamp(104px, 27vw, 176px); aspect-ratio: 3 / 4; border-radius: 22px; padding: 8px 8px 10px; overflow: hidden; text-align: center;
+  display: flex; flex-direction: column; justify-content: flex-end; color: #fff; border: 2px solid rgba(255, 255, 255, .45);
+  background: radial-gradient(120% 90% at 50% 20%, color-mix(in srgb, var(--c1) 85%, #fff 0%), transparent 70%), linear-gradient(160deg, var(--c1), color-mix(in srgb, var(--c2) 55%, #10082e));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .5), 0 0 34px color-mix(in srgb, var(--c1) 55%, transparent);
+  transform: translateY(var(--dy)) rotate(var(--rot)) rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .25s var(--spring);
+  animation: cardIn .7s calc(.4s + var(--i) * .12s) var(--spring) both; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(120px) rotate(0) scale(.7); } }
+.fan-card:hover { z-index: 3; transform: translateY(calc(var(--dy) - 14px)) rotate(0deg) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.06); }
+.fan-card b { position: relative; z-index: 2; font-size: clamp(13px, 3.4vw, 17px); text-shadow: 0 2px 6px rgba(0, 0, 0, .6); }
+.fan-no { position: absolute; top: 4px; left: 8px; font-size: clamp(34px, 9vw, 58px); color: transparent; -webkit-text-stroke: 1.5px rgba(255, 255, 255, .5); opacity: .8; }
+.fan-art { position: absolute; inset: 6% 4% 20%; z-index: 1; display: block; }
+.fan-card .foil, .slot .foil { position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: screen; opacity: .55;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgba(255, 255, 255, .85), transparent 42%),
+    conic-gradient(from 210deg at var(--mx, 50%) var(--my, 30%), rgba(255, 46, 136, .5), rgba(25, 227, 255, .5), rgba(255, 210, 63, .5), rgba(122, 77, 255, .5), rgba(255, 46, 136, .5)); }
+.fan-card.empty { background: rgba(255, 255, 255, .05); border: 2px dashed rgba(255, 255, 255, .3); box-shadow: none; justify-content: center; gap: 4px; color: var(--mute); }
+.fan-card.empty .q { font-size: 64px; color: rgba(255, 255, 255, .25); }
+.cta { display: flex; flex-direction: column; align-items: center; gap: 14px; animation: screenIn .8s .8s both; }
+.cta-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.cta .btn.big { animation: pulse 2.2s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.045); box-shadow: 0 10px 44px rgba(255, 46, 136, .7); } }
+.record { display: flex; gap: clamp(14px, 4vw, 34px); padding: 12px clamp(16px, 4vw, 30px); border-radius: 999px; animation: screenIn .8s 1s both; }
+.record div { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.record b { font-family: var(--display); font-size: 22px; font-style: italic; }
+.record small { color: var(--mute); font-size: 11px; font-weight: 700; }

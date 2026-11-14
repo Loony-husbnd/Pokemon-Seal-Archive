@@ -2,34 +2,23 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06051a">
   <title>Proelium</title>
-  <style>
-    :root { --bg:#0b1020; --fg:#e8ecf8; --mute:#93a0c0; --accent:#818cf8; --card:#141b33; }
-    @media (prefers-color-scheme: light) { :root { --bg:#f4f6fc; --fg:#12172b; --mute:#58637f; --card:#fff; } }
-    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; }
-    main { max-width:640px; margin:0 auto; padding:48px 16px; }
-    h1 { margin:0 0 4px; letter-spacing:.04em; }
-    .sub { color:var(--mute); margin:0 0 24px; }
-    .card { background:var(--card); border-radius:12px; padding:16px 20px; margin-bottom:12px; }
-    .ok { color:#34d399; } .ng { color:#f87171; }
-    a { color:var(--accent); }
-  </style>
+  <meta name="description" content="내가 고른 포켓몬 3마리로 겨루는 배틀 아레나">
 </head>
 <body>
-  <main>
-    <h1>Proelium</h1>
-    <p class="sub">포켓몬 배틀 중심 앱 · Rembrandt 엔진 탑재 (기초 구조)</p>
-    <div class="card" id="status">엔진 확인 중…</div>
-    <div class="card"><a href="../">← Holo (띠부씰 아카이브)</a></div>
-  </main>
+  <!-- 배경: 오로라 · 별 · 투시 그리드 바닥 -->
+  <div class="bg" aria-hidden="true"><i class="bg-aurora"></i><i class="bg-stars"></i><i class="bg-grid"></i></div>
+  <div id="app"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 
-  <!-- 엔진: 두 앱이 함께 쓰는 packages/rembrandt (dev: /packages, 배포: ../packages) -->
+  <!-- 배틀 엔진(Rembrandt): 일반 스크립트. 개발 서버는 /packages, 배포는 ../packages 로 연결된다 -->
   <script src="../packages/rembrandt/data/battle-data.js"></script>
+  <script src="../packages/rembrandt/data/battle-learnsets.js"></script>
   <script src="../packages/rembrandt/engine.js"></script>
   <script src="../packages/rembrandt/ai.js"></script>
   <script src="../packages/rembrandt/party.js"></script>
-  <script src="./src/storage.js"></script>
-  <script src="./src/main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

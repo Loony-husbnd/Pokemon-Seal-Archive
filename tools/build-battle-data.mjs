@@ -54,6 +54,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = path.join(ROOT, 'tools', '.cache');
 const OUT = path.join(ROOT, 'packages', 'rembrandt', 'data', 'battle-data.js');
+const OUT_LEARN = path.join(ROOT, 'packages', 'rembrandt', 'data', 'battle-learnsets.js');
 const CSV_BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv';
 const SETS_URL = 'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/random-battles/gen9/sets.json';
 const CSV_FILES = [
@@ -397,6 +398,7 @@ async function main() {
   }
 
   const pokemon = {};
+  const learnOut = {};   // 포켓몬별로 배울 수 있는 공격기 전체 (Proelium 의 기술 직접 선택용)
   const stats = { sd: 0, noSd: 0, fewMoves: [], missingKo: [] };
   for (const r of pokeRows) {
     const id = Number(r.id), speciesId = Number(r.species_id);
@@ -417,6 +419,7 @@ async function main() {
     const p = { id, t, b, e: r.identifier };
     const ctx = { sdMoves, learnerCount, globalFame };
     const picked = selectMoves(p, candidates, ctx);
+    learnOut[id] = [...learnIds].sort((a, b2) => a - b2);
     if (picked.length < 4) stats.fewMoves.push(id);
 
     // 변화기: 배울 수 있는 것(sm, id 순) / 그중 Showdown 랜덤배틀 세트에 나오는 것(ss)
@@ -463,11 +466,32 @@ async function main() {
     pokemon,
   };
 
+  // 배울 수 있는 공격기 전체: 기술 ID 를 36진수 2글자로 압축해 한 줄 문자열로 만든다 (Proelium 만 불러온다)
+  const extraMoves = {};
+  const learnPacked = {};
+  for (const [pid, ids] of Object.entries(learnOut)) {
+    for (const mid of ids) {
+      if (mid >= 1296) throw new Error(`기술 ID 가 36진수 2글자를 넘습니다: ${mid}`);
+      if (!moveOut[mid] && !extraMoves[mid]) {
+        const m = moves.get(mid);
+        extraMoves[mid] = { k: moveKo.get(mid) || m.e, e: m.e, t: m.type, c: m.cls === 'phys' ? 'p' : 's', pw: m.power, ac: m.acc, pp: m.pp, pr: m.pri, fx: m.fx };
+      }
+    }
+    learnPacked[pid] = ids.map(i => i.toString(36).padStart(2, '0')).join('');
+  }
+
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT,
     '/* 자동 생성 파일 — 직접 수정하지 말고 tools/build-battle-data.mjs 를 수정해 다시 생성하세요. */\n' +
     '(function (g) { g.BATTLE_DATA = ' + JSON.stringify(data) + '; })(typeof window !== "undefined" ? window : globalThis);\n');
 
+  fs.writeFileSync(OUT_LEARN,
+    '/* 자동 생성 파일 — tools/build-battle-data.mjs. 포켓몬별로 배울 수 있는 공격기(BATTLE_LEARN)와 battle-data 에 없던 공격기 데이터를 더한다. */\n' +
+    '(function (g) {\n  var D = g.BATTLE_DATA; if (!D) return;\n  var X = ' + JSON.stringify(extraMoves) + ';\n  for (var k in X) if (!D.moves[k]) D.moves[k] = X[k];\n' +
+    '  var P = ' + JSON.stringify(learnPacked) + ', L = {};\n' +
+    '  for (var id in P) { var s = P[id], a = []; for (var i = 0; i < s.length; i += 2) a.push(parseInt(s.substr(i, 2), 36)); L[id] = a; }\n' +
+    '  g.BATTLE_LEARN = L;\n})(typeof window !== "undefined" ? window : globalThis);\n');
+  console.log(`학습 가능 공격기 파일: ${path.relative(ROOT, OUT_LEARN)} (${(fs.statSync(OUT_LEARN).size / 1024).toFixed(0)}KB, 추가 기술 ${Object.keys(extraMoves).length}개)`);
   console.log(`생성 완료: ${path.relative(ROOT, OUT)} (${(fs.statSync(OUT).size / 1024).toFixed(0)}KB)`);
   console.log(`포켓몬 ${data.meta.pokemonCount}종/폼, 기술 ${data.meta.moveCount}개 (지원 가능 공격기 후보 ${moves.size}개, 변화기 ${statusMoves.size}개)`);
   const smAvg = Object.values(pokemon).reduce((a, p) => a + p.sm.length, 0) / data.meta.pokemonCount;

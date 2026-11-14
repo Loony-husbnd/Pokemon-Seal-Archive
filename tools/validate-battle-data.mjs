@@ -75,6 +75,23 @@ for (const [id, p] of Object.entries(d.pokemon)) {
   dist[p.m.length] = (dist[p.m.length] || 0) + 1;
 }
 
+// Proelium 용 학습 가능 공격기 파일 (battle-learnsets.js)
+const learnFile = path.join(ROOT, 'packages', 'rembrandt', 'data', 'battle-learnsets.js');
+if (fs.existsSync(learnFile)) {
+  const sb2 = { BATTLE_DATA: d };
+  vm.runInNewContext(fs.readFileSync(learnFile, 'utf8'), sb2);
+  const L = sb2.BATTLE_LEARN || {};
+  let learnCount = 0;
+  for (const id of Object.keys(d.pokemon)) {
+    if (!L[id]) { err(`#${id}: 학습 가능 공격기 목록 없음`); continue; }
+    for (const mid of L[id]) {
+      learnCount++;
+      if (!d.moves[mid] || d.moves[mid].c === 'n') err(`#${id}: 학습 목록의 기술 ${mid} 가 공격기가 아니거나 없음`);
+    }
+  }
+  console.log(`학습 가능 공격기 목록: ${Object.keys(L).length}종, 평균 ${(learnCount / Object.keys(L).length).toFixed(1)}개`);
+} else err('battle-learnsets.js 가 없습니다 (npm run battle:data)');
+
 const n = Object.keys(d.pokemon).length;
 console.log(`포켓몬 ${n}종/폼, 기술 ${Object.keys(d.moves).length}개 (변화기 ${statusIds.length}개), 평균 대표 공격기 ${(totalMoves / n).toFixed(2)}개`);
 if (statusIds.length !== 150) err(`변화기가 150개여야 합니다 (현재 ${statusIds.length})`);
