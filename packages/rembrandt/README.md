@@ -7,8 +7,11 @@
 - 테스트 `npm run test:battle`, 데이터 재생성 `npm run battle:data`, 검증 `npm run battle:validate`.
 - 사용법은 `engine.js` 파일 상단 주석 참고.
 
-## 변화기 (1단계)
+## 변화기 (1·2단계, 150개)
 - 분류 `cls: 'status'` (데이터에서는 `c: 'n'`). 정의는 `tools/battle-status-moves.json`, 효과 스키마는 `tools/build-battle-data.mjs` 상단 주석.
 - 포켓몬 데이터의 `sm` = 배울 수 있는 변화기, `ss` = 그중 Showdown 랜덤배틀 세트에 나오는 것. `m` 은 대표 공격기 그대로.
+- 배틀 상태: `battle.field`(날씨·필드·트릭룸), `battle.sides[i].cond`(함정·벽·순풍), 포켓몬의 임시 상태(`freshVolatile`: 씨뿌리기·도발·대타 등).
+- 화면용 이벤트: `field`(날씨·필드·함정 전체 상태), `vol`(포켓몬 임시 상태), `types`, `stages`, `cure`.
+- AI/화면에서 쓰는 도우미: `battle.ctx(side)`(데미지 계산용 날씨·필드·벽), `battle.outspeeds(side)`, `battle.legalActions(side)`(도발·앙코르 등으로 잠긴 기술은 `usable:false` + `why`).
 - 기술 4개 구성: `BattleParty.pickMoveset(id, rng)` (무작위) 또는 `makeMon(id, { moves: [...] })` 로 직접 지정.
 - 밸런스 확인: `npm run sim:status`, 기술별 측정: `npm run sim:status-moves`.

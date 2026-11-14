@@ -15,6 +15,16 @@
   const LIGHT_TEXT = new Set([13, 15]);   // 밝은 배경이라 어두운 글자를 쓰는 속성
   const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중', eva: '회피' };
   const STATUS_KO = { par: '마비', brn: '화상', psn: '독', tox: '맹독', slp: '잠듦', frz: '얼음' };
+  // 배틀 중에만 있는 임시 상태 / 날씨·필드 / 한쪽 진영에 걸리는 효과의 표시 이름
+  const VOL_KO = { seeded: '씨뿌리기', taunt: '도발', encore: '앙코르', disable: '봉인', torment: '트집', yawn: '졸림', aquaRing: '아쿠아링', ingrain: '뿌리박기',
+    sub: '대타', trapped: '가두기', attract: '헤롱헤롱', nightmare: '악몽', perish: '멸망', focus: '기합', protect: '방어' };
+  const WEATHER_UI = { sun: '☀ 쾌청', rain: '☔ 비', sand: '🌪 모래바람', snow: '❄ 눈' };
+  const TERRAIN_UI = { electric: '⚡ 일렉트릭필드', grassy: '🌿 그래스필드', misty: '🌫 미스트필드', psychic: '🔮 사이코필드' };
+  const COND_UI = (c) => [
+    c.rocks && '스텔스록', c.spikes && `압정 ×${c.spikes}`, c.tspikes && `독압정 ×${c.tspikes}`, c.web && '끈적네트',
+    c.reflect && `리플렉터 ${c.reflect}`, c.lightscreen && `빛의장막 ${c.lightscreen}`, c.veil && `오로라베일 ${c.veil}`,
+    c.tailwind && `순풍 ${c.tailwind}`, c.safeguard && `신비의부적 ${c.safeguard}`, c.mist && `미스트 ${c.mist}`,
+  ].filter(Boolean);
   const LEVELS = {
     easy:   { label: '쉬움',   desc: '상대 파티가 약하고 실수도 잦아요.' },
     normal: { label: '보통',   desc: '내 파티와 비슷한 강도, 대체로 최선의 수를 둬요.' },
@@ -369,10 +379,10 @@
     S.log = []; S.finished = false; S.busy = true; S.skip = false; S.showHistory = false; S.curMove = null;
 
     // UI 미러: 이벤트를 따라 갱신되는 화면용 상태
-    S.U = { turn: 0, side: [0, 1].map(si => ({
+    S.U = { turn: 0, field: { weather: null, terrain: null, room: 0, sides: [{}, {}] }, side: [0, 1].map(si => ({
       active: 0,
       party: parties[si].map((m, i) => ({
-        name: m.name, types: m.types.slice(), maxHp: m.maxHp, hp: m.maxHp, fainted: false, status: null, confusion: false, stages: {},
+        name: m.name, types: m.types.slice(), origTypes: m.types.slice(), vol: {}, maxHp: m.maxHp, hp: m.maxHp, fainted: false, status: null, confusion: false, stages: {},
         img: si === 0 ? mine[i].img : artworkUrl(m.dataId), id: m.dataId, dex: si === 0 ? mine[i].dex : D().pokemon[m.dataId].sp,
       })),
     })) };
@@ -396,6 +406,7 @@
             <div class="bt-box me" id="bt-box-me"></div>
             <div class="bt-fx" id="bt-fx"></div>
             <div class="bt-turn" id="bt-turn">배틀 준비</div>
+            <div class="bt-fieldbar" id="bt-fieldbar"></div>
             <div class="bt-tools">
               <button id="bt-speed" data-act="speed" title="재생 속도">${S.speed}x</button>
               <button data-act="skip" title="연출 건너뛰기">⏭</button>
@@ -435,13 +446,16 @@
       const v = mon.stages[k];
       if (v) chips.push(`<span class="bt-chip ${v > 0 ? 'up' : 'down'}">${STAT_KO[k]} ${v > 0 ? '▲' : '▼'}${Math.abs(v)}</span>`);
     }
+    for (const k of Object.keys(VOL_KO)) if (mon.vol && mon.vol[k]) chips.push(`<span class="bt-chip vol">${VOL_KO[k]}</span>`);
+    const conds = COND_UI((S.U.field && S.U.field.sides[si]) || {}).map(t => `<span class="bt-chip cond">${esc(t)}</span>`).join('');
     const dots = side.party.map((m, i) => `<i class="${m.fainted ? 'ko' : ''}${i === side.active ? ' cur' : ''}" title="${esc(m.name)}"></i>`).join('');
     boxEl(si).innerHTML = `
       <div class="bt-name"><span>${esc(mon.name)}</span><small>Lv.100</small><span class="ml-auto">${typeChips(mon.types)}</span></div>
       <div class="bt-hp"><b>HP</b><div class="bt-hpbar"><i class="${hpClass(ratio)}" style="width:${(ratio * 100).toFixed(1)}%"></i></div></div>
       ${si === 0 ? `<div class="bt-hpnum"><span class="bt-hpcur">${mon.hp}</span> / ${mon.maxHp}</div>` : ''}
       <div class="flex items-center justify-between"><div class="bt-dots">${dots}</div></div>
-      <div class="bt-chips">${chips.join('')}</div>`;
+      <div class="bt-chips">${chips.join('')}</div>
+      ${conds ? `<div class="bt-chips" title="${si === 0 ? '우리 쪽' : '상대 쪽'} 효과">${conds}</div>` : ''}`;
     if (withSprite) {
       const spr = spriteEl(si), img = $('img', spr);
       spr.classList.remove('noimg', 'fainted');
@@ -451,6 +465,18 @@
       $('.bt-fallback', spr).textContent = mon.name;
       spr.classList.toggle('fainted', mon.fainted);
     }
+  }
+
+  function renderField() {
+    const el = $('#bt-fieldbar');
+    if (!el || !S.U) return;
+    const f = S.U.field, tags = [];
+    if (f.weather) tags.push(WEATHER_UI[f.weather]);
+    if (f.terrain) tags.push(TERRAIN_UI[f.terrain]);
+    if (f.room) tags.push(`🌀 트릭룸 ${f.room}`);
+    el.innerHTML = tags.map(t => `<span>${esc(t)}</span>`).join('');
+    el.classList.toggle('on', tags.length > 0);
+    el.dataset.weather = f.weather || '';
   }
 
   function updateHp(si, animate) {
@@ -532,9 +558,28 @@
     const mon = si => U.side[si].party[U.side[si].active];
     switch (ev.t) {
       case 'turn': U.turn = ev.turn; $('#bt-turn').textContent = `${ev.turn}턴`; break;
+      case 'field': {
+        U.field = { weather: ev.weather, terrain: ev.terrain, room: ev.room, sides: ev.sides };
+        renderField(); renderSide(0, false); renderSide(1, false);
+        break;
+      }
+      case 'vol': { mon(ev.side).vol = ev.flags; renderSide(ev.side, false); break; }
+      case 'types': { mon(ev.side).types = ev.types; renderSide(ev.side, false); break; }
+      case 'stages': {
+        mon(ev.side).stages = Object.assign({}, ev.stages); renderSide(ev.side, false);
+        if (ev.text) { say(ev.text); await wait(msgDelay(ev.text)); }
+        break;
+      }
+      case 'cure': {
+        const side = U.side[ev.side];
+        for (const i of ev.indexes) { side.party[i].status = null; if (i === side.active) side.party[i].confusion = false; }
+        renderSide(ev.side, false);
+        say(ev.text); await wait(msgDelay(ev.text));
+        break;
+      }
       case 'switch': {
         const side = U.side[ev.side];
-        if (!ev.initial) { const old = side.party[side.active]; old.stages = {}; old.confusion = false; }
+        if (!ev.initial) { const old = side.party[side.active]; old.stages = {}; old.confusion = false; old.vol = {}; old.types = old.origTypes.slice(); }
         side.active = ev.to;
         side.party[ev.to].hp = ev.hp;
         renderSide(ev.side, true);
@@ -608,7 +653,7 @@
       }
       case 'faint': {
         const m = mon(ev.side);
-        m.fainted = true; m.hp = 0; m.status = null; m.confusion = false; m.stages = {};
+        m.fainted = true; m.hp = 0; m.status = null; m.confusion = false; m.stages = {}; m.vol = {}; m.types = m.origTypes.slice();
         updateHp(ev.side, false);
         renderSide(ev.side, false);
         say(ev.text);
@@ -668,8 +713,9 @@
         // 변화기는 위력 대신 효과를 보여 준다. 자신에게 쓰는 기술은 명중 판정이 없다
         const line1 = isStatus ? `<span class="fxdesc">${esc(E.describeEffect(m))}</span>` : `<span>위력 ${m.power}</span>`;
         const line2 = m.acc === null || (m.fx && m.fx.neverMiss) ? '필중' : '명중 ' + m.acc;
-        return `<button class="bt-move${LIGHT_TEXT.has(m.type) ? ' light' : ''}${isStatus ? ' status' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${m.pp <= 0 ? 'disabled' : ''} title="${i + 1}번 키">
-          ${hint && !isStatus ? `<span class="hint ${hint[0]}">${hint[1]}</span>` : ''}
+        const lm = la.moves[i], why = lm && lm.why;
+        return `<button class="bt-move${LIGHT_TEXT.has(m.type) ? ' light' : ''}${isStatus ? ' status' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${m.pp <= 0 || (lm && !lm.usable) ? 'disabled' : ''} title="${why ? esc(why) + ' · ' : ''}${i + 1}번 키">
+          ${why ? `<span class="hint im">${esc(why)}</span>` : hint && !isStatus ? `<span class="hint ${hint[0]}">${hint[1]}</span>` : ''}
           <span class="nm">${esc(m.name)}</span>
           <span class="meta"><span>${esc(D().types[m.type - 1].k)} · ${clsKo}</span>${line1}</span>
           <span class="meta"><span>PP ${m.pp}/${m.maxPp}</span><span>${line2}</span></span>
@@ -678,7 +724,7 @@
     host.innerHTML = `
       <div class="bt-cmd">${moveBtns}</div>
       <div class="bt-sub">
-        <button data-act="switch-open" ${la.switches.length ? '' : 'disabled'}>교체</button>
+        <button data-act="switch-open" ${la.switches.length ? '' : 'disabled'}>${la.trapped ? '교체 불가' : '교체'}</button>
         <button data-act="hints" title="효과 힌트 표시">${S.hints ? '상성 힌트 켬' : '상성 힌트 끔'}</button>
         <button class="danger" data-act="surrender">항복</button>
       </div>

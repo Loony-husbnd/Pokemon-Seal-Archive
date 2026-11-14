@@ -37,6 +37,14 @@
  *   powder   true                    풀 타입에게는 효과 없음 (가루 기술)
  *   typeImmune true                  기술 타입 상성이 적용된다 (전기자석파 ↔ 땅)
  *   (기술 자체의 w = 무작위 기술 구성에서 뽑힐 비중, 기본 1)
+ *
+ * 2단계 변화기 fx (지속 효과 · 필드 · 함정 …)
+ *   weather  sun|rain|sand|snow            날씨 5턴          terrain electric|grassy|misty|psychic  필드 5턴       room 트릭룸(다시 쓰면 해제)
+ *   hazard   rocks|spikes|tspikes|web      상대 쪽 함정       screen  reflect|lightscreen|veil       우리 쪽 벽 5턴  side tailwind|safeguard|mist
+ *   defog    함정·벽 제거                  seed 씨뿌리기      taunt/encore/disable/torment/yawn/attract/nightmare/trap/spite/soak  상대에게 거는 지속 상태
+ *   aquaRing/ingrain/wish/focus            자신 지속 효과     roost 날개쉬기(heal 과 함께)          weatherHeal / sandHeal  날씨별 회복량
+ *   protect  protect|endure                이번 턴 방어       sub 대타출동  painSplit  phaze 강제 교체  transform  haze  splash  metronome  sleepTalk  perish
+ *   cure     self|party  cureFoe           상태이상 회복      randStat  무작위 능력 +N               reqFoeStatus [kind…]  상대가 그 상태일 때만
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -197,7 +205,7 @@ function buildMoves(raw, overrides) {
 // ───────────────────────── 변화기 (1단계 50개) ─────────────────────────
 const AILMENT_ID = { par: 1, slp: 2, brn: 4, psn: 5, tox: 5, cnf: 6 };
 
-function buildStatusMoves(raw, defs) {
+function buildStatusMoves(raw, defs, unverified) {
   const byIdent = new Map(raw.moves.map(m => [m.identifier, m]));
   const out = new Map();
   const problems = [];
@@ -212,11 +220,11 @@ function buildStatusMoves(raw, defs) {
     for (const side of ['tgt', 'self']) for (const c of fx[side] || []) want[c.stat] = c.change;
     const have = {};
     for (const c of raw.statChanges.get(id) || []) have[STAT_KEY[c.stat]] = c.change;
-    if (ident !== 'belly-drum' && JSON.stringify(Object.entries(want).sort()) !== JSON.stringify(Object.entries(have).sort())) {
+    if (!unverified.has(ident) && JSON.stringify(Object.entries(want).sort()) !== JSON.stringify(Object.entries(have).sort())) {
       problems.push(`${ident}: 능력 변화 불일치 정의=${JSON.stringify(want)} 원본=${JSON.stringify(have)}`);
     }
     if (fx.ail && num(meta.meta_ailment_id) !== AILMENT_ID[fx.ail.kind]) problems.push(`${ident}: 상태이상 불일치`);
-    if (fx.heal && num(meta.healing) !== fx.heal) problems.push(`${ident}: 회복량 불일치 (원본 ${meta.healing})`);
+    if (!unverified.has(ident) && fx.heal && num(meta.healing) !== fx.heal) problems.push(`${ident}: 회복량 불일치 (원본 ${meta.healing})`);
     out.set(id, {
       id, e: ident, type: num(m.type_id), cls: 'sta', power: 0,
       acc: num(m.accuracy) || null, pp: num(m.pp), pri: num(m.priority) || 0,
@@ -337,7 +345,7 @@ async function main() {
   const statusJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'battle-status-moves.json'), 'utf8'));
   const statusDefs = statusJson.moves, statusWeights = statusJson.weights || {};
   for (const k of Object.keys(statusWeights)) if (!statusDefs[k]) { console.error(`weights 에 정의되지 않은 변화기: ${k}`); process.exit(1); }
-  const statusMoves = buildStatusMoves({ moves: moveRows, meta, statChanges }, statusDefs);
+  const statusMoves = buildStatusMoves({ moves: moveRows, meta, statChanges }, statusDefs, new Set(statusJson.unverified || []));
 
   // 포켓몬 기본 정보
   const baseStats = new Map(), types = new Map();

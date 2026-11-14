@@ -88,18 +88,35 @@
     // ───────────── 기술 구성 (변화기 포함) ─────────────
     const clamp01 = v => Math.max(0, Math.min(1, v));
 
+    /** 효과 종류별 기본 비중 (2단계 변화기). 시뮬레이션 결과로 기술마다의 w 가 따로 곱해진다 */
+    const SPECIAL_FIT = {
+      splash: 0.02, metronome: 0.3, sleepTalk: 0.25, perish: 0.1, transform: 6,
+      weather: 0.6, terrain: 0.45, room: 0.4, defog: 0.4, seed: 0.8, taunt: 0.7, encore: 0.4, disable: 0.3, torment: 0.2, yawn: 0.5, attract: 0.5,
+      nightmare: 0.2, trap: 0.3, spite: 0.15, soak: 0.2, aquaRing: 0.5, ingrain: 0.35, wish: 0.7, focus: 0.2, sub: 0.7, painSplit: 0.3, phaze: 0.5,
+      haze: 0.35, cureFoe: 0.5, randStat: 0.5,
+    };
+    const HAZARD_FIT = { rocks: 1, spikes: 0.6, tspikes: 0.6, web: 0.4 };
+    const SCREEN_FIT = { reflect: 0.6, lightscreen: 0.6, veil: 0.2 };
+    const SIDE_FIT = { tailwind: 0.7, safeguard: 0.3, mist: 0.2 };
+
     /** 이 포켓몬에게 이 변화기가 얼마나 어울리는지 (0이면 뽑히지 않는다) */
     function statusFit(p, mv) {
       const fx = mv.fx;
+      for (const k of Object.keys(SPECIAL_FIT)) if (fx[k]) return SPECIAL_FIT[k];
+      if (fx.hazard) return HAZARD_FIT[fx.hazard];
+      if (fx.screen) return SCREEN_FIT[fx.screen];
+      if (fx.side) return SIDE_FIT[fx.side];
+      if (fx.protect) return fx.protect === 'endure' ? 0.2 : 0.9;
+      if (fx.cure) return fx.heal ? 0.6 : fx.cure === 'party' ? 0.4 : 0.3;
       let w;
-      if (fx.heal) w = 1;
+      if (fx.heal) w = fx.roost || fx.weatherHeal || fx.sandHeal ? 1 : 1;
       else if (fx.rest) w = 0.6;
       else if (fx.self) {
         const rel = { atk: clamp01(p.b[1] / Math.max(p.b[1], p.b[3])) ** 3, spa: clamp01(p.b[3] / Math.max(p.b[1], p.b[3])) ** 3,
           def: 0.6, spd: 0.6, spe: 0.7, acc: 0.3, eva: 0.2 };
         const ups = fx.self.filter(c => c.change > 0);
         w = ups.length ? 1.1 * ups.reduce((a, c) => a + rel[c.stat], 0) / ups.length : 0;
-        if (fx.hpCost) w *= 0.5;                                   // 뱃대띠
+        if (fx.hpCost) w *= 0.5;                                   // 뱃대띠 등
         if (mv.e === 'growth' || mv.e === 'harden') w *= 0.5;      // 효과가 약한 기술
       } else if (fx.ail && fx.tgt) w = 0.7;                        // 뽐내기·치켜세우기
       else if (fx.ail) w = { slp: 1.1, tox: 1.2, par: 1, brn: 1, psn: 0.7, cnf: 0.5 }[fx.ail.kind] || 0.5;
@@ -107,13 +124,20 @@
       return w;
     }
 
-    /** 같은 역할의 변화기가 한 포켓몬에게 겹치지 않도록 하는 표식 (회복 / 같은 상태이상 / 같은 능력) */
+    /** 같은 역할의 변화기가 한 포켓몬에게 겹치지 않도록 하는 표식 (회복 / 같은 상태이상 / 같은 능력 / 필드 …) */
     function roleTokens(mv) {
       const fx = mv.fx, t = [];
       if (fx.heal || fx.rest) t.push('heal');
       if (fx.ail) t.push('ail:' + fx.ail.kind);
       (fx.tgt || []).forEach(c => t.push('foe:' + c.stat));
       (fx.self || []).forEach(c => { if (c.change > 0) t.push('my:' + c.stat); });
+      if (fx.weather || fx.terrain || fx.room) t.push('field');          // 날씨·필드·트릭룸은 하나만
+      if (fx.hazard) t.push('hazard:' + fx.hazard);
+      if (fx.screen) t.push('screen');
+      if (fx.side) t.push('side:' + fx.side);
+      if (fx.protect) t.push('protect');
+      if (fx.cure) t.push('cure');
+      for (const k of ['seed', 'taunt', 'encore', 'disable', 'torment', 'yawn', 'attract', 'nightmare', 'trap', 'sub', 'phaze', 'haze', 'painSplit', 'defog', 'randStat']) if (fx[k]) t.push(k);
       return t;
     }
 

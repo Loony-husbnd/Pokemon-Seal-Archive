@@ -8,6 +8,7 @@
  * 2) 변화기 효과  : 변화기 있는 쪽 vs 공격기만 있는 쪽 (같은 파티, 자리 교차) → 변화기가 이득인지
  * 3) 종족값 격차  : 종족값 합계 차이별 승률 (상대 파티 난이도 보정 OFFSET 을 다시 맞출 때 참고)
  * 4) 기술별 통계  : 변화기마다 쓰인 횟수, 그 기술을 가진 쪽의 승률
+ * 5) 종류별 사용  : AI 가 날씨·함정·벽·지속 효과 같은 종류를 실제로 쓰는지 (사용 횟수 대비 가진 횟수)
  */
 import { loadBattle } from './lib/load-battle.mjs';
 
@@ -49,6 +50,20 @@ function fight(sideA, sideB, seed, st) {
   }
   if (st) st.turns += bt.turn;
   return bt.winner;
+}
+function kindOf(fx) {
+  if (fx.weather || fx.terrain || fx.room) return '날씨·필드';
+  if (fx.hazard || fx.defog) return '함정';
+  if (fx.screen || fx.side) return '벽·측면';
+  if (fx.protect || fx.sub) return '보호·대타';
+  if (fx.seed || fx.taunt || fx.encore || fx.disable || fx.torment || fx.yawn || fx.attract || fx.nightmare || fx.trap || fx.spite || fx.soak || fx.perish) return '상대에게 거는 지속 상태';
+  if (fx.aquaRing || fx.ingrain || fx.wish || fx.focus) return '자신 지속 효과';
+  if (fx.phaze || fx.painSplit || fx.haze || fx.transform || fx.metronome || fx.sleepTalk || fx.splash) return '기타 특수';
+  if (fx.cure || fx.cureFoe) return '상태 회복';
+  if (fx.heal || fx.rest) return '회복';
+  if (fx.ail) return '상태이상';
+  if (fx.tgt) return '상대 능력 하락';
+  return '자신 능력 상승';
 }
 const pct = (a, b) => (b ? (100 * a / b).toFixed(1) : '-') + '%';
 const t0 = Date.now();
@@ -101,6 +116,12 @@ const list = Object.entries(owner).filter(([, o]) => o.have >= 30)
 const line = x => `  ${x.n.padEnd(8)} 사용 ${String(x.use).padStart(5)}  승률 ${(100 * x.wr).toFixed(1)}%  (${x.have}판)`;
 console.log('  ▲ 승률 높은 기술');  list.slice(0, 6).forEach(x => console.log(line(x)));
 console.log('  ▼ 승률 낮은 기술');  list.slice(-6).forEach(x => console.log(line(x)));
+// 5) 종류별 사용
+const have = {}, used = {};
+for (const m of Object.values(data.moves)) if (m.c === 'n') { const k = kindOf(m.fx); used[k] = (used[k] || 0) + (st.byName[m.k] || 0); }
+for (const [n, o] of Object.entries(owner)) { const m = Object.values(data.moves).find(x => x.k === n); const k = kindOf(m.fx); have[k] = (have[k] || 0) + o.have; }
+console.log('\n[5] 종류별 사용 (사용 횟수 / 가진 판 수 = 가진 판당 평균 사용)');
+for (const k of Object.keys(have).sort((a, b) => (used[b] || 0) / have[b] - (used[a] || 0) / have[a])) console.log(`  ${k.padEnd(14)} 사용 ${String(used[k] || 0).padStart(6)}  가진 판 ${String(have[k]).padStart(6)}  판당 ${((used[k] || 0) / have[k]).toFixed(2)}회`);
 const unused = Object.values(data.moves).filter(m => m.c === 'n' && !(st.byName[m.k] > 0)).map(m => m.k);
 console.log(`  한 번도 쓰이지 않은 변화기: ${unused.length ? unused.join(', ') : '없음'}`);
 console.log(`\n소요 ${((Date.now() - t0) / 1000).toFixed(1)}초`);

@@ -202,3 +202,14 @@
   .bt-sprite.idle img, .bt-sprite.enter, .bt-sprite.atk-me, .bt-sprite.atk-foe, .bt-sprite.cast img, .bt-sprite.hit, .bt-sprite.hit img { animation: none !important; }
   .bt-burst, .bt-banner, .bt-float { animation-duration: .01s !important; }
 }
+
+/* 날씨·필드 막대, 임시 상태/진영 효과 칩 */
+.bt-fieldbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: none; gap: 6px; z-index: 6; flex-wrap: wrap; justify-content: center; max-width: 70%; }
+.bt-fieldbar.on { display: flex; }
+.bt-fieldbar span { background: rgba(15, 23, 42, .78); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, .55); }
+.bt-fieldbar[data-weather="sun"] span:first-child { background: rgba(217, 119, 6, .85); }
+.bt-fieldbar[data-weather="rain"] span:first-child { background: rgba(37, 99, 235, .85); }
+.bt-fieldbar[data-weather="sand"] span:first-child { background: rgba(146, 110, 50, .88); }
+.bt-fieldbar[data-weather="snow"] span:first-child { background: rgba(14, 116, 144, .85); }
+.bt-chip.vol { background: #ede9fe; color: #5b21b6; }
+.bt-chip.cond { background: #fef3c7; color: #92400e; }

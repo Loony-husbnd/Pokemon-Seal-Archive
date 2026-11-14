@@ -14,6 +14,10 @@ const sandbox = {};
 vm.runInNewContext(fs.readFileSync(file, 'utf8'), sandbox); // 브라우저와 같은 방식(전역 BATTLE_DATA)으로 로드
 const d = sandbox.BATTLE_DATA;
 
+// 엔진(engine.js)이 이해하는 변화기 효과 키. 새 효과를 엔진에 추가하면 여기에도 넣는다.
+const STATUS_FX_KEYS = new Set(['ail', 'tgt', 'self', 'heal', 'rest', 'hpCost', 'powder', 'typeImmune', 'weather', 'terrain', 'room', 'hazard', 'defog', 'screen', 'side', 'seed', 'taunt',
+  'encore', 'disable', 'torment', 'yawn', 'aquaRing', 'ingrain', 'wish', 'roost', 'sandHeal', 'weatherHeal', 'focus', 'attract', 'nightmare', 'perish', 'protect', 'sub', 'painSplit',
+  'phaze', 'transform', 'splash', 'haze', 'metronome', 'sleepTalk', 'trap', 'spite', 'soak', 'randStat', 'reqFoeStatus', 'cure', 'cureFoe']);
 const errors = [];
 const err = m => errors.push(m);
 const isInt = v => Number.isInteger(v);
@@ -32,8 +36,12 @@ for (const [id, m] of Object.entries(d.moves)) {
   if (!m.fx || typeof m.fx !== 'object') err(`기술 ${id}: fx 없음`);
   if (isStatus) {
     const fx = m.fx;
-    if (!(fx.ail || fx.tgt || fx.self || fx.heal || fx.rest)) err(`변화기 ${id}(${m.e}): 효과 없음`);
-    if ((fx.ail || fx.tgt) && m.ac === null) err(`변화기 ${id}(${m.e}): 상대에게 거는 기술인데 명중률이 없음`);
+    if (!Object.keys(fx).length) err(`변화기 ${id}(${m.e}): 효과 없음`);
+    if (fx.ail && m.ac === null) err(`변화기 ${id}(${m.e}): 상태이상을 거는 기술인데 명중률이 없음`);
+    for (const k of Object.keys(fx)) if (!STATUS_FX_KEYS.has(k)) err(`변화기 ${id}(${m.e}): 알 수 없는 효과 ${k}`);
+    const enums = { weather: ['sun', 'rain', 'sand', 'snow'], terrain: ['electric', 'grassy', 'misty', 'psychic'], hazard: ['rocks', 'spikes', 'tspikes', 'web'],
+      screen: ['reflect', 'lightscreen', 'veil'], side: ['tailwind', 'safeguard', 'mist'], protect: ['protect', 'endure'], cure: ['self', 'party'] };
+    for (const [k, list] of Object.entries(enums)) if (fx[k] !== undefined && !list.includes(fx[k])) err(`변화기 ${id}(${m.e}): ${k} 값 오류 (${fx[k]})`);
     if (m.w !== undefined && !(m.w >= 0 && m.w <= 3)) err(`변화기 ${id}(${m.e}): 비중(w) 범위 오류`);
     for (const c of [...(fx.tgt || []), ...(fx.self || [])]) {
       if (!['atk', 'def', 'spa', 'spd', 'spe', 'acc', 'eva'].includes(c.stat) || !Number.isInteger(c.change) || c.change === 0) err(`변화기 ${id}(${m.e}): 능력 변화 오류`);
@@ -69,7 +77,7 @@ for (const [id, p] of Object.entries(d.pokemon)) {
 
 const n = Object.keys(d.pokemon).length;
 console.log(`포켓몬 ${n}종/폼, 기술 ${Object.keys(d.moves).length}개 (변화기 ${statusIds.length}개), 평균 대표 공격기 ${(totalMoves / n).toFixed(2)}개`);
-if (statusIds.length !== 50) err(`변화기가 50개여야 합니다 (현재 ${statusIds.length})`);
+if (statusIds.length !== 150) err(`변화기가 150개여야 합니다 (현재 ${statusIds.length})`);
 console.log('보유 기술 수 분포:', JSON.stringify(dist));
 const missing = Array.from({ length: 1025 }, (_, i) => i + 1).filter(i => !d.pokemon[i]);
 if (missing.length) err(`1~1025 중 누락: ${missing.join(',')}`);

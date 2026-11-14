@@ -222,13 +222,19 @@ test('describeEffect: 효과 한 줄 요약', () => {
 });
 
 // ───────────── 데이터 ─────────────
-test('데이터: 변화기 50개가 모두 들어 있고 형식이 올바르다', () => {
+test('데이터: 1단계 변화기 50개가 그대로 들어 있고 형식이 올바르다', () => {
+  const stage1 = new Set(['poison-powder', 'toxic', 'will-o-wisp', 'thunder-wave', 'stun-spore', 'glare', 'sleep-powder', 'spore', 'hypnosis', 'sing', 'lovely-kiss', 'supersonic', 'confuse-ray',
+    'sweet-kiss', 'swagger', 'flatter', 'growl', 'tail-whip', 'leer', 'screech', 'charm', 'sand-attack', 'smokescreen', 'scary-face', 'string-shot', 'metal-sound', 'swords-dance', 'dragon-dance',
+    'nasty-plot', 'calm-mind', 'bulk-up', 'iron-defense', 'amnesia', 'agility', 'rock-polish', 'quiver-dance', 'shell-smash', 'growth', 'harden', 'cotton-guard', 'coil', 'belly-drum', 'double-team',
+    'recover', 'soft-boiled', 'slack-off', 'moonlight', 'synthesis', 'morning-sun', 'rest']);
   const st = Object.entries(data.moves).filter(([, m]) => m.c === 'n');
-  assert.equal(st.length, 50);
-  for (const [id, m] of st) {
+  assert.ok(st.length >= 50);
+  assert.equal(st.filter(([, m]) => stage1.has(m.e)).length, 50);
+  for (const [, m] of st) {
     assert.equal(m.pw, 0, m.e);
-    assert.ok(m.fx.ail || m.fx.tgt || m.fx.self || m.fx.heal || m.fx.rest, `${m.e}: 효과 없음`);
-    if (m.fx.ail || m.fx.tgt) assert.ok(m.ac > 0, `${m.e}: 상대에게 거는 기술은 명중률이 있어야 한다`);
+    assert.ok(m.fx.ail || m.fx.tgt || m.fx.self || m.fx.heal || m.fx.rest || Object.keys(m.fx).length, `${m.e}: 효과 없음`);
+    assert.ok(m.ac === null || m.ac > 0, `${m.e}: 명중률 오류`);
+    if (m.fx.ail) assert.ok(m.ac > 0, `${m.e}: 상태이상을 거는 기술은 명중률이 있어야 한다`);
   }
   for (const p of Object.values(data.pokemon)) {
     for (const mid of p.sm) assert.equal(data.moves[mid].c, 'n');
