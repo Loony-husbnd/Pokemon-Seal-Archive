@@ -23,12 +23,17 @@ export function mount(root, { go }) {
   const r = store.record, total = r.w + r.l + r.d;
   const fan = store.team.map((t, i) => t
     ? `<button class="fan-card" data-act="builder" style="${cardStyle(t.id)};--rot:${(i - 1) * 9}deg;--dy:${Math.abs(i - 1) * 14}px;--i:${i}">
-         <span class="fan-no display">${String(D().pokemon[t.id].sp).padStart(3, '0')}</span>
+         <span class="fan-no">${String(D().pokemon[t.id].sp).padStart(3, '0')}</span>
          <span class="fan-art">${monImg(t.id)}</span><b>${esc(formLabel(t.id))}</b><i class="foil"></i></button>`
     : `<button class="fan-card empty" data-act="builder" style="--rot:${(i - 1) * 9}deg;--dy:${Math.abs(i - 1) * 14}px;--i:${i}"><span class="q display">?</span><b>비어 있음</b></button>`).join('');
 
   root.innerHTML = `
     <main class="home screen">
+      <div class="ring-stage" aria-hidden="true">
+        <i class="dash"></i><i class="halo"></i><i class="arc"></i><i class="arc blue"></i>
+        <span class="orbit o1"><i></i></span><span class="orbit o2"><i></i></span>
+        <svg class="ringtxt" viewBox="0 0 200 200"><defs><path id="rtxt" d="M100 100m-96 0a96 96 0 1 1 192 0a96 96 0 1 1 -192 0"/></defs><text><textPath href="#rtxt">PROELIUM · BATTLE ARENA · 3 ON 3 · 1,351 POKÉMON · PROELIUM · BATTLE ARENA · 3 ON 3 · 1,351 POKÉMON ·</textPath></text></svg>
+      </div>
       <header class="home-top">
         <a class="iconbtn" href="../" title="띠부씰 아카이브(Holo)로" data-sfx>🗂</a>
         <span class="sp"></span>

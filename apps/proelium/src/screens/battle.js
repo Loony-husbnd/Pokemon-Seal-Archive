@@ -98,12 +98,17 @@ export function mount(root, { go, params }) {
     if (style) d.style.cssText += style; $('#fx').appendChild(d); setTimeout(() => d.remove(), life / speed + 120); return d;
   }
   const float = (si, text, cls, dy = 0) => { const c = centerOf(si); spawn('float ' + (cls || ''), esc(text), { x: c.x, y: c.y - 30 + dy }); };
+  // 타격 파티클은 타입 색에 금색·파랑·흰색과 여러 색을 섞어 화려하게 터뜨린다
+  const CONFETTI = ['#ffb21f', '#ffe3a6', '#ffffff', '#9bb8ff', '#ff5fa2', '#5ee7ff', '#7dff6b', '#b45cff'];
   function burst(si, color, n = 12) {
-    const c = centerOf(si);
+    const c = centerOf(si), total = n + 10;
     spawn('ringfx', '', c, `--c:${color}`, 700);
-    for (let i = 0; i < n; i++) {
-      const a = (Math.PI * 2 * i) / n + Math.random() * .5, d = 70 + Math.random() * 70;
-      spawn('spark', '', c, `--c:${color};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px`, 700);
+    spawn('ringfx gold', '', c, '--c:#ffb21f', 950);
+    for (let i = 0; i < total; i++) {
+      const a = (Math.PI * 2 * i) / total + Math.random() * .5, d = 70 + Math.random() * 120;
+      const col = i % 3 === 0 ? color : CONFETTI[Math.floor(Math.random() * CONFETTI.length)];
+      const sz = 6 + Math.random() * 11;
+      spawn('spark', '', c, `--c:${col};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px;width:${sz}px;height:${sz}px;${i % 4 === 0 ? 'border-radius:2px;' : ''}`, 850);
     }
   }
   const shake = (cls = 'shake') => { arena.classList.remove('shake', 'shake-big'); void arena.offsetWidth; arena.classList.add(cls); };
