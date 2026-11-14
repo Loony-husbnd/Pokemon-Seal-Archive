@@ -21,7 +21,7 @@ const MIME: Record<string, string> = {
   '.json': 'application/json; charset=utf-8',
 };
 
-function sharedPackages(appName: string, copyOnBuild: boolean) {
+function sharedPackages(copyOnBuild: boolean) {
   return {
     name: 'shared-packages',
     configureServer(server: any) {
@@ -35,9 +35,6 @@ function sharedPackages(appName: string, copyOnBuild: boolean) {
       });
     },
     closeBundle() {
-      // 일반 <script src> 로 불러오는 앱 자체 소스(apps/*/src)는 번들되지 않으므로 그대로 복사한다.
-      const appSrc = path.resolve(ROOT, 'apps', appName, 'src');
-      if (fs.existsSync(appSrc)) fs.cpSync(appSrc, path.resolve(ROOT, 'dist', appName === 'proelium' ? 'proelium' : '', 'src'), { recursive: true });
       if (!copyOnBuild) return;
       fs.cpSync(PACKAGES, path.resolve(ROOT, 'dist', 'packages'), {
         recursive: true,
@@ -53,7 +50,7 @@ export default defineConfig(({ mode }) => {
   return {
     root: appDir,
     base: './', // 하위 경로 배포·file:// 에서도 상대경로로 열리도록
-    plugins: [sharedPackages(isProelium ? 'proelium' : 'holo', !isProelium)],
+    plugins: [sharedPackages(!isProelium)],
     build: {
       outDir: path.resolve(ROOT, 'dist', isProelium ? 'proelium' : ''),
       emptyOutDir: true,

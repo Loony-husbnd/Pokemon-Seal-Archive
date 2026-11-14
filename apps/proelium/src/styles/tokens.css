@@ -1,0 +1,19 @@
+/* ───────── Proelium 디자인 토큰 — "네온 아레나" ───────── */
+:root {
+  --bg0: #06051a; --bg1: #0d0a2e; --bg2: #1a1458;
+  --ink: #f6f3ff; --mute: #a59fd8; --dim: #6f69a8;
+  --line: rgba(255, 255, 255, .12); --glass: rgba(20, 16, 70, .55);
+  --hot: #ff2e88; --violet: #7a4dff; --cyan: #19e3ff; --gold: #ffd23f; --lime: #7dff6b; --danger: #ff4d5e;
+  --grad: linear-gradient(120deg, #ff2e88 0%, #7a4dff 52%, #19e3ff 100%);
+  --grad-gold: linear-gradient(120deg, #ffd23f, #ff8a3d);
+  --r: 22px; --r-sm: 14px;
+  --spring: cubic-bezier(.2, 1.1, .3, 1.25);
+  --font: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif;
+  --display: 'Arial Black', 'Impact', 'Haettenschweiler', system-ui, sans-serif;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+/* 타입 색 (네온 배경에서 또렷하게 보이도록 채도를 높였다) */
+:root {
+  --t1: #aab4c8; --t2: #ff6a3d; --t3: #7fb2ff; --t4: #b45cff; --t5: #d9a441; --t6: #b8a266; --t7: #9ccc2a; --t8: #7a5cc7; --t9: #7fb6c9;
+  --t10: #ff5a2a; --t11: #2f8cff; --t12: #35c759; --t13: #ffd60a; --t14: #ff4f9a; --t15: #5ee7ff; --t16: #5a4bff; --t17: #7b6a66; --t18: #ff8fd0;
+}

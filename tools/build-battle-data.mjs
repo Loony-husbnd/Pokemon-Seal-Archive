@@ -12,8 +12,11 @@
  * 규칙
  *  - 능력치: Lv100, 개체값 31, 노력치 0, 성격 보정 없음
  *      HP = 2*종족값 + 31 + 110,  그 외 = 2*종족값 + 31 + 5   (껍질몬 HP = 1)
- *  - 기술 : 공격기만, 최대 4개. 자속(STAB) 고위력 + 시그니처 + 커버(상성 범위)로 자동 선정.
- *           변화기/2턴기/반동 턴/자폭/조건부 위력 등 엔진 1차 범위 밖의 기술은 제외한다.
+ *  - 공격기 : 포켓몬마다 최대 4개(m). 자속(STAB) 고위력 + 시그니처 + 커버(상성 범위)로 자동 선정.
+ *             2턴기/반동 턴/자폭/조건부 위력 등 엔진 범위 밖의 기술은 제외한다.
+ *  - 변화기 : tools/battle-status-moves.json 에 정의한 50개(1단계: 상태이상·능력 변화·회복).
+ *             포켓몬마다 배울 수 있는 것(sm)과 그중 Showdown 랜덤배틀 세트에 나오는 것(ss)을 담는다.
+ *             실제로 4개 기술을 구성하는 일은 엔진 쪽(BattleParty.pickMoveset)이 한다.
  *
  * 기술 효과(fx) 스키마
  *   hits     [min, max]              다단 히트
@@ -25,6 +28,23 @@
  *   tgt/self [{ stat, change, chance }]  stat: atk def spa spd spe acc eva
  *   neverMiss true                   필중
  *   useDef   true                    특수기인데 상대의 방어로 계산 (사이코쇼크 등)
+ *
+ * 변화기(c = 'n', pw = 0) 전용 fx — 공격기와 같은 ail / tgt / self 키를 그대로 쓴다 (변화기는 chance 100)
+ *   ail·tgt 가 있으면 대상은 상대(명중 판정 있음), 없으면 자신(명중 판정 없음)
+ *   heal     %                       자신의 최대 체력 대비 회복 (예: 50)
+ *   rest     true                    잠자기: 체력 전부 회복 + 잠듦 2턴 (기존 상태이상은 낫는다)
+ *   hpCost   %                       자신의 최대 체력을 이만큼 깎고 쓴다 (뱃대띠: 50). 체력이 모자라면 실패
+ *   powder   true                    풀 타입에게는 효과 없음 (가루 기술)
+ *   typeImmune true                  기술 타입 상성이 적용된다 (전기자석파 ↔ 땅)
+ *   (기술 자체의 w = 무작위 기술 구성에서 뽑힐 비중, 기본 1)
+ *
+ * 2단계 변화기 fx (지속 효과 · 필드 · 함정 …)
+ *   weather  sun|rain|sand|snow            날씨 5턴          terrain electric|grassy|misty|psychic  필드 5턴       room 트릭룸(다시 쓰면 해제)
+ *   hazard   rocks|spikes|tspikes|web      상대 쪽 함정       screen  reflect|lightscreen|veil       우리 쪽 벽 5턴  side tailwind|safeguard|mist
+ *   defog    함정·벽 제거                  seed 씨뿌리기      taunt/encore/disable/torment/yawn/attract/nightmare/trap/spite/soak  상대에게 거는 지속 상태
+ *   aquaRing/ingrain/wish/focus            자신 지속 효과     roost 날개쉬기(heal 과 함께)          weatherHeal / sandHeal  날씨별 회복량
+ *   protect  protect|endure                이번 턴 방어       sub 대타출동  painSplit  phaze 강제 교체  transform  haze  splash  metronome  sleepTalk  perish
+ *   cure     self|party  cureFoe           상태이상 회복      randStat  무작위 능력 +N               reqFoeStatus [kind…]  상대가 그 상태일 때만
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -34,6 +54,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = path.join(ROOT, 'tools', '.cache');
 const OUT = path.join(ROOT, 'packages', 'rembrandt', 'data', 'battle-data.js');
+const OUT_LEARN = path.join(ROOT, 'packages', 'rembrandt', 'data', 'battle-learnsets.js');
 const CSV_BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv';
 const SETS_URL = 'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/random-battles/gen9/sets.json';
 const CSV_FILES = [
@@ -182,6 +203,39 @@ function buildMoves(raw, overrides) {
   return moves;
 }
 
+// ───────────────────────── 변화기 (1단계 50개) ─────────────────────────
+const AILMENT_ID = { par: 1, slp: 2, brn: 4, psn: 5, tox: 5, cnf: 6 };
+
+function buildStatusMoves(raw, defs, unverified) {
+  const byIdent = new Map(raw.moves.map(m => [m.identifier, m]));
+  const out = new Map();
+  const problems = [];
+  for (const [ident, fx] of Object.entries(defs)) {
+    const m = byIdent.get(ident);
+    if (!m) { problems.push(`${ident}: PokeAPI 에 없음`); continue; }
+    const id = Number(m.id);
+    if (m.damage_class_id !== '1') problems.push(`${ident}: 변화기가 아님`);
+    // ── PokeAPI 와 교차 검증: 정의한 효과가 원본 데이터와 어긋나면 알려 준다 ──
+    const meta = raw.meta.get(id) || {};
+    const want = {};
+    for (const side of ['tgt', 'self']) for (const c of fx[side] || []) want[c.stat] = c.change;
+    const have = {};
+    for (const c of raw.statChanges.get(id) || []) have[STAT_KEY[c.stat]] = c.change;
+    if (!unverified.has(ident) && JSON.stringify(Object.entries(want).sort()) !== JSON.stringify(Object.entries(have).sort())) {
+      problems.push(`${ident}: 능력 변화 불일치 정의=${JSON.stringify(want)} 원본=${JSON.stringify(have)}`);
+    }
+    if (fx.ail && num(meta.meta_ailment_id) !== AILMENT_ID[fx.ail.kind]) problems.push(`${ident}: 상태이상 불일치`);
+    if (!unverified.has(ident) && fx.heal && num(meta.healing) !== fx.heal) problems.push(`${ident}: 회복량 불일치 (원본 ${meta.healing})`);
+    out.set(id, {
+      id, e: ident, type: num(m.type_id), cls: 'sta', power: 0,
+      acc: num(m.accuracy) || null, pp: num(m.pp), pri: num(m.priority) || 0,
+      fx: structuredClone(fx),
+    });
+  }
+  if (problems.length) { console.error('변화기 정의 문제:\n  ' + problems.join('\n  ')); process.exit(1); }
+  return out;
+}
+
 // ───────────────────────── 점수 / 선정 ─────────────────────────
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
 
@@ -287,7 +341,12 @@ async function main() {
     if (!statChanges.has(id)) statChanges.set(id, []);
     statChanges.get(id).push({ stat: Number(r.stat_id), change: Number(r.change) });
   }
-  const moves = buildMoves({ moves: csv('moves'), meta, statChanges }, overrides);
+  const moveRows = csv('moves');
+  const moves = buildMoves({ moves: moveRows, meta, statChanges }, overrides);
+  const statusJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'battle-status-moves.json'), 'utf8'));
+  const statusDefs = statusJson.moves, statusWeights = statusJson.weights || {};
+  for (const k of Object.keys(statusWeights)) if (!statusDefs[k]) { console.error(`weights 에 정의되지 않은 변화기: ${k}`); process.exit(1); }
+  const statusMoves = buildStatusMoves({ moves: moveRows, meta, statChanges }, statusDefs, new Set(statusJson.unverified || []));
 
   // 포켓몬 기본 정보
   const baseStats = new Map(), types = new Map();
@@ -306,10 +365,15 @@ async function main() {
   const defaultOfSpecies = new Map(pokeRows.filter(r => r.is_default === '1').map(r => [Number(r.species_id), Number(r.id)]));
 
   // 습득 기술 (포켓몬 → 기술 집합), 기술별 습득 종 수
-  const learnset = new Map(), learnersBySpecies = new Map();
+  const learnset = new Map(), learnersBySpecies = new Map(), statusLearnset = new Map();
   const speciesOfPoke = new Map(pokeRows.map(r => [Number(r.id), Number(r.species_id)]));
   for (const r of csv('pokemon_moves')) {
     const pid = Number(r.pokemon_id), mid = Number(r.move_id);
+    if (statusMoves.has(mid)) {
+      if (!statusLearnset.has(pid)) statusLearnset.set(pid, new Set());
+      statusLearnset.get(pid).add(mid);
+      continue;
+    }
     if (!moves.has(mid)) continue;
     if (!learnset.has(pid)) learnset.set(pid, new Set());
     learnset.get(pid).add(mid);
@@ -320,7 +384,7 @@ async function main() {
 
   // Showdown 랜덤배틀 세트: 종(정규화 식별자) → 기술(정규화 식별자) → 등장 세트 수
   const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
-  const moveByNorm = new Map([...moves.values()].map(m => [norm(m.e), m.id]));
+  const moveByNorm = new Map([...moves.values(), ...statusMoves.values()].map(m => [norm(m.e), m.id]));
   const sdSets = JSON.parse(fs.readFileSync(path.join(CACHE, 'showdown-gen9-sets.json'), 'utf8'));
   const sdBySpecies = new Map();
   const globalFame = new Map();
@@ -334,6 +398,7 @@ async function main() {
   }
 
   const pokemon = {};
+  const learnOut = {};   // 포켓몬별로 배울 수 있는 공격기 전체 (Proelium 의 기술 직접 선택용)
   const stats = { sd: 0, noSd: 0, fewMoves: [], missingKo: [] };
   for (const r of pokeRows) {
     const id = Number(r.id), speciesId = Number(r.species_id);
@@ -354,7 +419,12 @@ async function main() {
     const p = { id, t, b, e: r.identifier };
     const ctx = { sdMoves, learnerCount, globalFame };
     const picked = selectMoves(p, candidates, ctx);
+    learnOut[id] = [...learnIds].sort((a, b2) => a - b2);
     if (picked.length < 4) stats.fewMoves.push(id);
+
+    // 변화기: 배울 수 있는 것(sm, id 순) / 그중 Showdown 랜덤배틀 세트에 나오는 것(ss)
+    const sLearn = [...(statusLearnset.get(id) || statusLearnset.get(defId) || new Set())].sort((a, b2) => a - b2);
+    const sRec = sLearn.filter(mid => sdMoves.has(mid));
 
     const s = b.map((v, i) => i === 0 ? 2 * v + 31 + 110 : 2 * v + 31 + 5);
     if (speciesId === 292) s[0] = 1; // 껍질몬
@@ -366,21 +436,24 @@ async function main() {
       bst: b.reduce((a, x) => a + x, 0),
       leg: sp.is_mythical === '1' ? 2 : sp.is_legendary === '1' ? 1 : 0,
       m: picked,
+      sm: sLearn,
+      ss: sRec,
     };
   }
 
   // 사용된 기술만 출력
-  const usedMoveIds = new Set(Object.values(pokemon).flatMap(p => p.m));
+  const usedMoveIds = new Set([...Object.values(pokemon).flatMap(p => p.m), ...statusMoves.keys()]);
   const moveOut = {};
   for (const mid of [...usedMoveIds].sort((a, b) => a - b)) {
-    const m = moves.get(mid);
-    moveOut[mid] = { k: moveKo.get(mid) || m.e, e: m.e, t: m.type, c: m.cls === 'phys' ? 'p' : 's', pw: m.power, ac: m.acc, pp: m.pp, pr: m.pri, fx: m.fx };
+    const m = moves.get(mid) || statusMoves.get(mid);
+    moveOut[mid] = { k: moveKo.get(mid) || m.e, e: m.e, t: m.type, c: m.cls === 'phys' ? 'p' : m.cls === 'sta' ? 'n' : 's', pw: m.power, ac: m.acc, pp: m.pp, pr: m.pri, fx: m.fx };
+    if (m.cls === 'sta' && statusWeights[m.e] !== undefined) moveOut[mid].w = statusWeights[m.e];   // 무작위 기술 구성에서 뽑힐 비중
   }
   const typeOut = TYPE_IDENT.map((e, i) => ({ id: i + 1, e, k: typeKo.get(i + 1) || e }));
 
   const data = {
     meta: {
-      version: 1,
+      version: 2,
       level: 100,
       statRule: 'IV31 / EV0 / 성격 보정 없음. HP=2B+141, 그 외=2B+36',
       source: 'PokeAPI csv + Pokemon Showdown gen9 random battle sets',
@@ -393,13 +466,36 @@ async function main() {
     pokemon,
   };
 
+  // 배울 수 있는 공격기 전체: 기술 ID 를 36진수 2글자로 압축해 한 줄 문자열로 만든다 (Proelium 만 불러온다)
+  const extraMoves = {};
+  const learnPacked = {};
+  for (const [pid, ids] of Object.entries(learnOut)) {
+    for (const mid of ids) {
+      if (mid >= 1296) throw new Error(`기술 ID 가 36진수 2글자를 넘습니다: ${mid}`);
+      if (!moveOut[mid] && !extraMoves[mid]) {
+        const m = moves.get(mid);
+        extraMoves[mid] = { k: moveKo.get(mid) || m.e, e: m.e, t: m.type, c: m.cls === 'phys' ? 'p' : 's', pw: m.power, ac: m.acc, pp: m.pp, pr: m.pri, fx: m.fx };
+      }
+    }
+    learnPacked[pid] = ids.map(i => i.toString(36).padStart(2, '0')).join('');
+  }
+
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT,
     '/* 자동 생성 파일 — 직접 수정하지 말고 tools/build-battle-data.mjs 를 수정해 다시 생성하세요. */\n' +
     '(function (g) { g.BATTLE_DATA = ' + JSON.stringify(data) + '; })(typeof window !== "undefined" ? window : globalThis);\n');
 
+  fs.writeFileSync(OUT_LEARN,
+    '/* 자동 생성 파일 — tools/build-battle-data.mjs. 포켓몬별로 배울 수 있는 공격기(BATTLE_LEARN)와 battle-data 에 없던 공격기 데이터를 더한다. */\n' +
+    '(function (g) {\n  var D = g.BATTLE_DATA; if (!D) return;\n  var X = ' + JSON.stringify(extraMoves) + ';\n  for (var k in X) if (!D.moves[k]) D.moves[k] = X[k];\n' +
+    '  var P = ' + JSON.stringify(learnPacked) + ', L = {};\n' +
+    '  for (var id in P) { var s = P[id], a = []; for (var i = 0; i < s.length; i += 2) a.push(parseInt(s.substr(i, 2), 36)); L[id] = a; }\n' +
+    '  g.BATTLE_LEARN = L;\n})(typeof window !== "undefined" ? window : globalThis);\n');
+  console.log(`학습 가능 공격기 파일: ${path.relative(ROOT, OUT_LEARN)} (${(fs.statSync(OUT_LEARN).size / 1024).toFixed(0)}KB, 추가 기술 ${Object.keys(extraMoves).length}개)`);
   console.log(`생성 완료: ${path.relative(ROOT, OUT)} (${(fs.statSync(OUT).size / 1024).toFixed(0)}KB)`);
-  console.log(`포켓몬 ${data.meta.pokemonCount}종/폼, 기술 ${data.meta.moveCount}개 (지원 가능 공격기 후보 ${moves.size}개)`);
+  console.log(`포켓몬 ${data.meta.pokemonCount}종/폼, 기술 ${data.meta.moveCount}개 (지원 가능 공격기 후보 ${moves.size}개, 변화기 ${statusMoves.size}개)`);
+  const smAvg = Object.values(pokemon).reduce((a, p) => a + p.sm.length, 0) / data.meta.pokemonCount;
+  console.log(`변화기 평균 습득 ${smAvg.toFixed(1)}개 / 변화기를 못 배우는 포켓몬 ${Object.values(pokemon).filter(p => !p.sm.length).length}종`);
   console.log(`Showdown 세트 매칭 ${stats.sd} / 미매칭 ${stats.noSd}`);
   console.log(`기술 4개 미만 ${stats.fewMoves.length}종, 한국어 이름 없음 ${stats.missingKo.length}종`);
 
@@ -412,7 +508,7 @@ async function main() {
 
 // 앱(index.html)이 쓰는 폼 ID/이름이 데이터에 모두 있는지 교차 검증
 function checkAgainstApp(pokemon, speciesById, defaultOfSpecies) {
-  const htmlPath = path.join(ROOT, 'index.html');
+  const htmlPath = path.join(ROOT, 'apps', 'holo', 'index.html');
   if (!fs.existsSync(htmlPath)) return;
   const html = fs.readFileSync(htmlPath, 'utf8');
   const block = name => {

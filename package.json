@@ -12,9 +12,11 @@
     "battle:data": "node tools/build-battle-data.mjs",
     "battle:validate": "node tools/validate-battle-data.mjs",
     "check:boundaries": "node tools/check-boundaries.mjs",
-    "test:battle": "node --test packages/rembrandt/engine.test.mjs packages/rembrandt/ai.test.mjs",
+    "test:battle": "node --test packages/rembrandt/engine.test.mjs packages/rembrandt/ai.test.mjs packages/rembrandt/status.test.mjs packages/rembrandt/status2.test.mjs",
     "sim:battle": "node tools/simulate-battles.mjs",
-    "sim:ai": "node tools/simulate-ai.mjs"
+    "sim:ai": "node tools/simulate-ai.mjs",
+    "sim:status": "node tools/simulate-status.mjs",
+    "sim:status-moves": "node tools/simulate-status-moves.mjs"
   },
   "devDependencies": {
     "vite": "^6.2.3"
