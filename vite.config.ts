@@ -1,6 +1,7 @@
 import {defineConfig} from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 /**
  * 한 저장소, 두 앱 (GitHub Pages 하위 경로 배포)
@@ -32,6 +33,18 @@ function sharedPackages(copyOnBuild: boolean) {
         if (!file.startsWith(PACKAGES + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return next();
         res.setHeader('Content-Type', MIME[path.extname(file)] || 'application/octet-stream');
         res.end(fs.readFileSync(file));
+      });
+    },
+    /**
+     * 일반 <script src>/<link href> 로 불러오는 packages/ 파일은 이름이 고정이라 브라우저가 옛 버전을 들고 있을 수 있다
+     * (새 화면 코드가 옛 엔진 위에서 돌아가는 문제). 파일 내용 해시를 ?v= 로 붙여 내용이 바뀌면 주소도 바뀌게 한다.
+     */
+    transformIndexHtml(html: string) {
+      return html.replace(/(src|href)="((?:\.\.?\/)+packages\/[^"?]+)"/g, (m: string, attr: string, url: string) => {
+        const file = path.resolve(ROOT, url.replace(/^(?:\.\.?\/)+/, ''));
+        if (!fs.existsSync(file)) return m;
+        const h = crypto.createHash('md5').update(fs.readFileSync(file)).digest('hex').slice(0, 8);
+        return `${attr}="${url}?v=${h}"`;
       });
     },
     closeBundle() {
