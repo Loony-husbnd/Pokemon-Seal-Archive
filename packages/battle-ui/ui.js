@@ -147,7 +147,7 @@
         <div class="rounded-2xl p-4 sm:p-5 text-white bg-gradient-to-br from-indigo-600 via-violet-600 to-rose-500 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-black flex items-center gap-2"><i data-lucide="swords" class="w-5 h-5"></i>띠부씰 배틀</h2>
-            <p class="text-xs text-indigo-100 mt-1 leading-relaxed">내 띠부씰 3마리로 싸우는 3:3 턴제 배틀 · 전원 Lv.100 · 포켓몬마다 대표 공격기 4개 · 파티 종족값 합계 ${fmt(PRT.cap)} 이하</p>
+            <p class="text-xs text-indigo-100 mt-1 leading-relaxed">내 띠부씰 3마리로 싸우는 3:3 턴제 배틀 · 전원 Lv.100 · 포켓몬마다 무작위 기술 4개 · 종족값 합계 제한 없음, 상대는 내 파티 강도에 맞춰 나와요</p>
           </div>
           <div id="bt-record" class="flex gap-2 text-center"></div>
         </div>
@@ -176,8 +176,8 @@
     S.party = entries.map(e => e.seal.id);                       // 삭제된 씰 정리
     const ids = entries.map(e => e.id);
     const check = PRT.validate(ids);
-    const total = check.total, ratio = Math.min(1, total / PRT.cap);
-    const meterCls = total > PRT.cap ? 'over' : ratio > 0.9 ? 'warn' : '';
+    const total = check.total, ratio = Math.min(1, total / 2400);      // 막대는 참고용(상한 없음)
+    const meterCls = '';
     const errors = check.errors.filter(m => !(entries.length < 3 && /3마리/.test(m)));
     const ready = check.ok && entries.length === 3;
 
@@ -210,7 +210,7 @@
         <div class="mt-3">
           <div class="flex items-center justify-between text-[11px] font-bold mb-1">
             <span class="text-slate-500">종족값 합계</span>
-            <span class="${total > PRT.cap ? 'text-rose-600' : 'text-slate-800'}">${fmt(total)} / ${fmt(PRT.cap)}</span>
+            <span class="text-slate-800">${fmt(total)}</span>
           </div>
           <div class="bt-meter ${meterCls}"><i style="width:${Math.max(0, ratio * 100)}%"></i></div>
           ${errors.length ? `<ul class="mt-2 text-[11px] text-rose-600 font-bold space-y-0.5">${errors.map(m => `<li>· ${esc(m)}</li>`).join('')}</ul>` : ''}
@@ -272,7 +272,6 @@
       if (!sel) {
         if (pEntries.length >= 3) { dis = true; why = '파티 가득'; }
         else if (partySp.has(c.sp)) { dis = true; why = '같은 종'; }
-        else if (partyTotal + c.p.bst > PRT.cap) { dis = true; why = '상한 초과'; }
       }
       return `<button class="bt-pick${sel ? ' sel' : ''}${dis ? ' dis' : ''}" data-act="pick" data-id="${esc(c.seal.id)}" ${dis ? `title="${esc(why)}"` : ''}>
         ${sel ? '<span class="bt-tag">선택</span>' : dis && why !== '파티 가득' ? `<span class="bt-tag no">${esc(why)}</span>` : ''}
@@ -294,30 +293,21 @@
       const cur = partyEntries();
       if (cur.length >= 3) return toast('파티가 가득 찼어요. 먼저 한 마리를 빼 주세요.', 'warning');
       if (cur.some(e => e.sp === c.sp)) return toast('같은 종류의 포켓몬은 한 파티에 한 마리만 넣을 수 있어요.', 'warning');
-      if (cur.reduce((s, e) => s + e.p.bst, 0) + c.p.bst > PRT.cap) return toast(`종족값 합계가 상한(${PRT.cap})을 넘어요.`, 'warning');
       S.party = cur.map(e => e.seal.id).concat(sealId);
     }
     save(); renderParty(); renderPicker();
   }
 
-  /** 종족값 합계가 상한 이하에서 가장 큰 서로 다른 3마리 (전체 후보 대상 투 포인터 탐색) */
+  /** 서로 다른 종 중 종족값이 가장 높은 3마리 (상한이 없으므로 가장 강한 조합) */
   function autoParty() {
     const best = new Map();
     for (const c of candidates()) { const k = c.sp; if (!best.has(k) || c.p.bst > best.get(k).p.bst) best.set(k, c); }
-    const arr = [...best.values()].sort((a, b) => a.p.bst - b.p.bst);
+    const arr = [...best.values()].sort((a, b) => b.p.bst - a.p.bst);
     if (arr.length < 3) return toast('서로 다른 포켓몬 띠부씰이 3종 이상 필요해요.', 'warning');
-    let top = null;
-    for (let i = 0; i < arr.length - 2; i++) {
-      let j = i + 1, k = arr.length - 1;
-      while (j < k) {
-        const t = arr[i].p.bst + arr[j].p.bst + arr[k].p.bst;
-        if (t <= PRT.cap) { if (!top || t > top.t) top = { t, set: [arr[i], arr[j], arr[k]] }; j++; } else k--;
-      }
-    }
-    if (!top) return toast(`종족값 합계 ${PRT.cap} 이하로 만들 수 있는 조합이 없어요.`, 'warning');
-    S.party = top.set.map(c => c.seal.id);
+    const set = arr.slice(0, 3), t = set.reduce((s2, c) => s2 + c.p.bst, 0);
+    S.party = set.map(c => c.seal.id);
     save(); renderParty(); renderPicker();
-    toast(`추천 파티 완성! (종족값 합계 ${top.t})`, 'success');
+    toast(`추천 파티 완성! (종족값 합계 ${t})`, 'success');
   }
 
   // ═════════════════════ 상대 공개(VS) 화면 ═════════════════════

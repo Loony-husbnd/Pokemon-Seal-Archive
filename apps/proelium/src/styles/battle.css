@@ -96,7 +96,7 @@
   color: #fff; -webkit-text-stroke: 3px #0a1230; paint-order: stroke fill; text-shadow: 0 6px 0 #0a1230, 0 0 40px rgba(42, 98, 255, .9); }
 .banner.on { animation: bannerIn .9s var(--spring) forwards; } @keyframes bannerIn { 0% { transform: translate(-50%, -50%) scale(3); opacity: 0; } 25% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -60%) scale(1.05); opacity: 0; } }
 .banner.super { color: #ffd23f; } .banner.weak { color: #9fb0d8; font-size: clamp(30px, 6vw, 56px); } .banner.none { color: #c3c8e8; font-size: clamp(30px, 6vw, 56px); } .banner.crit { color: #ff5a2a; }
-.banner.ko { color: #ff2e4d; font-size: clamp(60px, 16vw, 150px); } .banner.fight { background: var(--grad-gold); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: clamp(60px, 14vw, 130px); }
+.banner.ko { color: #ff2e4d; font-size: clamp(60px, 16vw, 150px); } .banner.fight { font-size: clamp(60px, 14vw, 130px); }   /* FIGHT! 는 READY? 와 같은 흰 글자 */
 
 /* 로그 · 조작 */
 .log { margin: 12px 14px 0; min-height: 58px; display: flex; align-items: center; padding: 10px 18px; border-radius: 18px; background: rgba(3, 6, 18, .88); border: 1.5px solid var(--line); }

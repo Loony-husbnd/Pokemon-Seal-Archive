@@ -2,26 +2,25 @@
  * 파티 규칙과 상대 파티 생성 (3단계)
  *
  *   const P = BattleParty.create(BATTLE_DATA);
- *   P.validate([6, 25, 9])                    → { ok, total, cap, errors:[] }   (3마리·종 중복 없음·종족값 합계 ≤ 상한)
+ *   P.validate([6, 25, 9])                    → { ok, total, errors:[] }   (3마리·종 중복 없음. 종족값 합계 상한은 없다)
  *   P.generateOpponent({ playerIds, level, rng })   → 포켓몬 데이터 ID 3개 (플레이어 파티 종족값 합계에 맞춤)
  *   P.displayName(id)                         → '메가리자몽X', '알로라 라이츄' 등 표시 이름
  *   P.pickMoveset(id, rng)                    → 기술 ID 최대 4개 (공격기 2~3 + 변화기 1~2, 무작위)  ※ Holo 용
  *                                               변화기를 못 배우는 포켓몬은 공격기 그대로. 엔진에는 makeMon(id, { moves }) 로 넘긴다.
  *
- * 상대 파티의 종족값 합계 목표 = 내 파티 합계 + 난이도 보정 (시뮬레이션: 100 차이 ≈ 승률 72%)
- *   쉬움 −120 / 보통 0 / 어려움 +90 (어려움은 상한을 최대 90까지 넘을 수 있다)
- * 전설·환상은 내 파티에 있을 때만 상대에게도 허용한다.
+ * 상대 파티의 종족값 합계 목표 = 내 파티 합계 + 난이도 보정 (시뮬레이션: 100 차이 ≈ 승률 72%). 상한은 없다.
+ *   쉬움 −120 / 보통 0 / 어려움 +90
+ * 전설·환상은 내 파티에 있거나, 목표 합계가 2000을 넘을 때만 상대에게도 허용한다.
  */
 (function (global) {
   'use strict';
 
-  const CAP = 1500;
+  const LEGEND_FROM = 2000;      // 목표 종족값 합계가 이보다 크면 전설·환상도 상대로 나올 수 있다
   const OFFSET = { easy: -120, normal: 0, hard: 90 };
   const REGION = { alola: '알로라', galar: '가라르', hisui: '히스이', paldea: '팔데아' };
 
   function create(data, opts) {
     opts = opts || {};
-    const cap = opts.cap || CAP;
     const P = data.pokemon;
 
     const speciesLabel = id => P[id].k;
@@ -51,38 +50,48 @@
       if (ids.length !== 3) errors.push('포켓몬 3마리를 골라야 합니다.');
       if (new Set(ids.map(id => P[id] && P[id].sp)).size !== ids.length) errors.push('같은 종류의 포켓몬은 한 파티에 한 마리만 넣을 수 있습니다.');
       const t = total(ids.filter(id => P[id]));
-      if (t > cap) errors.push(`종족값 합계가 상한(${cap})을 넘었습니다. (${t})`);
-      return { ok: errors.length === 0, total: t, cap, errors };
+      return { ok: errors.length === 0, total: t, errors };
     }
 
+    /**
+     * 내 파티 강도(종족값 합계)에 맞춘 상대 3마리. 상한은 없다.
+     * 목표 = 내 합계 + 난이도 보정. 한 마리당 평균 종족값 근처의 후보에서 뽑아 높은 목표에도 맞추고,
+     * 맞출 수 있는 최대치를 넘는 목표면 가장 강한 후보들 중 가장 가까운 조합을 고른다.
+     */
     function generateOpponent(o) {
       const rng = o.rng || Math.random;
       const level = OFFSET[o.level] === undefined ? 'normal' : o.level;
       const playerTotal = total(o.playerIds);
-      const allowLegend = hasLegend(o.playerIds);
-      const maxTotal = cap + (level === 'hard' ? OFFSET.hard : 0);
-      const target = Math.max(750, Math.min(maxTotal, playerTotal + OFFSET[level]));
+      const target = Math.max(750, playerTotal + OFFSET[level]);
+      const allowLegend = hasLegend(o.playerIds) || target > LEGEND_FROM;     // 높은 목표는 전설 없이 맞출 수 없다
 
-      const cands = pool.filter(id => allowLegend || !P[id].leg);
-      const pick = () => cands[Math.floor(rng() * cands.length)];
+      const sorted = pool.filter(id => allowLegend || !P[id].leg).sort((a, b) => P[a].bst - P[b].bst || a - b);
+      const avg = target / 3;
+      const near = w => sorted.filter(id => Math.abs(P[id].bst - avg) <= w);
+      const valid = ids => new Set(ids.map(id => P[id].sp)).size === 3 && new Set(ids.map(id => P[id].t[0])).size >= 2;   // 같은 속성 3마리는 제외
 
-      // 합계가 목표에 가까운 서로 다른 3마리를 찾는다 (허용 오차를 점점 넓힘)
-      for (let tol = 30; tol <= 400; tol += 30) {
-        for (let tries = 0; tries < 4000; tries++) {
-          const ids = [pick(), pick(), pick()];
-          if (new Set(ids.map(id => P[id].sp)).size < 3) continue;
-          if (new Set(ids.map(id => P[id].t[0])).size < 2) continue;       // 같은 속성 3마리는 제외
-          if (ids.some(id => P[id].bst > 720)) continue;
-          const t = total(ids);
-          if (t <= maxTotal && Math.abs(t - target) <= tol) return ids;   // 상한은 절대 넘지 않는다
+      // 허용 오차와 후보 범위를 점점 넓혀 가며 목표에 가까운 조합을 찾는다
+      for (const w of [150, 260, 420, 700]) {
+        const win = near(w);
+        if (win.length < 12) continue;
+        const pick = () => win[Math.floor(rng() * win.length)];
+        for (const tol of [30, 60, 110, 190]) {
+          for (let tries = 0; tries < 1500; tries++) {
+            const ids = [pick(), pick(), pick()];
+            if (valid(ids) && Math.abs(total(ids) - target) <= tol) return ids;
+          }
         }
       }
-      // 폴백: 합계가 상한 이하가 될 때까지 가장 약한 쪽으로 다시 뽑는다
-      for (let tries = 0; tries < 20000; tries++) {
+      // 폴백: 가장 강한 후보들 중 목표에 가장 가까운 조합
+      const top = sorted.slice(-60), pick = () => top[Math.floor(rng() * top.length)];
+      let best = null, bestD = Infinity;
+      for (let tries = 0; tries < 12000; tries++) {
         const ids = [pick(), pick(), pick()];
-        if (new Set(ids.map(id => P[id].sp)).size === 3 && total(ids) <= maxTotal) return ids;
+        if (!valid(ids)) continue;
+        const d = Math.abs(total(ids) - target);
+        if (d < bestD) { bestD = d; best = ids; }
       }
-      return [pick(), pick(), pick()];
+      return best || [pick(), pick(), pick()];
     }
 
     // ───────────── 기술 구성 (변화기 포함) ─────────────
@@ -167,8 +176,8 @@
       return attacks.slice(0, Math.max(0, 4 - chosen.length)).concat(chosen);
     }
 
-    return { validate, generateOpponent, displayName, speciesLabel, pickMoveset, total, cap, pool, OFFSET };
+    return { validate, generateOpponent, displayName, speciesLabel, pickMoveset, total, pool, OFFSET };
   }
 
-  global.BattleParty = { create, CAP, OFFSET };
+  global.BattleParty = { create, OFFSET };
 })(typeof window !== 'undefined' ? window : globalThis);
