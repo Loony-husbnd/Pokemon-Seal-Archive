@@ -20,8 +20,8 @@
 .bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
 .bar { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .bar b { font-size: 11px; font-weight: 900; line-height: 1; text-shadow: 0 1px 3px #0008; }
-.bar .tr { position: relative; width: 100%; height: 30px; border-radius: 8px; background: rgba(255, 255, 255, .16); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
-.bar i { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--h) * 100%); border-radius: 6px 6px 0 0; background: linear-gradient(to top, #fff, rgba(255, 255, 255, .55)); animation: growH .7s .3s var(--spring) backwards; }
+.bar .tr { position: relative; width: 100%; height: 34px; border-radius: 8px; background: rgba(6, 4, 30, .55); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18); }
+.bar i { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--h) * 100%); border-radius: 6px 6px 0 0; background: linear-gradient(to top, var(--lime), #fff); animation: growH .7s .3s var(--spring) backwards; }
 .bar small { font-size: 9px; font-weight: 900; color: #ffffffcc; }
 @keyframes growH { from { height: 0; } }
 .slot-moves { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -96,4 +96,8 @@
 .num { display: flex; flex-direction: column; align-items: center; font-weight: 900; font-size: 15px; line-height: 1.1; } .num small { font-size: 9px; color: var(--mute); font-weight: 700; }
 .check { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; background: rgba(255, 255, 255, .1); } .mrow.on .check { background: var(--lime); color: #0a3a0a; }
 .empty { text-align: center; color: var(--mute); padding: 40px 0; }
-.sheet-dock { position: sticky; bottom: 0; left: auto; right: auto; margin: 16px -18px -100px; z-index: 6; }
+/* 기술 시트: 위(선수 정보)와 아래(결정 버튼)는 고정하고 가운데 목록만 스크롤 → 버튼이 목록을 가리지 않는다 */
+.moves .sheet-box { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+.moves .mv-head { position: static; flex: none; }
+.moves .sheet-scroll { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -18px; padding: 0 18px 16px; }
+.sheet-dock { position: static; flex: none; margin: 0 -18px; padding: 12px 16px calc(12px + var(--safe-b)); background: #0b0830; border-top: 1.5px solid var(--line); }

@@ -126,6 +126,7 @@ export function mount(root, { go }) {
           <div class="mv-title"><h3>${esc(formLabel(t.id))}</h3><div>${p.t.map(typeChip).join('')}</div></div>
           <div class="mv-tools"><button class="btn" data-x="rec" title="추천 기술">✨ 추천</button><button class="btn" data-x="rnd" title="무작위 기술">🎲 무작위</button></div>
         </header>
+        <div class="sheet-scroll">
         <div class="mv-slots"></div>
         <div class="filters">
           <div class="seg" data-f="tab"><button data-v="all" class="on">전체 ${pool.length}</button><button data-v="atk">공격</button><button data-v="sta">변화</button></div>
@@ -133,6 +134,7 @@ export function mount(root, { go }) {
           <input class="search" type="search" placeholder="기술 이름 · 효과 검색" autocomplete="off">
         </div>
         <div class="mv-list"></div>
+        </div>
         <footer class="dock sheet-dock"><span class="dock-msg"></span><button class="btn primary big" data-x="done">✓ 이 기술로 결정</button></footer>
       </div>`;
     root.appendChild(sheet);
