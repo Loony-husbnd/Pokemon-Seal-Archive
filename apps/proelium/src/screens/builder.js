@@ -18,7 +18,7 @@ export function mount(root, { go }) {
     const p = D().pokemon[t.id], st = stat6(t.id);
     const bars = st.map((v, k) => `<div class="bar" title="${STAT_LABEL[k]} ${v}"><b>${v}</b><span class="tr"><i style="--h:${Math.min(1, v / 160).toFixed(2)}"></i></span><small>${STAT_LABEL[k]}</small></div>`).join('');
     return `<article class="slot" style="${cardVars(t.id)}" data-i="${i}">
-      <i class="foil"></i><span class="slot-no display">${String(p.sp).padStart(3, '0')}</span>
+      <i class="foil"></i><span class="slot-no">${String(p.sp).padStart(3, '0')}</span>
       <span class="slot-num">${i + 1}</span>
       <div class="slot-art">${monImg(t.id)}</div>
       <div class="slot-body">

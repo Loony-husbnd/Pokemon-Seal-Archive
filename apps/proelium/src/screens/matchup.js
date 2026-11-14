@@ -21,7 +21,7 @@ export function mount(root, { go, params }) {
   const card = (t, i, side) => {
     const p = D().pokemon[t.id];
     return `<article class="vs-card ${side}" style="${cardVars(t.id)};--i:${i}">
-      <span class="vs-no display">${String(p.sp).padStart(3, '0')}</span>
+      <span class="vs-no">${String(p.sp).padStart(3, '0')}</span>
       <div class="vs-art">${monImg(t.id)}</div>
       <div class="vs-info"><b>${esc(formLabel(t.id))}</b><div class="vs-types">${p.t.map(x => `<span title="${esc(D().types[x - 1].k)}">${TYPE_GLYPH[x]}</span>`).join('')}<small>${p.bst}</small></div>
       <div class="vs-moves">${t.moves.map(m => { const mv = moveInfo(m); return `<i class="${mv.cls === 'status' ? 'st' : ''}${isLite(mv.type) ? ' lite' : ''}" style="--c:${TYPE_HEX[mv.type]}" title="${esc(mv.name)}">${esc(mv.name)}</i>`; }).join('')}</div></div></article>`;

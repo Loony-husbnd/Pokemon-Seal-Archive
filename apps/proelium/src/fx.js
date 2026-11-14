@@ -12,7 +12,7 @@ export function confetti(ms = 3600) {
   document.body.appendChild(cv);
   const ctx = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
   const W = cv.width = innerWidth * dpr, H = cv.height = innerHeight * dpr;
-  const colors = ['#ff2e88', '#7a4dff', '#19e3ff', '#ffd23f', '#7dff6b', '#ffffff'];
+  const colors = ['#ffb21f', '#2a62ff', '#9bb8ff', '#ffd23f', '#7dff6b', '#ffffff'];
   const bits = Array.from({ length: 170 }, () => ({
     x: W / 2 + (Math.random() - .5) * W * .3, y: H * .55, vx: (Math.random() - .5) * 18 * dpr, vy: (-Math.random() * 20 - 8) * dpr,
     s: (6 + Math.random() * 8) * dpr, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: colors[Math.floor(Math.random() * colors.length)],

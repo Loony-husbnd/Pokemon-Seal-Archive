@@ -1,18 +1,26 @@
-/* ───────── Proelium 디자인 토큰 — "네온 아레나" ───────── */
+/* ───────── Proelium 디자인 토큰 ─────────
+   바탕은 순수한 검정, 테마색은 파랑과 금색 두 가지.
+   금색 = 주요 행동·강조·고리 / 파랑 = 보조 강조·조명·바닥 격자 */
 :root {
-  --bg0: #06051a; --bg1: #0d0a2e; --bg2: #1a1458;
-  --ink: #f6f3ff; --mute: #a59fd8; --dim: #6f69a8;
-  --line: rgba(255, 255, 255, .12); --glass: rgba(20, 16, 70, .55);
-  --hot: #ff2e88; --violet: #7a4dff; --cyan: #19e3ff; --gold: #ffd23f; --lime: #7dff6b; --danger: #ff4d5e;
-  --grad: linear-gradient(120deg, #ff2e88 0%, #7a4dff 52%, #19e3ff 100%);
-  --grad-gold: linear-gradient(120deg, #ffd23f, #ff8a3d);
+  --bg0: #000000; --bg1: #02040a; --bg2: #070b1c;
+  --ink: #f6f4ee; --mute: #a6a9bd; --dim: #6c7088;
+  --line: rgba(255, 255, 255, .13); --glass: rgba(10, 16, 44, .55);
+  --blue: #2a62ff; --blue-soft: #9bb8ff; --gold: #ffb21f; --gold-soft: #ffe3a6;
+  /* 이전 이름도 같은 색을 가리키게 둔다 (hot=금색, violet=파랑, cyan=연한 파랑) */
+  --hot: var(--gold); --violet: var(--blue); --cyan: var(--blue-soft);
+  --lime: #7dff6b; --danger: #ff4d5e;
+  --grad: linear-gradient(120deg, #ffe3a6 0%, #ffb21f 55%, #ff9a1f 100%);          /* 금색: 주요 버튼·선택 */
+  --grad-gold: linear-gradient(120deg, #fff3c4, #ffb21f 60%, #d98a00);              /* 금색: 큰 글자 */
+  --grad-blue: linear-gradient(120deg, #2a62ff, #9bb8ff);
+  --on-gold: #1a1200;
   --r: 22px; --r-sm: 14px;
   --spring: cubic-bezier(.2, 1.1, .3, 1.25);
-  --font: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif;
-  --display: 'Arial Black', 'Impact', 'Haettenschweiler', system-ui, sans-serif;
+  /* 글꼴: 강조 = Hahmlet, 본문·숫자 = Pretendard */
+  --font: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif;
+  --display: 'Hahmlet', 'Noto Serif KR', 'Batang', serif;
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
-/* 타입 색 (네온 배경에서 또렷하게 보이도록 채도를 높였다) */
+/* 타입 색 (포켓몬 타입의 고유한 색이라 테마와 무관하게 유지) */
 :root {
   --t1: #aab4c8; --t2: #ff6a3d; --t3: #7fb2ff; --t4: #b45cff; --t5: #d9a441; --t6: #b8a266; --t7: #9ccc2a; --t8: #7a5cc7; --t9: #7fb6c9;
   --t10: #ff5a2a; --t11: #2f8cff; --t12: #35c759; --t13: #ffd60a; --t14: #ff4f9a; --t15: #5ee7ff; --t16: #5a4bff; --t17: #7b6a66; --t18: #ff8fd0;
