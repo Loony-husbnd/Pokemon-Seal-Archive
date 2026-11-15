@@ -16,6 +16,6 @@ export function loadBattle() {
   }
   return {
     data: sandbox.BATTLE_DATA, engine: sandbox.BattleEngine, createEngine: sandbox.createBattleEngine,
-    ai: sandbox.BattleAI, party: sandbox.BattleParty,
+    ai: sandbox.BattleAI, party: sandbox.BattleParty, learn: sandbox.BATTLE_LEARN,
   };
 }

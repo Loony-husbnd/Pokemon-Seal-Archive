@@ -56,6 +56,14 @@
  *   levitate telekinesis foresight(ghost|dark) lockOn laserFocus curse destinyBond grudge imprison snatch coat dust(분진) octolock tar nextOrder(1|-1) boostNext
  *   psychoShift statusSwap clearBoosts embargo healBlock simple insomnia recycle strengthSap stockpile swallow charge2(2턴 충전) tidy selfTrap terrainHeal
  *   dead ally|item                         싱글 배틀에서 아무 효과가 없는 기술(아군·도구가 필요한 기술)
+ * 특수 공격기 fx (tools/battle-attack-moves.json, 1~4단계) — 효과는 모두 engine.js 에 구현되어 있다
+ *   1단계 autoCls breakProtect clearFoeStages freezeDry multiAcc escalate dual trapBoth trapFoe cureFoeStatus ppCut syrup typeBy ail.kind('tri'|'dire')
+ *   2단계 dyn(wtTarget wtRatio hp150 flail hardPress crushGrip gyro electroBall stored spitUp weatherBall terrainPulse risingVoltage expandingForce) fixed(level|half|endeavor|userHp)
+ *         ohko useDefAsAtk useTargetAtk priTerrain needTerrain
+ *   3단계 x2If(조건부 2배) ifFoeBoosted counter(phys|spec|any|any15) finalGambit beatUp present reqFoeStatus lastResort needFoeAttack needFoePriority firstTurn focusPunch beakBlast onlySleep
+ *         dyn(rageFist lastRespects echoed furyCutter)
+ *   4단계 charge2(chargeText chargeSkip chargeSelf invul solarWeak) recharge rampage(uproar) delay bind pivot forceOut selfKO crash selfDamagePct cantRepeat salt mortalSpin breakScreens loseType glaive leaveOne
+ *         dyn(rollout mistyBoost)
  * 변화기 공통 플래그(원본 move_flags): rf = 매직코트가 튕겨 냄, sn = 가로채기 대상.   공격기: ct = 접촉 기술(니들가드 등이 반격)
  */
 import fs from 'node:fs';

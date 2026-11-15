@@ -145,12 +145,12 @@ export function mount(root, { go }) {
         <span class="glyph${isLite(m.type) ? ' lite' : ''}">${TYPE_GLYPH[m.type]}</span>
         <span class="mi"><b>${esc(m.name)}</b><small>${m.desc ? esc(m.desc) : ' '}</small></span>
         <span class="tag ${m.cls}">${clsKo[m.cls]}</span>
-        <span class="num">${m.cls === 'status' ? '—' : m.power}<small>위력</small></span><span class="num">${m.acc === null ? '필중' : m.acc}<small>명중</small></span><span class="num">${m.pp}<small>PP</small></span>
+        <span class="num">${m.cls === 'status' ? '—' : m.varPower ? '가변' : m.power}<small>위력</small></span><span class="num">${m.acc === null ? '필중' : m.acc}<small>명중</small></span><span class="num">${m.pp}<small>PP</small></span>
         <span class="check">${on ? '✓' : ''}</span></button>`;
     };
     function renderSlots() {
       slotsEl.innerHTML = Array.from({ length: 4 }, (_, i) => sel[i]
-        ? (() => { const m = moveInfo(sel[i]); return `<button class="mslot on${isLite(m.type) ? ' lite' : ''}" data-id="${m.id}" style="--c:${TYPE_HEX[m.type]}"><span>${TYPE_GLYPH[m.type]}</span><b>${esc(m.name)}</b><small>${m.cls === 'status' ? esc(m.desc) : `${clsKo[m.cls]} · 위력 ${m.power}`}</small></button>`; })()
+        ? (() => { const m = moveInfo(sel[i]); return `<button class="mslot on${isLite(m.type) ? ' lite' : ''}" data-id="${m.id}" style="--c:${TYPE_HEX[m.type]}"><span>${TYPE_GLYPH[m.type]}</span><b>${esc(m.name)}</b><small>${m.cls === 'status' ? esc(m.desc) : `${clsKo[m.cls]} · 위력 ${m.varPower ? '가변' : m.power}`}</small></button>`; })()
         : `<div class="mslot"><span>＋</span><small>비어 있음</small></div>`).join('');
       msg.textContent = sel.length ? `${sel.length}/4 선택` : '기술을 1개 이상 골라 주세요';
     }

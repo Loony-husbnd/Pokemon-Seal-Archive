@@ -516,3 +516,259 @@ test('3단계 AI: 실패가 확정인 기술은 쓰지 않는다 (속이기 2턴
   const c = mk('C', ['fighting'], { spe: 300 }, [mv('counter'), atk({ power: 20 })]);
   assert.equal(brain.chooseAction(duel(c, mk('D', ['normal'], {}, [atk({ cls: 'spec' })])), 0, 'hard').index, 1, '특수 공격뿐인 상대에게 카운터는 쓰지 않는다');
 });
+
+// ═════════════ 4단계: 턴 구조 (충전·반동·난동·구속·교체·자폭 …) ═════════════
+test('4단계: 공중날기 — 첫 턴은 날아올라 공격을 피하고 다음 턴 때린다 (PP 는 한 번만)', () => {
+  const a = mk('A', ['flying'], { spe: 300 }, [mv('fly'), splash()]), b = mk('B', ['normal'], { spe: 100 }, [atk()]);
+  const bt = duel(a, b);
+  const ev = bt.playTurn(M0, M0);
+  assert.ok(has(ev, '날아올랐다')); assert.equal(a.hp, a.maxHp, '날아오른 동안은 맞지 않는다');
+  assert.equal(a.invul, 'air');
+  assert.ok(ev.some(e => e.t === 'miss'));
+  assert.equal(bt.legalActions(0).moves[1].usable, false);
+  const ev2 = bt.playTurn(M1, M0);                                   // 다른 기술을 골라도 공중날기가 나간다
+  assert.ok(dmgOf(ev2) > 0); assert.equal(a.invul, null);
+  assert.equal(a.moves[0].pp, 98);
+});
+
+test('4단계: 땅속·물속에 있는 상대에게는 지진·파도타기만 맞고 2배', () => {
+  const dig = mk('A', ['ground'], { spe: 300 }, [mv('dig')]);
+  const eq = atk({ type: T('ground'), ident: 'earthquake' }), plain = atk({ ident: 'tackle' });
+  const bt = duel(dig, mk('B', ['normal'], { spe: 100 }, [eq]));
+  bt.playTurn(M0, M0);
+  const hurt1 = dig.maxHp - dig.hp;
+  assert.ok(hurt1 > 0, '지진은 땅속에도 맞는다');
+  const dig2 = mk('A', ['ground'], { spe: 300 }, [mv('dig')]);
+  duel(dig2, mk('B', ['normal'], { spe: 100 }, [plain])).playTurn(M0, M0);
+  assert.equal(dig2.hp, dig2.maxHp);
+  const w = mk('W', ['water'], { spe: 300 }, [mv('dive')]);
+  duel(w, mk('B', ['normal'], { spe: 100 }, [plain])).playTurn(M0, M0);
+  assert.equal(w.invul, 'water');
+});
+
+test('4단계: 솔라빔 — 쾌청이면 바로 발사, 비·모래·눈에서는 위력 절반 / 일렉트로빔은 비에서 바로 발사하고 특공 +1', () => {
+  const s = mk('S', ['grass'], { spe: 300 }, [mv('solar-beam')]), d = mk('D', ['normal'], { hp: 900 }, [splash()]);
+  const bt = duel(s, d); bt.field.weather = 'sun'; bt.field.weatherTurns = 5;
+  assert.ok(dmgOf(bt.playTurn(M0, M0)) > 0, '쾌청: 한 턴에 발사');
+  const s2 = mk('S', ['grass'], { spe: 300 }, [mv('solar-beam')]);
+  const normal = E.calcDamage(s2, d, s2.moves[0], { roll: 100, ctx: {} }).damage, rain = E.calcDamage(s2, d, s2.moves[0], { roll: 100, ctx: { weather: 'rain' } }).damage;
+  assert.ok(rain < normal * 0.55, '비에서는 절반');
+  const e = mk('E', ['electric'], { spe: 300 }, [mv('electro-shot')]);
+  const bt2 = duel(e, mk('D', ['normal'], { hp: 900 }, [splash()])); bt2.field.weather = 'rain'; bt2.field.weatherTurns = 5;
+  bt2.playTurn(M0, M0);
+  assert.ok(true);
+  const e2 = mk('E', ['electric'], { spe: 300 }, [mv('electro-shot')]);
+  const bt3 = duel(e2, mk('D', ['normal'], { hp: 900 }, [splash()]));
+  const ev = bt3.playTurn(M0, M0);
+  assert.equal(e2.stages.spa, 1, '충전 턴에 특공 +1'); assert.equal(dmgOf(ev), 0);
+});
+
+test('4단계: 파괴광선류 — 맞히면 다음 턴 반동으로 움직이지 못한다 (교체하면 없다)', () => {
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('hyper-beam'), splash()]), b = mk('B', ['normal'], { hp: 9000 }, [splash()]);
+  const bt = duel(a, b);
+  bt.playTurn(M0, M0);
+  assert.equal(a.recharge, true);
+  const ev = bt.playTurn(M0, M0);
+  assert.ok(has(ev, '반동으로 움직일 수 없다')); assert.equal(dmgOf(ev), 0);
+  assert.ok(dmgOf(bt.playTurn(M0, M0)) > 0, '그 다음 턴에는 다시');
+  for (const id of ['giga-impact', 'blast-burn', 'hydro-cannon', 'frenzy-plant', 'rock-wrecker', 'roar-of-time', 'prismatic-laser']) assert.ok(data.moves[idOf(id)].fx.recharge, id);
+});
+
+test('4단계: 빗나간 파괴광선은 반동이 없다', () => {
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('hyper-beam')]);
+  const bt = duel(a, mk('B', ['normal'], { hp: 9000 }, [splash()]), R(0.99));
+  bt.playTurn(M0, M0);
+  assert.equal(a.recharge, false);
+});
+
+test('4단계: 난동부리기류 — 2~3턴 같은 기술을 쓰고 끝나면 혼란, 빗나가면 거기서 끝', () => {
+  const a = mk('A', ['dragon'], { spe: 300 }, [mv('outrage'), splash()]), d = mk('D', ['normal'], { hp: 9000 }, [splash()]);
+  const bt = duel(a, d, R(0.01));              // 최소: 총 2번
+  bt.playTurn(M0, M0);
+  assert.ok(a.rampage); assert.equal(bt.legalActions(0).moves[1].usable, false);
+  bt.playTurn(M1, M0);                          // 다른 기술을 골라도 난동이 이어진다
+  assert.equal(a.rampage, null); assert.ok(a.confusion > 0, '끝나면 혼란');
+  assert.equal(a.moves[0].pp, 98);
+  const b = mk('B', ['dragon'], { spe: 300 }, [mv('outrage')]);
+  const bt2 = duel(b, mk('D', ['fairy'], { hp: 9000 }, [splash()]));
+  bt2.playTurn(M0, M0);
+  assert.equal(b.rampage, null, '효과가 없으면 난동은 이어지지 않는다');
+});
+
+test('4단계: 소란피기는 3턴 이어지고 그동안 아무도 잠들지 못한다 / 구르기는 연속으로 2배', () => {
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('uproar')]), d = mk('D', ['normal'], { hp: 9000 }, [mv('hypnosis')]);
+  const bt = duel(a, d, R(0.01));
+  bt.playTurn(M0, M0);
+  assert.ok(a.uproar > 0);
+  const ev = bt.playTurn(M0, M0);
+  assert.equal(a.status, null);
+  const r = mk('R', ['rock'], { spe: 300 }, [mv('rollout')]), t = mk('T', ['normal'], { hp: 9000, def: 900 }, [splash()]);
+  const bt2 = duel(r, t, R(0.01));
+  const p = () => E.resolveMove(r, t, r.moves[0], {}).power;
+  assert.equal(p(), 30);
+  bt2.playTurn(M0, M0); assert.equal(p(), 60);
+  bt2.playTurn(M0, M0); assert.equal(p(), 120);
+});
+
+test('4단계: 미래예지 — 쓴 뒤 2턴 뒤에 맞고, 악 타입에는 통하지 않으며, 이미 걸려 있으면 실패', () => {
+  const a = mk('A', ['psychic'], { spe: 300 }, [mv('future-sight'), splash()]), d = mk('D', ['normal'], { hp: 900 }, [splash()]);
+  const bt = duel(a, d);
+  const e1 = bt.playTurn(M0, M0); assert.equal(dmgOf(e1), 0); assert.ok(has(e1, '예지'));
+  assert.ok(has(bt.playTurn(M0, M0), '실패'), '이미 걸려 있다');
+  const e3 = bt.playTurn(M1, M0);
+  assert.ok(e3.some(e => e.t === 'damage' && e.cause === 'future' && e.side === 1), '2턴 뒤 명중');
+  assert.ok(d.hp < 900);
+  const dk = mk('K', ['dark'], { hp: 900 }, [splash()]);
+  const bt2 = duel(mk('A', ['psychic'], { spe: 300 }, [mv('future-sight'), splash()]), dk);
+  bt2.playTurn(M0, M0); bt2.playTurn(M1, M0);
+  const e = bt2.playTurn(M1, M0);
+  assert.equal(dk.hp, 900); assert.ok(has(e, '효과가 없'));
+});
+
+test('4단계: 조이기류 — 4~5턴 매 턴 1/8 피해에 교체 불가, 거는 쪽이 나가면 풀린다', () => {
+  const a = mk('A', ['fire'], { spe: 300 }, [mv('fire-spin'), splash()]), a2 = idle(), d = mk('D', ['normal'], { hp: 800 }, [splash()]), d2 = idle();
+  const bt = duel([a, a2], [d, d2], R(0.01));
+  bt.playTurn(M0, M0);
+  assert.ok(d.bound > 0); assert.deepEqual(A(bt.legalActions(1).switches), []);
+  assert.equal(d.maxHp - d.hp > 100, true);
+  bt.playTurn(SW(1), M0);
+  assert.equal(d.bound, 0, '거는 쪽이 나가면 풀린다');
+  assert.deepEqual(A(bt.legalActions(1).switches), [1]);
+});
+
+test('4단계: 유턴·볼트체인지·퀵턴 — 때린 뒤 교체한다 (상대가 쓰러져도, 대타를 쳐도)', () => {
+  for (const id of ['u-turn', 'volt-switch', 'flip-turn']) {
+    const a = mk('A', ['bug'], { spe: 300 }, [mv(id)]), a2 = mk('A2', ['water'], {}, [atk()]);
+    const bt = duel([a, a2], mk('D', ['normal'], { hp: 900 }, [atk({ power: 20 })]));
+    const ev = bt.playTurn(M0, M0);
+    assert.equal(bt.phase, 'switch', id); assert.deepEqual(A(bt.pending), [0]);
+    assert.ok(ev.some(e => e.t === 'damage' && e.side === 1));
+    bt.replace(0, 1);
+    assert.ok(a2.hp < a2.maxHp, `${id}: 교체한 포켓몬이 상대 공격을 받는다`);
+  }
+  const lone = mk('A', ['bug'], { spe: 300 }, [mv('u-turn')]);
+  const bt2 = duel(lone, idle());
+  bt2.playTurn(M0, M0);
+  assert.equal(bt2.phase, 'move', '교체할 동료가 없으면 교체 없이 끝');
+});
+
+test('4단계: 드래곤테일·배대뒤치기 — 때린 뒤 상대를 강제로 교체시킨다 (우선도 −6)', () => {
+  const a = mk('A', ['dragon'], { spe: 1 }, [mv('dragon-tail')]), d = mk('D', ['normal'], { spe: 300, hp: 900 }, [atk({ power: 10 })]), d2 = idle();
+  const bt = duel(a, [d, d2]);
+  const ev = bt.playTurn(M0, M0);
+  assert.equal(bt.sides[1].active, 1); assert.ok(ev.some(e => e.t === 'switch' && e.side === 1));
+  assert.equal(data.moves[idOf('dragon-tail')].pr, -6);
+  const lone = mk('A', ['dragon'], { spe: 1 }, [mv('circle-throw')]);
+  const bt2 = duel(lone, mk('D', ['normal'], { hp: 900 }, [splash()]));
+  bt2.playTurn(M0, M0);
+  assert.equal(bt2.sides[1].active, 0);
+});
+
+test('4단계: 자폭·대폭발 — 맞히든 빗나가든 쓰러진다 / 미스트버스트는 미스트필드에서 1.5배', () => {
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('explosion')]), a2 = idle();
+  const bt = duel([a, a2], mk('D', ['normal'], { hp: 900 }, [splash()]));
+  assert.ok(dmgOf(bt.playTurn(M0, M0)) > 0); assert.equal(a.fainted, true);
+  const b = mk('B', ['normal'], { spe: 300 }, [mv('self-destruct')]), b2 = idle();
+  const bt2 = duel([b, b2], mk('D', ['normal'], {}, [splash()]), R(0.999));
+  bt2.playTurn(M0, M0);
+  assert.equal(b.fainted, true);
+  const m = mk('M', ['fairy'], {}, [mv('misty-explosion')]), d = idle();
+  const pw = ctx => E.resolveMove(m, d, m.moves[0], ctx).power;
+  assert.equal(pw({ terrain: 'misty', attGrounded: true }), Math.floor(pw({}) * 1.5));
+});
+
+test('4단계: 무릎차기는 빗나가면 최대 체력의 절반 피해 / 강철빔·클로로블라스트는 맞히면 반동 50%', () => {
+  const a = mk('A', ['fighting'], { spe: 300 }, [mv('high-jump-kick')]);
+  duel(a, idle(), R(0.999)).playTurn(M0, M0);
+  assert.equal(a.hp, 150);
+  const b = mk('B', ['steel'], { spe: 300 }, [mv('steel-beam')]);
+  duel(b, mk('D', ['normal'], { hp: 900 }, [splash()]), R(0.01)).playTurn(M0, M0);
+  assert.equal(b.hp, 150);
+  const c = mk('C', ['fighting'], { spe: 300 }, [mv('high-jump-kick')]);
+  assert.ok(has(duel(c, mk('G', ['ghost'], {}, [splash()])).playTurn(M0, M0), '효과가 없'));
+  assert.equal(c.hp, 150, '효과가 없어도 부딪힌다');
+});
+
+test('4단계: 거대해머·블러드문은 연속으로 쓸 수 없다', () => {
+  const a = mk('A', ['steel'], { spe: 300 }, [mv('gigaton-hammer'), splash()]);
+  const bt = duel(a, mk('D', ['normal'], { hp: 9000 }, [splash()]));
+  bt.playTurn(M0, M0);
+  const la = bt.legalActions(0);
+  assert.equal(la.moves[0].usable, false); assert.equal(la.moves[0].why, '연속 사용 불가');
+  bt.playTurn(M1, M0);
+  assert.equal(bt.legalActions(0).moves[0].usable, true);
+});
+
+test('4단계: 소금절이·킬러스핀·레이징불·전광쌍격·글레이브러시·칼등치기', () => {
+  const s = mk('S', ['rock'], { spe: 300 }, [mv('salt-cure')]), d = mk('D', ['normal'], { hp: 900 }, [splash()]);
+  const bt = duel(s, d); bt.playTurn(M0, M0);
+  assert.equal(d.salted, true);
+  const hp1 = d.hp; bt.playTurn(M0, M0);
+  assert.ok(hp1 - d.hp > 100);
+  const m = mk('M', ['poison'], { spe: 300 }, [mv('mortal-spin')]), t = mk('T', ['normal'], { hp: 900 }, [splash()]);
+  const bt2 = duel(m, t, R(0.01)); bt2.sides[0].cond.rocks = true; m.seeded = true;
+  bt2.playTurn(M0, M0);
+  assert.equal(t.status, 'psn'); assert.equal(bt2.sides[0].cond.rocks, false); assert.equal(m.seeded, false);
+  const r = mk('R', ['normal'], { spe: 300 }, [mv('raging-bull')]), x = mk('X', ['normal'], { hp: 900 }, [splash()]);
+  const bt3 = duel(r, x); bt3.sides[1].cond.reflect = 5;
+  bt3.playTurn(M0, M0);
+  assert.equal(bt3.sides[1].cond.reflect, 0);
+  const e = mk('E', ['electric', 'flying'], { spe: 300 }, [mv('double-shock')]), y = mk('Y', ['normal'], { hp: 900 }, [splash()]);
+  duel(e, y).playTurn(M0, M0);
+  assert.deepEqual(A(e.types), [T('flying')]);
+  assert.ok(has(duel(mk('N', ['normal'], {}, [mv('double-shock')]), idle()).playTurn(M0, M0), '실패'), '전기 타입이 아니면 실패');
+  const g = mk('G', ['dragon'], { spe: 300 }, [mv('glaive-rush')]), z = mk('Z', ['normal'], { spe: 100 }, [atk({ acc: 1 })]);
+  const bt4 = duel(g, z, R(0.9)); const before = g.hp;
+  const ev = bt4.playTurn(M0, M0);
+  assert.ok(!ev.some(e => e.t === 'miss' && e.side === 1), '글레이브러시 뒤에는 필중');
+  const f = mk('F', ['normal'], { spe: 300 }, [mv('false-swipe')]), w = mk('W', ['normal'], { hp: 20 }, [splash()]);
+  duel(f, w).playTurn(M0, M0);
+  assert.equal(w.hp, 1, '칼등치기는 체력 1 을 남긴다');
+});
+
+test('4단계: 섀도다이브·팬텀포스는 방어를 깨고 때리며 첫 턴에는 모습을 감춘다', () => {
+  const a = mk('A', ['ghost'], { spe: 300 }, [mv('shadow-force')]), p = mk('P', ['psychic'], { spe: 100 }, [mv('protect')]);
+  const bt = duel(a, p, R(0.1));
+  bt.playTurn(M0, M0);
+  assert.equal(a.invul, 'ghost');
+  const ev = bt.playTurn(M0, M0);
+  assert.ok(dmgOf(ev) > 0, '방어해도 뚫는다');
+});
+
+test('4단계 AI: 반동 턴·충전·자폭 같은 기술을 상황에 맞게 고른다', () => {
+  const brain = AI.create(E, { seed: 5 });
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('explosion'), atk({ power: 40 })]);
+  assert.equal(brain.chooseAction(duel(a, mk('D', ['normal'], { hp: 900 }, [splash()])), 0, 'hard').index, 1, '멀쩡할 때는 자폭하지 않는다');
+  const b = mk('B', ['normal'], { spe: 300 }, [mv('explosion'), atk({ power: 40 })]); b.hp = 20;
+  const t = mk('T', ['normal'], { hp: 60 }, [splash()]);
+  assert.equal(brain.chooseAction(duel([b, idle()], t), 0, 'hard').index, 0, '확실히 쓰러뜨릴 수 있고 곧 쓰러질 때는 자폭');
+  const c = mk('C', ['flying'], { spe: 300 }, [mv('hyper-beam'), atk({ power: 40 })]); c.recharge = true;
+  const g = mk('G', ['normal'], { spe: 100 }, [splash()]);
+  assert.ok([0, 1].includes(brain.chooseAction(duel(c, g), 0, 'hard').index));
+});
+
+test('4단계: 특수 공격기 전부를 섞은 무작위 배틀 400판이 오류 없이 끝난다 (교체 선택 포함)', () => {
+  const adv = Object.keys(data.moves).filter(i => data.moves[i].c !== 'n').map(Number);
+  const rnd = E.mulberry32(21);
+  const pick = l => l[Math.floor(rnd() * l.length)];
+  let sw = 0, ended = 0;
+  for (let g = 0; g < 400; g++) {
+    const team = () => [0, 1, 2].map(() => E.makeMon(1 + Math.floor(rnd() * 1025), { moves: [...new Set([pick(adv), pick(adv), pick(adv), pick(adv)])] }));
+    const bt = E.createBattle({ parties: [team(), team()], seed: g + 1, maxTurns: 120 });
+    const brains = [AI.create(E, { seed: g }), AI.create(E, { seed: g + 1 })];
+    bt.start();
+    let guard = 0;
+    while (bt.phase !== 'ended') {
+      if (++guard > 500) throw new Error('끝나지 않음');
+      if (bt.phase === 'switch') {
+        for (const si of bt.pending.slice()) if (bt.phase === 'switch' && bt.pending.includes(si)) { if (bt.pivot) sw++; bt.replace(si, brains[si].chooseReplacement(bt, si, 'hard')); }
+        continue;
+      }
+      const pickAction = si => { if (rnd() < 0.5) return brains[si].chooseAction(bt, si, 'hard'); const la = bt.legalActions(si); if (la.mustStruggle) return M0; return { type: 'move', index: pick(la.moves.filter(m => m.usable)).index }; };
+      bt.playTurn(pickAction(0), pickAction(1));
+      for (const m of bt.sides.flatMap(s => s.party)) assert.ok(m.hp >= 0 && m.hp <= m.maxHp);
+    }
+    ended++;
+  }
+  assert.equal(ended, 400); assert.ok(sw > 5, '공격 뒤 교체가 실제로 일어났다');
+});

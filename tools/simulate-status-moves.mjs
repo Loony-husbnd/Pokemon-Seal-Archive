@@ -16,7 +16,8 @@ const opt = (name, def) => { const i = args.indexOf(`--${name}`); return i >= 0 
 const K = Number(opt('k', 600)), SEED = Number(opt('seed', 1)), LEVEL = opt('level', 'hard');
 const ONLY = opt('only', '') ? new Set(opt('only', '').split(',')) : null;
 const STAGE3 = args.includes('--stage3');
-const { engine: E, data, ai: AI } = loadBattle();
+const ATTACKS = args.includes('--attacks');          // 특수 공격기를 하나씩 측정 (대표 공격기 4번째 칸을 X 로 교체)
+const { engine: E, data, ai: AI, learn: LEARN } = loadBattle();
 const rnd = E.mulberry32(SEED);
 // 3단계(120개) 변화기 식별자: tools/battle-status-moves.json 에서 150번째 이후
 const STAGE3_SET = new Set(Object.keys(JSON.parse(fs.readFileSync(new URL('./battle-status-moves.json', import.meta.url), 'utf8')).moves).slice(150));
@@ -40,11 +41,12 @@ function fight(sideA, sideB, seed) {
 const atk = id => ({ id, moves: [...data.pokemon[id].m] });
 
 const out = [];
+const ADV = new Set(Object.keys(JSON.parse(fs.readFileSync(new URL('./battle-attack-moves.json', import.meta.url), 'utf8')).moves));
 for (const [mid, mv] of Object.entries(data.moves)) {
-  if (mv.c !== 'n') continue;
+  if (ATTACKS ? !ADV.has(mv.e) : mv.c !== 'n') continue;
   if (ONLY && !ONLY.has(mv.e)) continue;
   if (STAGE3 && !STAGE3_SET.has(mv.e)) continue;
-  const learners = all.filter(id => data.pokemon[id].sm.includes(Number(mid)) && data.pokemon[id].m.length >= 4);
+  const learners = all.filter(id => (ATTACKS ? (LEARN[id] || []).includes(Number(mid)) : data.pokemon[id].sm.includes(Number(mid))) && data.pokemon[id].m.length >= 4);
   if (learners.length < 3) { out.push({ k: mv.k, e: mv.e, n: 0 }); continue; }
   let base = 0, vari = 0, n = 0;
   for (let i = 0; i < K; i++) {

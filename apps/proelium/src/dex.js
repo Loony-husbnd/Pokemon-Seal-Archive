@@ -67,7 +67,9 @@ export function searchMons({ q = '', type = 0, kind = 'all', sort = 'dex' }) {
 export function moveInfo(id) {
   const m = D().moves[id];
   const cls = m.c === 'p' ? 'phys' : m.c === 'n' ? 'status' : 'spec';
-  return { id: Number(id), name: m.k, type: m.t, cls, power: m.pw, acc: m.ac, pp: m.pp, pri: m.pr, fx: m.fx, desc: cls === 'status' ? E().describeEffect({ fx: m.fx }) : fxNote(m) };
+  const f = m.fx || {};
+  const varPower = E().variablePower({ cls, fx: f });                       // 위력이 상황에 따라 정해지는 기술
+  return { id: Number(id), name: m.k, type: m.t, cls, power: m.pw, varPower, acc: m.ac, pp: m.pp, pri: m.pr, fx: m.fx, desc: cls === 'status' ? E().describeEffect({ fx: m.fx }) : fxNote(m) };
 }
 function fxNote(m) {
   const f = m.fx, out = [];
@@ -78,6 +80,8 @@ function fxNote(m) {
   if (f.flinch) out.push(`${f.flinch}% 풀죽음`);
   if (f.crit) out.push('급소 높음');
   if (m.pr > 0) out.push('선제공격');
+  const sp = E().describeAttack(m);                                           // 특수 처리(가변 위력·충전·교체 …)
+  if (sp) out.push(sp);
   return out.join(' · ');
 }
 const _pool = new Map();

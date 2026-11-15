@@ -23,6 +23,20 @@ const STATUS_FX_KEYS = new Set(['ail', 'tgt', 'self', 'heal', 'rest', 'hpCost', 
   'fairyLock', 'courtChange', 'mimic', 'sketch', 'mirrorMove', 'copycat', 'meFirst', 'assist', 'naturePower', 'repeat', 'copyStages', 'typeChange', 'addType', 'setType', 'swapTypes', 'rolePlay',
   'giveTypes', 'doodle', 'swapStages', 'invertStages', 'swapStat', 'ownSwap', 'splitStats', 'psychoShift', 'statusSwap', 'clearBoosts', 'embargo', 'healBlock', 'simple', 'insomnia', 'recycle',
   'levitate', 'telekinesis', 'foresight', 'lockOn', 'laserFocus', 'curse', 'destinyBond', 'grudge', 'imprison', 'snatch', 'coat', 'dust', 'octolock', 'nextOrder', 'boostNext']);
+// 공격기 효과 키 (기본 + 특수 공격기). 엔진이 모르는 키가 들어오면 검증이 실패한다.
+const ATTACK_FX_KEYS = new Set(['hits', 'crit', 'flinch', 'ail', 'drain', 'recoil', 'tgt', 'self', 'neverMiss', 'useDef',
+  'autoCls', 'breakProtect', 'clearFoeStages', 'freezeDry', 'multiAcc', 'escalate', 'dual', 'trapBoth', 'trapFoe', 'cureFoeStatus', 'ppCut', 'syrup', 'typeBy',
+  'dyn', 'fixed', 'ohko', 'useDefAsAtk', 'useTargetAtk', 'priTerrain', 'needTerrain', 'x2If', 'ifFoeBoosted', 'counter', 'finalGambit', 'beatUp', 'present', 'reqFoeStatus', 'lastResort',
+  'needFoeAttack', 'needFoePriority', 'firstTurn', 'focusPunch', 'beakBlast', 'onlySleep',
+  'charge2', 'chargeText', 'chargeSkip', 'chargeSelf', 'invul', 'solarWeak', 'recharge', 'rampage', 'uproar', 'delay', 'bind', 'pivot', 'forceOut', 'selfKO', 'crash', 'selfDamagePct',
+  'cantRepeat', 'salt', 'mortalSpin', 'breakScreens', 'loseType', 'glaive', 'leaveOne']);
+const ATTACK_ENUMS = {
+  dyn: ['wtTarget', 'wtRatio', 'hp150', 'flail', 'hardPress', 'crushGrip', 'gyro', 'electroBall', 'stored', 'spitUp', 'weatherBall', 'terrainPulse', 'risingVoltage', 'expandingForce',
+    'rageFist', 'lastRespects', 'echoed', 'furyCutter', 'rollout', 'mistyBoost'],
+  fixed: ['level', 'half', 'endeavor', 'userHp'], counter: ['phys', 'spec', 'any', 'any15'], typeBy: ['user'], pivot: ['out'], invul: ['air', 'ground', 'water', 'ghost'],
+  chargeSkip: ['sun', 'rain'], priTerrain: ['grassy', 'electric', 'misty', 'psychic'], cureFoeStatus: ['brn', 'par', 'psn', 'slp', 'frz'],
+  x2If: ['userStatus', 'foePoison', 'foeStatus', 'foeHalf', 'foeHurt', 'actedAfter', 'hurtByFoe', 'allyFaintedPrev', 'lowered', 'prevFailed', 'always'],
+};
 const errors = [];
 const err = m => errors.push(m);
 const isInt = v => Number.isInteger(v);
@@ -98,6 +112,15 @@ if (fs.existsSync(learnFile)) {
     }
   }
   console.log(`학습 가능 공격기 목록: ${Object.keys(L).length}종, 평균 ${(learnCount / Object.keys(L).length).toFixed(1)}개`);
+  // 학습 전용 기술까지 합쳐진 뒤 공격기 효과를 검사한다 (엔진이 모르는 키·잘못된 값 방지)
+  for (const [id, m] of Object.entries(d.moves)) {
+    if (m.c === 'n') continue;
+    for (const k of Object.keys(m.fx)) if (!ATTACK_FX_KEYS.has(k)) err(`공격기 ${id}(${m.e}): 알 수 없는 효과 ${k}`);
+    for (const [k, list] of Object.entries(ATTACK_ENUMS)) if (m.fx[k] !== undefined && !list.includes(m.fx[k])) err(`공격기 ${id}(${m.e}): ${k} 값 오류 (${m.fx[k]})`);
+    if (m.fx.ail && !['par', 'slp', 'frz', 'brn', 'psn', 'tox', 'cnf', 'tri', 'dire'].includes(m.fx.ail.kind)) err(`공격기 ${id}(${m.e}): 상태이상 종류 오류`);
+  }
+  const attackTotal = Object.values(d.moves).filter(m => m.c !== 'n').length;
+  console.log(`공격기 ${attackTotal}개 (기본 ${attackTotal - Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'battle-attack-moves.json'), 'utf8')).moves).length} + 특수 공격기 ${Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'battle-attack-moves.json'), 'utf8')).moves).length})`);
 } else err('battle-learnsets.js 가 없습니다 (npm run battle:data)');
 
 const n = Object.keys(d.pokemon).length;
