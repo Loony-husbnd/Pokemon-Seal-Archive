@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * '지옥' 난이도 측정. 플레이어 쪽은 어려움 AI, 상대는 지옥(팀 빌더로 내 팀을 겨냥해 짠 조합 + 행동 읽기·탐색 AI).
- *   node tools/simulate-hell.mjs [--n 30] [--seed 1] [--team random|strong]
+ *   node tools/simulate-hell.mjs [--n 30] [--seed 1] [--team random|strong|all|eter]
  * 능력치 배율 같은 반칙이 없으므로, 승률을 일부러 맞추지 않고 '가장 잘 이기는지'만 본다.
  */
 import { loadBattle } from './lib/load-battle.mjs';
@@ -11,13 +11,15 @@ const N = Number(opt('n', 30)), SEED = Number(opt('seed', 1)), TEAM = opt('team'
 const { engine: E, data, ai: AI, party: PT, boss: BB, learn } = loadBattle();
 const P = PT.create(data), B = BB.create({ E, AI, PT, data, learn });
 const rnd = E.mulberry32(SEED);
-const pool = Object.keys(data.pokemon).map(Number).filter(id => id <= 1025);
+const pool = TEAM === 'all' ? Object.keys(data.pokemon).map(Number) : Object.keys(data.pokemon).map(Number).filter(id => id <= 1025);   // all: 모든 폼
 const strong = [...pool].sort((a, b) => data.pokemon[b].bst - data.pokemon[a].bst).slice(0, 220);
+const eterId = Number(Object.keys(data.pokemon).find(i => data.pokemon[i].e === 'eternatus-eternamax'));
 const src = TEAM === 'strong' ? strong : pool;
 let wins = 0, losses = 0, draws = 0, turns = 0, buildMs = 0;
 const seen = new Map();
 for (let g = 0; g < N; g++) {
   const s = new Set();
+  if (TEAM === 'eter') s.add(eterId);      // 무한다이맥스 1마리 + 무작위 2마리
   while (s.size < 3) { const id = src[Math.floor(rnd() * src.length)]; if (![...s].some(x => data.pokemon[x].sp === data.pokemon[id].sp)) s.add(id); }
   const mine = [...s].map(id => ({ id, moves: P.pickMoveset(id, rnd) }));
   const t0 = Date.now();

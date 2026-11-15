@@ -58,3 +58,25 @@ test('빌더: 진행 상황을 알려 주고 예산 안에 끝난다', async () 
   assert.ok(marks.length >= 4 && marks[marks.length - 1] === 1);
   assert.ok(Date.now() - t0 < 6000);
 });
+
+test('빌더: 사람이 고를 수 있는 모든 포켓몬(무한다이맥스·원시회귀·왕관 폼 등)이 상대 후보에도 있다', () => {
+  const cand = new Set(B.candidatePool());
+  const selectable = Object.keys(data.pokemon).map(Number);
+  assert.equal(JSON.stringify(P.fullPool), JSON.stringify(selectable));
+  for (const sp of new Set(selectable.map(id => data.pokemon[id].sp))) {
+    const forms = selectable.filter(id => data.pokemon[id].sp === sp).sort((a, b) => data.pokemon[b].bst - data.pokemon[a].bst);
+    assert.ok(cand.has(forms[0]), `${data.pokemon[forms[0]].k}(${data.pokemon[forms[0]].e}) 가 후보에 없다`);
+  }
+  for (const e of ['eternatus-eternamax', 'groudon-primal', 'kyurem-white']) {
+    const id = Number(Object.keys(data.pokemon).find(i => data.pokemon[i].e === e));
+    assert.ok(cand.has(id), `${e} 는 상대도 쓸 수 있어야 한다`);
+  }
+});
+
+test('빌더: 사람이 무한다이맥스를 들고 와도 후보로 짠 상대 팀이 유효하다', async () => {
+  const rnd = E.mulberry32(5);
+  const eter = Number(Object.keys(data.pokemon).find(i => data.pokemon[i].e === 'eternatus-eternamax'));
+  const team = await B.build(teamOf([eter, 9, 3], rnd), { rng: rnd, budgetMs: 2500 });
+  assert.equal(team.length, 3);
+  assert.equal(new Set(team.map(t => data.pokemon[t.id].sp)).size, 3);
+});

@@ -136,11 +136,15 @@
     const winRate = (playerTeam, bossTeam, n, seed0) => { let s = 0; for (let i = 0; i < n; i++) s += simulate(playerTeam, bossTeam, seed0 + i * 31); return s / n; };
 
     // ───────────── 후보 풀 ─────────────
+    // 플레이어가 고를 수 있는 모든 포켓몬(무한다이맥스·원시회귀·왕관 폼 등 포함)이 후보다. 사람이 할 수 있는 선택은 AI 도 할 수 있어야 한다.
+    // 같은 종은 폼마다 속성·능력이 다르므로 종족값 상위 2개 폼까지 남긴다 (3마리 조합에서는 종 중복이 걸러진다).
     const candidatePool = () => {
-      const ids = party.pool.filter(id => P[id].m.length >= 1);
-      const bySpecies = new Map();                                   // 같은 종은 종족값이 가장 높은 폼 하나만
-      for (const id of ids) { const sp = P[id].sp; if (!bySpecies.has(sp) || P[bySpecies.get(sp)].bst < P[id].bst) bySpecies.set(sp, id); }
-      return [...bySpecies.values()];
+      const ids = party.fullPool.filter(id => P[id].m.length >= 1);
+      const bySpecies = new Map();
+      for (const id of ids) { const sp = P[id].sp; if (!bySpecies.has(sp)) bySpecies.set(sp, []); bySpecies.get(sp).push(id); }
+      const out = [];
+      for (const list of bySpecies.values()) out.push(...list.sort((a, b) => P[b].bst - P[a].bst).slice(0, 2));
+      return out;
     };
 
     /**
