@@ -5,10 +5,12 @@
  *   ai.chooseAction(battle, 1, 'normal')       → { type:'move', index } | { type:'switch', to }
  *   ai.chooseReplacement(battle, 1, 'normal')  → 파티 인덱스 (기절 후 교체)
  *
- * 난이도(level): 'easy' | 'normal' | 'hard'
+ * 난이도(level): 'easy' | 'normal' | 'hard' | 'hell'
  *   쉬움  : 실수가 잦고(최선 기술 55%) 먼저 교체하지 않는다
  *   보통  : 대체로 최선(85%), 확실히 불리할 때만 교체
  *   어려움: 항상 최선 + 선공 KO/우선도/상성 교체까지 계산
+ *   지옥  : 어려움 + 플레이어가 이번 턴 고른 행동을 미리 보고(chooseAction 의 4번째 인자) 그에 맞는 최선의 수를 둔다.
+ *           (상대 파티·능력치도 따로 강화된다: BattleParty 의 hell 설정)
  *
  * AI 는 엔진과 별도의 난수(opts.rng 또는 seed)를 쓰므로 엔진의 시드 재현성을 해치지 않는다.
  */
@@ -19,6 +21,7 @@
     easy:   { label: '쉬움',   best: 0.55, switchChance: 0,   ko: 0.6, replaceBest: 0.5,  status: 0.7 },
     normal: { label: '보통',   best: 0.85, switchChance: 0.6, ko: 1,   replaceBest: 0.85, status: 1 },
     hard:   { label: '어려움', best: 1,    switchChance: 1,   ko: 1.3, replaceBest: 1,    status: 1.1 },
+    hell:   { label: '지옥',   best: 1,    switchChance: 1,   ko: 1.5, replaceBest: 1,    status: 1.2, peek: true },
   };
 
   function create(E, opts) {
@@ -583,10 +586,75 @@
       return { value: mine - theirs + speedEdge, mine, theirs };
     }
 
-    function chooseAction(battle, si, level) {
+    /**
+     * 지옥 난이도: 상대(플레이어)가 이번 턴 고른 행동을 알고 있을 때의 최선. 선후 관계·방어·교체·확정 KO 를 정확히 반영한다.
+     * 각 선택지를 '이번 턴에 내가 주는 피해 − 받는 피해(와 그로 인한 손실)' 로 평가한다.
+     */
+    function peekChoose(battle, si, c, la, foeAction) {
+      const foeSi = 1 - si, me = battle.active(si), foe = battle.active(foeSi);
+      const env = { B: battle.ctx ? battle : null, si, la };
+      const ctxMe = battle.ctx(si), ctxFoe = battle.ctx(foeSi);
+      const foeMove = foeAction.type === 'move' && foeAction.index >= 0 ? foe.moves[foeAction.index] : null;
+      const foeSwitchTo = foeAction.type === 'switch' ? battle.sides[foeSi].party[foeAction.to] : null;
+      const foePri = foeSwitchTo ? 100 : foeMove ? (foeMove.pri || 0) : 0;
+      const foeAttacks = !!(foeMove && foeMove.cls !== 'status');
+      const foeProtects = !!(foeMove && foeMove.fx && foeMove.fx.protect && foeMove.fx.protect !== 'endure');
+      const foeEst = foeAttacks ? E.estimateDamage(foe, me, foeMove, ctxFoe) : null;
+      const meFasterThan = pri => (pri !== foePri ? pri > foePri : battle.outspeeds(si));
+      const rows = [];
+      // ── 기술 ──
+      scoreMoves(me, foe, battle.outspeeds(si), 'hard', env).forEach(r => {
+        const mv = r.mv;
+        const first = meFasterThan(mv.pri || 0);
+        const target = foeSwitchTo || foe;                           // 상대가 교체하면 교체해 들어오는 포켓몬이 맞는다
+        let score = r.score;
+        if (mv.cls === 'status') {
+          if (mv.fx.protect && mv.fx.protect !== 'endure') {          // 방어: 상대가 공격할 때만 값지다
+            score = foeAttacks && !foeMove.fx.breakProtect && me.protectStreak === 0 ? foeEst.expected * 1.3 : -1;
+          } else {
+            if (foeProtects && (mv.fx.ail || mv.fx.tgt)) score *= 0.1;   // 상대가 막으면 헛수고
+            if (foeSwitchTo && (mv.fx.ail || mv.fx.tgt)) score *= 0.4;  // 교체해 나온 포켓몬에게 맞는다
+            if (!foeAttacks) score *= 1.25;                              // 상대가 공격하지 않으면 준비 동작이 공짜다
+            if (foeEst && !first && foeEst.min >= me.hp && !mv.fx.protect) score *= 0.15;   // 준비하기 전에 쓰러진다
+          }
+        } else if (r.score >= 0) {
+          const est = E.estimateDamage(me, target, mv, ctxMe);
+          let dealt = est.expected;
+          if (foeProtects && !(mv.fx && mv.fx.breakProtect)) dealt = 0;
+          if (foeEst && !first && foeEst.min >= me.hp) dealt = 0;     // 내가 움직이기 전에 쓰러진다
+          const ko = first && est.min >= target.hp && !foeProtects;
+          score = dealt + (ko ? target.maxHp * 0.6 + (foeEst ? foeEst.expected * 0.8 : 0) : 0);
+          if (est.eff === 0) score = -1;
+          if (mv.fx && mv.fx.recoil) score -= dealt * mv.fx.recoil / 100 * 0.4;
+        }
+        rows.push({ action: { type: 'move', index: r.index }, score });
+      });
+      // ── 교체 ──
+      if (la.switches.length) {
+        for (const idx of la.switches) {
+          const cand = battle.sides[si].party[idx];
+          const take = foeAttacks && !foeSwitchTo ? E.estimateDamage(foe, cand, foeMove, ctxFoe).expected : 0;
+          const cur = foeEst && !foeProtects ? foeEst.expected : 0;
+          const doomed = foeEst && foeEst.min >= me.hp && !meFasterThan(0);
+          const saves = Math.max(0, cur - take) * 0.9 + (doomed ? me.hp * 0.8 : 0);     // 내 포켓몬 대신 이 포켓몬이 맞는다
+          const threat = Math.min(foe.hp, bestOf(cand, foe, ctxMe)) * 0.55;               // 다음 턴 이 포켓몬이 줄 피해
+          const gain = saves - take * 0.4 + threat - 0.3 * Math.max(0, bestOf(me, foe, ctxMe) * 0.5);
+          rows.push({ action: { type: 'switch', to: idx, reason: '읽고 교체' }, score: gain * (foeAttacks ? 1 : 0.2) });
+        }
+      }
+      rows.sort((a, b) => b.score - a.score);
+      const best = rows[0];
+      return best ? Object.assign({ reason: '지옥: 읽고 대응' }, best.action) : { type: 'move', index: 0 };
+    }
+
+    function chooseAction(battle, si, level, foeAction) {
       const c = cfg(level);
       const la = battle.legalActions(si);
       if (la.mustStruggle) return { type: 'move', index: 0, reason: '발버둥' };
+      if (c.peek && foeAction && foeAction.type !== 'surrender') {
+        const r = peekChoose(battle, si, c, la, foeAction);
+        if (r) return r;
+      }
 
       const me = battle.active(si), foe = battle.active(1 - si);
       const meFaster = battle.outspeeds ? battle.outspeeds(si) : E.effectiveStat(me, 'spe') >= E.effectiveStat(foe, 'spe');

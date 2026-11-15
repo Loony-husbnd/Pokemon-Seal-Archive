@@ -472,6 +472,12 @@
       const names = opts.names || ['나', '상대'];
       const maxTurns = opts.maxTurns || 500;
       if (!opts.parties || opts.parties.length !== 2 || opts.parties.some(p => !p.length)) throw new Error('양쪽 파티가 필요합니다.');
+      if (opts.statMult) {                                  // 능력치 배율 (opts.statMult = [내 쪽, 상대 쪽]) — 최고 난이도 '지옥'이 쓴다
+        opts.parties.forEach((party, i) => {
+          const m = opts.statMult[i] || 1;
+          if (m !== 1) party.forEach(mon => { Object.keys(mon.stats).forEach(k => { mon.stats[k] = Math.floor(mon.stats[k] * m); }); mon.maxHp = mon.stats.hp; mon.hp = mon.maxHp; });
+        });
+      }
 
       // 한쪽 진영에 걸리는 효과(함정·벽·순풍 …) / 양쪽에 걸리는 필드(날씨·필드·트릭룸)
       const newCond = () => ({ rocks: false, spikes: 0, tspikes: 0, web: false, reflect: 0, lightscreen: 0, veil: 0, tailwind: 0, safeguard: 0, mist: 0, lucky: 0, wish: null, hw: null, future: null });

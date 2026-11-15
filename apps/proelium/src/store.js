@@ -16,7 +16,7 @@ function cleanTeam(raw) {
 }
 export const store = {
   team: cleanTeam(load('team', null)),
-  level: ['easy', 'normal', 'hard'].includes(load('level', 'normal')) ? load('level', 'normal') : 'normal',
+  level: ['easy', 'normal', 'hard', 'hell'].includes(load('level', 'normal')) ? load('level', 'normal') : 'normal',
   sound: load('sound', true),
   record: Object.assign({ w: 0, l: 0, d: 0, streak: 0, best: 0 }, load('record', {})),
   save() { put('team', this.team); put('level', this.level); put('sound', this.sound); put('record', this.record); },
