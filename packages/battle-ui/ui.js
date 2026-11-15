@@ -17,13 +17,15 @@
   const STATUS_KO = { par: '마비', brn: '화상', psn: '독', tox: '맹독', slp: '잠듦', frz: '얼음' };
   // 배틀 중에만 있는 임시 상태 / 날씨·필드 / 한쪽 진영에 걸리는 효과의 표시 이름
   const VOL_KO = { seeded: '씨뿌리기', taunt: '도발', encore: '앙코르', disable: '봉인', torment: '트집', yawn: '졸림', aquaRing: '아쿠아링', ingrain: '뿌리박기',
-    sub: '대타', trapped: '가두기', attract: '헤롱헤롱', nightmare: '악몽', perish: '멸망', focus: '기합', protect: '방어' };
+    sub: '대타', trapped: '가두기', attract: '헤롱헤롱', nightmare: '악몽', perish: '멸망', focus: '기합', protect: '방어',
+    cursed: '저주', octolock: '문어굳히기', lockOn: '록온', laserFocus: '집중', foresight: '간파', levitate: '부유', embargo: '금제', healBlock: '회복봉인', simple: '단순', insomnia: '불면',
+    tarred: '타르', noRetreat: '배수의진', imprison: '봉인술', destinyBond: '길동무', boostNext: '도우미', charging: '충전 중', stock: '비축' };
   const WEATHER_UI = { sun: '☀ 쾌청', rain: '☔ 비', sand: '🌪 모래바람', snow: '❄ 눈' };
   const TERRAIN_UI = { electric: '⚡ 일렉트릭필드', grassy: '🌿 그래스필드', misty: '🌫 미스트필드', psychic: '🔮 사이코필드' };
   const COND_UI = (c) => [
     c.rocks && '스텔스록', c.spikes && `압정 ×${c.spikes}`, c.tspikes && `독압정 ×${c.tspikes}`, c.web && '끈적네트',
     c.reflect && `리플렉터 ${c.reflect}`, c.lightscreen && `빛의장막 ${c.lightscreen}`, c.veil && `오로라베일 ${c.veil}`,
-    c.tailwind && `순풍 ${c.tailwind}`, c.safeguard && `신비의부적 ${c.safeguard}`, c.mist && `미스트 ${c.mist}`,
+    c.tailwind && `순풍 ${c.tailwind}`, c.safeguard && `신비의부적 ${c.safeguard}`, c.mist && `미스트 ${c.mist}`, c.lucky && `주술 ${c.lucky}`,
   ].filter(Boolean);
   const LEVELS = {
     easy:   { label: '쉬움',   desc: '상대 파티가 약하고 실수도 잦아요.' },
@@ -464,6 +466,12 @@
     if (f.weather) tags.push(WEATHER_UI[f.weather]);
     if (f.terrain) tags.push(TERRAIN_UI[f.terrain]);
     if (f.room) tags.push(`🌀 트릭룸 ${f.room}`);
+    if (f.gravity) tags.push(`⬇ 중력 ${f.gravity}`);
+    if (f.wonder) tags.push(`🌀 원더룸 ${f.wonder}`);
+    if (f.magicRoom) tags.push(`🌀 매직룸 ${f.magicRoom}`);
+    if (f.mud) tags.push(`흙놀이 ${f.mud}`);
+    if (f.waterSport) tags.push(`물놀이 ${f.waterSport}`);
+    if (f.fairyLock) tags.push('🔒 페어리록');
     el.innerHTML = tags.map(t => `<span>${esc(t)}</span>`).join('');
     el.classList.toggle('on', tags.length > 0);
     el.dataset.weather = f.weather || '';
@@ -549,7 +557,7 @@
     switch (ev.t) {
       case 'turn': U.turn = ev.turn; $('#bt-turn').textContent = `${ev.turn}턴`; break;
       case 'field': {
-        U.field = { weather: ev.weather, terrain: ev.terrain, room: ev.room, sides: ev.sides };
+        U.field = { weather: ev.weather, terrain: ev.terrain, room: ev.room, gravity: ev.gravity, wonder: ev.wonder, magicRoom: ev.magicRoom, mud: ev.mud, waterSport: ev.waterSport, fairyLock: ev.fairyLock, sides: ev.sides };
         renderField(); renderSide(0, false); renderSide(1, false);
         break;
       }
@@ -563,6 +571,14 @@
       case 'cure': {
         const side = U.side[ev.side];
         for (const i of ev.indexes) { side.party[i].status = null; if (i === side.active) side.party[i].confusion = false; }
+        renderSide(ev.side, false);
+        if (ev.text) { say(ev.text); await wait(msgDelay(ev.text)); }
+        break;
+      }
+      case 'sync': { mon(ev.side).status = ev.status; renderSide(ev.side, false); break; }
+      case 'revive': {
+        const m = U.side[ev.side].party[ev.index];
+        m.fainted = false; m.hp = ev.hp; m.maxHp = ev.maxHp; m.status = null;
         renderSide(ev.side, false);
         say(ev.text); await wait(msgDelay(ev.text));
         break;
@@ -617,7 +633,7 @@
       case 'hits': say(ev.text); await wait(msgDelay(ev.text) - 200); break;
       case 'heal': {
         const m = mon(ev.side); m.hp = ev.hp; updateHp(ev.side, true);
-        floatText(ev.side, `+${ev.amount}`, 'heal'); say(ev.text);
+        if (ev.amount > 0) floatText(ev.side, `+${ev.amount}`, 'heal'); say(ev.text);
         await pulse(spriteEl(ev.side), 'heal', 700);
         await wait(msgDelay(ev.text) - 500);
         break;
@@ -771,7 +787,7 @@
           const idx = brain.chooseReplacement(B, 1, S.level);
           await playEvents(B.replace(1, idx));
         } else {
-          const alive = B.sides[0].party.map((m, i) => (m.fainted ? -1 : i)).filter(i => i >= 0);
+          const alive = B.replaceOptions(0);
           const idx = alive.length === 1 ? alive[0] : await askReplacement();
           await playEvents(B.replace(0, idx));
         }

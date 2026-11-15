@@ -2,19 +2,24 @@
 /**
  * 변화기 1개씩의 실제 가치 측정 (짝지은 A/B 시뮬레이션, AI 끼리)
  *
- *   node tools/simulate-status-moves.mjs [--k 600] [--seed 1] [--level hard]
+ *   node tools/simulate-status-moves.mjs [--k 600] [--seed 1] [--level hard] [--only 기술식별자,기술식별자 | --stage3]
  *
  * 변화기 X 를 배울 수 있는 포켓몬이 선봉인 파티를 두 가지로 싸우게 한다.
  *   기준: 공격기 4개          변형: 공격기 3개 + X
  * 같은 상대·같은 시드로 비교하므로, 승률 차이(변형 − 기준)가 곧 'X 를 4번째 공격기 대신 넣었을 때의 득실'이다.
  */
+import fs from 'node:fs';
 import { loadBattle } from './lib/load-battle.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : def; };
 const K = Number(opt('k', 600)), SEED = Number(opt('seed', 1)), LEVEL = opt('level', 'hard');
+const ONLY = opt('only', '') ? new Set(opt('only', '').split(',')) : null;
+const STAGE3 = args.includes('--stage3');
 const { engine: E, data, ai: AI } = loadBattle();
 const rnd = E.mulberry32(SEED);
+// 3단계(120개) 변화기 식별자: tools/battle-status-moves.json 에서 150번째 이후
+const STAGE3_SET = new Set(Object.keys(JSON.parse(fs.readFileSync(new URL('./battle-status-moves.json', import.meta.url), 'utf8')).moves).slice(150));
 const all = Object.keys(data.pokemon).map(Number).filter(id => id <= 1025);
 const pick = list => list[Math.floor(rnd() * list.length)];
 const randTeam = () => { const s = new Set(); while (s.size < 3) s.add(pick(all)); return [...s]; };
@@ -37,6 +42,8 @@ const atk = id => ({ id, moves: [...data.pokemon[id].m] });
 const out = [];
 for (const [mid, mv] of Object.entries(data.moves)) {
   if (mv.c !== 'n') continue;
+  if (ONLY && !ONLY.has(mv.e)) continue;
+  if (STAGE3 && !STAGE3_SET.has(mv.e)) continue;
   const learners = all.filter(id => data.pokemon[id].sm.includes(Number(mid)) && data.pokemon[id].m.length >= 4);
   if (learners.length < 3) { out.push({ k: mv.k, e: mv.e, n: 0 }); continue; }
   let base = 0, vari = 0, n = 0;

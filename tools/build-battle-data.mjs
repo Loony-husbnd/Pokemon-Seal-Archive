@@ -45,6 +45,18 @@
  *   aquaRing/ingrain/wish/focus            자신 지속 효과     roost 날개쉬기(heal 과 함께)          weatherHeal / sandHeal  날씨별 회복량
  *   protect  protect|endure                이번 턴 방어       sub 대타출동  painSplit  phaze 강제 교체  transform  haze  splash  metronome  sleepTalk  perish
  *   cure     self|party  cureFoe           상태이상 회복      randStat  무작위 능력 +N               reqFoeStatus [kind…]  상대가 그 상태일 때만
+ *
+ * 3단계 변화기 fx (교체 · 복사 · 타입 · 교환 · 방어 변종 …) — 효과는 모두 engine.js 에 구현되어 있다
+ *   pivot    out|baton|shed                 쓰고 나서 바로 교체(순간이동·막말내뱉기·썰렁개그 / 배턴터치 / 꼬리자르기)   faintSelf wish|dance|memento  자신이 쓰러진다(치유소원·초승달춤·추억의선물)
+ *   revive   회생의기도                      protect  king|spiky|bunker|obstruct|silk|burning|maxguard|quick|crafty|wide|mat   (기존 protect|endure 에 더해 접촉 반격·종류별 방어)
+ *   gravity wonder magicRoom sport(mud|water) ion electrify fairyLock courtChange    필드·진영 효과      side 에 'lucky'(주술) 추가
+ *   mimic sketch mirrorMove copycat meFirst assist naturePower repeat(지휘)        다른 기술을 쓰거나 복사
+ *   copyStages swapStages(['atk','spa']|'all') invertStages swapStat('spe') ownSwap([a,b]) splitStats([a,b])   능력 단계/능력치 교환·분배
+ *   typeChange move|resist|terrain|mirror  addType(타입ID) setType(타입ID) swapTypes rolePlay giveTypes doodle   타입 변경
+ *   levitate telekinesis foresight(ghost|dark) lockOn laserFocus curse destinyBond grudge imprison snatch coat dust(분진) octolock tar nextOrder(1|-1) boostNext
+ *   psychoShift statusSwap clearBoosts embargo healBlock simple insomnia recycle strengthSap stockpile swallow charge2(2턴 충전) tidy selfTrap terrainHeal
+ *   dead ally|item                         싱글 배틀에서 아무 효과가 없는 기술(아군·도구가 필요한 기술)
+ * 변화기 공통 플래그(원본 move_flags): rf = 매직코트가 튕겨 냄, sn = 가로채기 대상.   공격기: ct = 접촉 기술(니들가드 등이 반격)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -59,7 +71,7 @@ const CSV_BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/
 const SETS_URL = 'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/random-battles/gen9/sets.json';
 const CSV_FILES = [
   'pokemon', 'pokemon_species', 'pokemon_species_names', 'pokemon_stats', 'pokemon_types',
-  'pokemon_moves', 'moves', 'move_names', 'move_meta', 'move_meta_stat_changes', 'type_names',
+  'pokemon_moves', 'moves', 'move_names', 'move_meta', 'move_meta_stat_changes', 'move_flag_map', 'type_names',
 ];
 
 // ───────────────────────── 다운로드 / CSV ─────────────────────────
@@ -341,6 +353,8 @@ async function main() {
     if (!statChanges.has(id)) statChanges.set(id, []);
     statChanges.get(id).push({ stat: Number(r.stat_id), change: Number(r.change) });
   }
+  const flagMap = new Map();
+  for (const r of csv('move_flag_map')) { const id = Number(r.move_id); if (!flagMap.has(id)) flagMap.set(id, new Set()); flagMap.get(id).add(Number(r.move_flag_id)); }
   const moveRows = csv('moves');
   const moves = buildMoves({ moves: moveRows, meta, statChanges }, overrides);
   const statusJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'battle-status-moves.json'), 'utf8'));
@@ -448,6 +462,9 @@ async function main() {
     const m = moves.get(mid) || statusMoves.get(mid);
     moveOut[mid] = { k: moveKo.get(mid) || m.e, e: m.e, t: m.type, c: m.cls === 'phys' ? 'p' : m.cls === 'sta' ? 'n' : 's', pw: m.power, ac: m.acc, pp: m.pp, pr: m.pri, fx: m.fx };
     if (m.cls === 'sta' && statusWeights[m.e] !== undefined) moveOut[mid].w = statusWeights[m.e];   // 무작위 기술 구성에서 뽑힐 비중
+    const fl = flagMap.get(mid) || new Set();
+    if (m.cls === 'sta') { if (fl.has(5)) moveOut[mid].rf = 1; if (fl.has(6)) moveOut[mid].sn = 1; }   // 매직코트·가로채기 대상
+    else if (fl.has(1)) moveOut[mid].ct = 1;                                                             // 접촉 기술
   }
   const typeOut = TYPE_IDENT.map((e, i) => ({ id: i + 1, e, k: typeKo.get(i + 1) || e }));
 
