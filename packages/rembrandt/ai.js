@@ -22,6 +22,9 @@
     normal: { label: '보통',   best: 0.85, switchChance: 0.6, ko: 1,   replaceBest: 0.85, status: 1 },
     hard:   { label: '어려움', best: 1,    switchChance: 1,   ko: 1.3, replaceBest: 1,    status: 1.1 },
     hell:   { label: '지옥',   best: 1,    switchChance: 1,   ko: 1.5, replaceBest: 1,    status: 1.2, peek: true, search: true },
+    // 아래 둘은 화면에 나오는 난이도가 아니라 지옥 AI 의 '모의 상대/모의 자신'이다 (팀 빌더·탐색용, 빠르다)
+    peek:   { label: '읽기',   best: 1,    switchChance: 1,   ko: 1.5, replaceBest: 1,    status: 1.2, peek: true },                    // 지옥과 같은 규칙 기반 읽기(탐색 없음)
+    savvy:  { label: '노련',   best: 1,    switchChance: 1,   ko: 1.3, replaceBest: 1,    status: 1.1, predict: true },                 // 상대의 공격을 예측해 받아낼 포켓몬으로 교체하는 숙련된 사람
   };
 
   function create(E, opts) {
@@ -650,15 +653,17 @@
     // ───────────── 탐색 (지옥 난이도) ─────────────
     const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
     /** 복제한 배틀을 끝까지(또는 상한 턴까지) 굴려 si 쪽의 결과를 0~1 로 돌려준다. 양쪽은 '어려움' AI. */
-    function playOut(b, si, brains, turnCap) {
+    function playOut(b, si, brains, turnCap, lv) {
+      lv = lv || ['hard', 'hard'];
       let guard = 0;
       while (b.phase !== 'ended' && b.turn < turnCap && ++guard < 400) {
         if (b.phase === 'switch') {
-          for (const p of b.pending.slice()) if (b.phase === 'switch' && b.pending.includes(p)) b.replace(p, brains[p].chooseReplacement(b, p, 'hard'));
+          for (const p of b.pending.slice()) if (b.phase === 'switch' && b.pending.includes(p)) b.replace(p, brains[p].chooseReplacement(b, p, lv[p === si ? 0 : 1]));
           continue;
         }
-        const a0 = brains[0].chooseAction(b, 0, 'hard'), a1 = brains[1].chooseAction(b, 1, 'hard');
-        b.playTurn(a0, a1);
+        const fo = 1 - si, af = brains[fo].chooseAction(b, fo, lv[1]);                    // 상대(사람)가 먼저 고르고
+        const am = brains[si].chooseAction(b, si, lv[0], lv[0] === 'peek' ? af : undefined);   // 나는 (읽는 수준이면) 그걸 보고 고른다
+        b.playTurn(si === 0 ? am : af, si === 0 ? af : am);
       }
       const hpSum = s2 => b.sides[s2].party.reduce((a, m) => a + (m.fainted ? 0 : m.hp / m.maxHp), 0);
       // 이기더라도 체력을 많이 남기고 빨리 이기는 쪽이 낫고, 지더라도 상대 체력을 많이 깎은 쪽이 낫다 (동점일 때 더 좋은 수를 고르기 위해)
@@ -671,11 +676,12 @@
       return clampN(0.5 + (mine - theirs) / 6, 0.02, 0.98);                      // 시간 초과: 남은 체력 비율로 판단
     }
     /** 후보 행동들을 같은 조건으로 번갈아 굴려 평균 결과가 가장 좋은 것을 고른다 */
+    const MIN_ROUNDS = 8;
     function searchBest(battle, si, candidates, evalOne, budgetMs) {
       const t0 = nowMs(), sum = candidates.map(() => 0), cnt = candidates.map(() => 0);
       for (let round = 0; round < 40; round++) {
-        for (let i = 0; i < candidates.length; i++) { sum[i] += evalOne(candidates[i], round * 97 + i); cnt[i]++; }
-        if (round >= 3 && nowMs() - t0 > budgetMs) break;
+        for (let i = 0; i < candidates.length; i++) { sum[i] += evalOne(candidates[i], round * 97); cnt[i]++; }   // 같은 난수로 비교해야 후보 간 차이만 남는다
+        if (round >= MIN_ROUNDS - 1 && nowMs() - t0 > budgetMs) break;       // 느린 기기에서도 최소 횟수는 굴려 판단의 질이 떨어지지 않게 한다
       }
       let bi = 0;
       for (let i = 1; i < candidates.length; i++) if (sum[i] / cnt[i] > sum[bi] / cnt[bi]) bi = i;
@@ -693,9 +699,37 @@
         const b = battle.fork(7000 + k);
         const a = si === 0 ? [act, foeAction] : [foeAction, act];
         b.playTurn(a[0], a[1]);
-        return playOut(b, si, brains, battle.turn + 40);
-      }, budgetMs || 350);
+        return playOut(b, si, brains, battle.turn + 40, ['peek', 'savvy']);
+      }, budgetMs || 700);
       return Object.assign({ reason: `지옥: 탐색 ${(best.value * 100).toFixed(0)}%` }, cands[best.index]);
+    }
+
+    /**
+     * 노련한 사람의 플레이 모형: 상대가 가장 아프게 때릴 기술을 예측하고, 그걸 잘 받아내면서 반격이 강한 포켓몬으로 교체한다.
+     * (내가 먼저 쓰러뜨릴 수 있거나 위협이 작으면 그대로 싸운다.) 팀 빌더와 탐색이 '사람이 이런 수를 쓴다'는 것을 고려하도록 쓴다.
+     */
+    function savvySwitch(battle, si, la, m) {
+      if (!la.switches.length || battle.turn - m.lastSwitchTurn[si] <= 1 || !battle.ctx) return null;
+      const me = battle.active(si), foe = battle.active(1 - si), ctxM = battle.ctx(si), ctxF = battle.ctx(1 - si);
+      let pm = null, pe = 0;
+      for (const mv of foe.moves) {
+        if (mv.pp <= 0 || mv.cls === 'status') continue;
+        const e = E.estimateDamage(foe, me, mv, ctxF).expected;
+        if (e > pe) { pe = e; pm = mv; }
+      }
+      if (!pm || pe < me.hp * 0.4) return null;                                       // 위협이 작으면 버틴다
+      if (battle.outspeeds(si) && bestOf(me, foe, ctxM) >= foe.hp) return null;       // 먼저 쓰러뜨릴 수 있으면 때린다
+      let best = null;
+      for (const idx of la.switches) {
+        const cand = battle.sides[si].party[idx];
+        const take = E.estimateDamage(foe, cand, pm, ctxF).expected;
+        if (take > cand.hp * 0.4) continue;                                            // 잘 받아내지 못하면 의미 없다
+        const punish = Math.min(foe.hp, bestOf(cand, foe, ctxM));
+        if (punish < foe.hp * 0.4) continue;                                           // 반격도 약하면 의미 없다
+        const value = punish / foe.hp - take / cand.maxHp + (pe - take) / me.maxHp * 0.5;
+        if (!best || value > best.value) best = { idx, value };
+      }
+      return best && best.value > 0.5 && rng() < 0.75 ? best.idx : null;               // 읽기는 가끔 빗나간다
     }
 
     function chooseAction(battle, si, level, foeAction) {
@@ -716,6 +750,7 @@
 
       // ── 교체 판단 ──
       const m = mem(battle);
+      if (c.predict) { const to = savvySwitch(battle, si, la, m); if (to !== null) { m.lastSwitchTurn[si] = battle.turn; return { type: 'switch', to, reason: '노련: 예측 교체' }; } }
       if (c.switchChance > 0 && la.switches.length && battle.turn - m.lastSwitchTurn[si] > 2) {
         const menv = battle.ctx ? { mine: battle.ctx(si), theirs: battle.ctx(1 - si) } : undefined;
         const cur = matchup(me, foe, menv);
@@ -759,8 +794,8 @@
             const best = searchBest(battle, si, opts, (idx, k) => {
               const b = battle.fork(9000 + k);
               b.replace(si, idx);
-              return playOut(b, si, brains, battle.turn + 40);
-            }, c.budgetMs || 250);
+              return playOut(b, si, brains, battle.turn + 40, ['peek', 'savvy']);
+            }, c.budgetMs || 500);
             return opts[best.index];
           } catch (e) { /* 규칙 기반으로 */ }
         }

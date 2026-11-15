@@ -42,6 +42,9 @@
       return /-mega(-[xyz])?$/.test(e) || /-(alola|galar|hisui|paldea)(-|$)/.test(e);
     });
 
+    // 플레이어가 고를 수 있는 모든 포켓몬(모든 폼 포함). 지옥 상대는 사람과 같은 선택지를 가져야 한다.
+    const fullPool = Object.keys(P).map(Number);
+
     const total = ids => ids.reduce((s, id) => s + P[id].bst, 0);
     const hasLegend = ids => ids.some(id => P[id].leg);
 
@@ -185,7 +188,7 @@
       return attacks.slice(0, Math.max(0, 4 - chosen.length)).concat(chosen);
     }
 
-    return { validate, generateOpponent, displayName, speciesLabel, pickMoveset, total, pool, OFFSET };
+    return { validate, generateOpponent, displayName, speciesLabel, pickMoveset, total, pool, fullPool, OFFSET };
   }
 
   global.BattleParty = { create, OFFSET, };
