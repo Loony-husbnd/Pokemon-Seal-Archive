@@ -24,6 +24,8 @@
     hell:   { label: '지옥',   best: 1,    switchChance: 1,   ko: 1.5, replaceBest: 1,    status: 1.2, peek: true, search: true },
     // 아래 둘은 화면에 나오는 난이도가 아니라 지옥 AI 의 '모의 상대/모의 자신'이다 (팀 빌더·탐색용, 빠르다)
     peek:   { label: '읽기',   best: 1,    switchChance: 1,   ko: 1.5, replaceBest: 1,    status: 1.2, peek: true },                    // 지옥과 같은 규칙 기반 읽기(탐색 없음)
+    // 평가용 강한 가상 플레이어: 지옥 AI 가 행동을 읽는다는 것을 알고, 상대의 모든 대응을 굴려 보고 가장 덜 불리한 수(maximin)를 고른다. 느리므로 도구·테스트에서만 쓴다.
+    duelist:{ label: '결투가', best: 1,   switchChance: 1,   ko: 1.3, replaceBest: 1,    status: 1.1, minimax: true },
     savvy:  { label: '노련',   best: 1,    switchChance: 1,   ko: 1.3, replaceBest: 1,    status: 1.1, predict: true },                 // 상대의 공격을 예측해 받아낼 포켓몬으로 교체하는 숙련된 사람
   };
 
@@ -661,8 +663,10 @@
           for (const p of b.pending.slice()) if (b.phase === 'switch' && b.pending.includes(p)) b.replace(p, brains[p].chooseReplacement(b, p, lv[p === si ? 0 : 1]));
           continue;
         }
-        const fo = 1 - si, af = brains[fo].chooseAction(b, fo, lv[1]);                    // 상대(사람)가 먼저 고르고
-        const am = brains[si].chooseAction(b, si, lv[0], lv[0] === 'peek' ? af : undefined);   // 나는 (읽는 수준이면) 그걸 보고 고른다
+        const fo = 1 - si;
+        let am, af;
+        if (lv[1] === 'peek') { am = brains[si].chooseAction(b, si, lv[0]); af = brains[fo].chooseAction(b, fo, lv[1], am); }   // 상대가 읽는 쪽
+        else { af = brains[fo].chooseAction(b, fo, lv[1]); am = brains[si].chooseAction(b, si, lv[0], lv[0] === 'peek' ? af : undefined); }   // 내가 읽는 쪽(또는 서로 못 읽음)
         b.playTurn(si === 0 ? am : af, si === 0 ? af : am);
       }
       const hpSum = s2 => b.sides[s2].party.reduce((a, m) => a + (m.fainted ? 0 : m.hp / m.maxHp), 0);
@@ -732,10 +736,42 @@
       return best && best.value > 0.5 && rng() < 0.75 ? best.idx : null;               // 읽기는 가끔 빗나간다
     }
 
+    /**
+     * 결투가(평가용): 내 후보 × 상대 후보를 모두 한 턴 굴린 뒤 이후는 (나 'savvy', 상대 'peek')로 이어 굴려 결과표를 만들고,
+     * 상대가 내 행동을 읽고 최선으로 대응한다고 보고 최악에 가까운 값이 가장 좋은 행동을 고른다.
+     */
+    function minimaxChoose(battle, si, la, rounds) {
+      const foe = 1 - si, fla = battle.legalActions(foe);
+      const mine = [], theirs = [];
+      la.moves.forEach(m => { if (m.usable) mine.push({ type: 'move', index: m.index }); });
+      la.switches.forEach(i => mine.push({ type: 'switch', to: i }));
+      if (fla.mustStruggle) theirs.push({ type: 'move', index: 0 });
+      else { fla.moves.forEach(m => { if (m.usable) theirs.push({ type: 'move', index: m.index }); }); fla.switches.forEach(i => theirs.push({ type: 'switch', to: i })); }
+      if (!mine.length) return null;
+      if (mine.length === 1 || !theirs.length) return Object.assign({ reason: '결투가: 유일한 선택' }, mine[0]);
+      const brains = [create(E, { seed: 31 }), create(E, { seed: 32 })];
+      let best = null;
+      const table = mine.map(am => theirs.map(af => {
+        let sum = 0;
+        for (let k = 0; k < rounds; k++) {
+          const b = battle.fork(5000 + k * 97);
+          b.playTurn(si === 0 ? am : af, si === 0 ? af : am);
+          sum += playOut(b, si, brains, battle.turn + 25, ['savvy', 'peek']);
+        }
+        return sum / rounds;
+      }));
+      mine.forEach((am, i) => {
+        const row = table[i], v = 0.7 * Math.min(...row) + 0.3 * row.reduce((a, x) => a + x, 0) / row.length;
+        if (!best || v > best.v) best = { v, i };
+      });
+      return Object.assign({ reason: `결투가: 최악 가정 ${(best.v * 100).toFixed(0)}%` }, mine[best.i]);
+    }
+
     function chooseAction(battle, si, level, foeAction) {
       const c = cfg(level);
       const la = battle.legalActions(si);
       if (la.mustStruggle) return { type: 'move', index: 0, reason: '발버둥' };
+      if (c.minimax && battle.fork) { try { const r = minimaxChoose(battle, si, la, c.rounds || 2); if (r) return r; } catch (e) { /* 규칙 기반으로 */ } }
       if (c.peek && foeAction && foeAction.type !== 'surrender') {
         if (c.search && battle.fork) { try { const r = searchChoose(battle, si, la, foeAction, c.budgetMs); if (r) return r; } catch (e) { /* 복제할 수 없는 상황이면 아래 규칙 기반으로 */ } }
         const r = peekChoose(battle, si, c, la, foeAction);

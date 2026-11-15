@@ -8,11 +8,13 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-export function loadBattle() {
+/** opts.bossFile: 다른 버전의 boss.js 경로(빌더 비교용) */
+export function loadBattle(opts) {
+  opts = opts || {};
   const sandbox = {};
   vm.createContext(sandbox);
   for (const f of ['packages/rembrandt/data/battle-data.js', 'packages/rembrandt/data/battle-learnsets.js', 'packages/rembrandt/engine.js', 'packages/rembrandt/ai.js', 'packages/rembrandt/party.js', 'packages/rembrandt/boss.js']) {
-    vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
+    vm.runInContext(fs.readFileSync(f.endsWith('boss.js') && opts.bossFile ? opts.bossFile : path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
   }
   return {
     data: sandbox.BATTLE_DATA, engine: sandbox.BattleEngine, createEngine: sandbox.createBattleEngine,
