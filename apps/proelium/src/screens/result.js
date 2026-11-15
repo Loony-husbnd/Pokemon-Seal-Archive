@@ -9,12 +9,14 @@ export function mount(root, { go, params }) {
   const r = store.record;
   if (draw) r.d++; else if (win) { r.w++; r.streak++; r.best = Math.max(r.best, r.streak); } else { r.l++; r.streak = 0; }
   store.save();
+  const LEVEL_KO = { easy: '쉬움', normal: '보통', hard: '어려움', hell: '지옥' };
   const mvp = dmg.length ? dmg.indexOf(Math.max(...dmg)) : -1;
   root.innerHTML = `
     <main class="result screen ${win ? 'win' : draw ? 'draw' : 'lose'}">
       <div class="res-hero">
         <h1 class="res-title display">${win ? 'VICTORY' : draw ? 'DRAW' : 'DEFEAT'}</h1>
         <p class="res-sub">${win ? '완벽한 승부였어요!' : draw ? '아슬아슬한 무승부!' : '다음엔 이길 수 있어요. 팀을 다듬어 볼까요?'}</p>
+        <span class="res-level lv-${esc(level)}">난이도 · ${LEVEL_KO[level] || esc(level)}</span>
       </div>
       <div class="res-team">${mine.map((t, i) => `<article class="res-card${i === mvp && dmg[i] > 0 ? ' mvp' : ''}" style="--c1:${TYPE_HEX[D().pokemon[t.id].t[0]]};--i:${i}">
         ${i === mvp && dmg[i] > 0 ? '<span class="crown">👑 MVP</span>' : ''}<div class="rc-art">${monImg(t.id)}</div><b>${esc(formLabel(t.id))}</b><small>${(dmg[i] || 0).toLocaleString('ko-KR')} 피해</small></article>`).join('')}</div>

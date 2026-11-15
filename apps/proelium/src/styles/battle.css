@@ -129,6 +129,7 @@
 .result.lose .res-title { background: linear-gradient(120deg, #9fb0d8, #5b6aa8); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 10px 30px rgba(60, 80, 160, .6)); }
 .result.draw .res-title { background: linear-gradient(120deg, #9bb8ff, #2a62ff); -webkit-background-clip: text; background-clip: text; }
 .res-sub { margin: 0; color: var(--mute); font-size: 18px; font-weight: 700; }
+.res-level { display: inline-block; margin-top: 10px; padding: 4px 16px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .1); font-size: 14px; font-weight: 900; letter-spacing: .04em; } .res-level.lv-hell { color: #ff6b81; border-color: #ff6b81; } .res-level.lv-hard { color: #ffb21f; border-color: #ffb21f; }
 .res-team { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .res-card { --c1: #888; position: relative; width: 150px; padding: 12px 8px 12px; border-radius: 22px; border: 2px solid rgba(255, 255, 255, .45); background: radial-gradient(100% 70% at 50% 20%, color-mix(in srgb, var(--c1) 70%, transparent), transparent 75%), #0a1128; display: flex; flex-direction: column; align-items: center; gap: 2px; animation: cardIn .6s calc(var(--i) * .12s + .3s) var(--spring) both; }
 .res-card.mvp { border-color: var(--gold); box-shadow: 0 0 34px rgba(255, 210, 63, .6); transform: scale(1.06); } .crown { position: absolute; top: -14px; background: var(--grad-gold); color: #3a1d00; font-weight: 900; font-size: 12px; padding: 2px 12px; border-radius: 999px; }
