@@ -171,3 +171,134 @@ test('1단계: 단순 기술(쪼아대기·고양이돈받기·맹세 …)이 �
     assert.ok(dmgOf(ev) > 0, e);
   }
 });
+
+// ═════════════ 2단계: 가변 위력 · 고정 피해 · 일격필살 ═════════════
+const withWt = (mon, kg) => { mon.wt = kg * 10; return mon; };
+const powerOf = (att, def, ident, ctx) => E.resolveMove(att, def, att.moves.find(m => m.ident === ident) || mv(ident), ctx).power;
+
+test('2단계: 안다리걸기·풀묶기는 상대 몸무게로, 헤비봄버·히트스탬프는 몸무게 비율로 위력이 정해진다', () => {
+  const a = withWt(mk('A', ['fighting'], {}, [mv('low-kick')]), 50);
+  for (const [kg, p] of [[5, 20], [20, 40], [40, 60], [80, 80], [150, 100], [300, 120]]) assert.equal(powerOf(a, withWt(idle(), kg), 'low-kick'), p, `${kg}kg`);
+  assert.equal(powerOf(a, withWt(idle(), 8), 'grass-knot'), 20);
+  const h = withWt(mk('H', ['steel'], {}, [mv('heavy-slam')]), 300);
+  for (const [kg, p] of [[200, 40], [150, 60], [100, 80], [75, 100], [50, 120]]) assert.equal(powerOf(h, withWt(idle(), kg), 'heavy-slam'), p, `${kg}kg`);
+  assert.equal(powerOf(h, withWt(idle(), 50), 'heat-crash'), 120);
+});
+
+test('2단계: 분화·해수스파우팅·용의에너지는 체력 비례, 바둥바둥·기사회생은 체력이 적을수록 강하다', () => {
+  const a = mk('A', ['fire'], {}, [mv('eruption'), mv('flail')]), d = idle();
+  assert.equal(powerOf(a, d, 'eruption'), 150);
+  a.hp = 150; assert.equal(powerOf(a, d, 'eruption'), 75);
+  a.hp = 300; assert.equal(powerOf(a, d, 'flail'), 20);
+  a.hp = 8; assert.equal(powerOf(a, d, 'flail'), 200);
+  a.hp = 100; assert.equal(powerOf(a, d, 'flail'), 80);
+});
+
+test('2단계: 하드프레스·묵사발은 상대 체력이 많을수록, 자이로볼은 느릴수록, 일렉트릭볼은 빠를수록 강하다', () => {
+  const a = mk('A', ['steel'], { spe: 50 }, [mv('hard-press'), mv('crush-grip'), mv('gyro-ball'), mv('electro-ball')]), d = mk('D', ['normal'], { spe: 400 }, [splash()]);
+  assert.equal(powerOf(a, d, 'hard-press'), 100); d.hp = 150;
+  assert.equal(powerOf(a, d, 'hard-press'), 50); assert.equal(powerOf(a, d, 'crush-grip'), 60);
+  assert.equal(powerOf(a, d, 'gyro-ball'), 150, '상한 150');
+  const f = mk('F', ['electric'], { spe: 400 }, [mv('electro-ball')]), s = mk('S', ['normal'], { spe: 100 }, [splash()]);
+  assert.equal(powerOf(f, s, 'electro-ball'), 150);
+  assert.equal(powerOf(f, mk('S2', ['normal'], { spe: 400 }, [splash()]), 'electro-ball'), 60);
+});
+
+test('2단계: 어시스트파워·기어오르기는 올라간 능력 단계 하나당 +20', () => {
+  const a = mk('A', ['psychic'], {}, [mv('stored-power')]), d = idle();
+  assert.equal(powerOf(a, d, 'stored-power'), 20);
+  a.stages.atk = 2; a.stages.spd = 1; a.stages.def = -3;
+  assert.equal(powerOf(a, d, 'stored-power'), 80, '내려간 단계는 세지 않는다');
+});
+
+test('2단계: 바디프레스는 방어 능력치로, 속임수는 상대 공격 능력치로 때린다', () => {
+  const a = mk('A', ['fighting'], { atk: 50, def: 400 }, [mv('body-press')]), d = mk('D', ['normal'], { def: 200 }, [splash()]);
+  const bp = E.calcDamage(a, d, a.moves[0], { roll: 100 }).damage;
+  const a2 = mk('A2', ['fighting'], { atk: 400, def: 50 }, [mv('body-press')]);
+  assert.ok(bp > E.calcDamage(a2, d, a2.moves[0], { roll: 100 }).damage * 2);
+  const f = mk('F', ['dark'], { atk: 50 }, [mv('foul-play')]), strong = mk('S', ['normal'], { atk: 400 }, [splash()]), weak = mk('W', ['normal'], { atk: 50 }, [splash()]);
+  assert.ok(E.calcDamage(f, strong, f.moves[0], { roll: 100 }).damage > E.calcDamage(f, weak, f.moves[0], { roll: 100 }).damage * 3);
+});
+
+test('2단계: 웨더볼·대지의파동은 날씨/필드에 따라 타입이 바뀌고 위력 2배', () => {
+  const a = mk('A', ['normal'], {}, [mv('weather-ball'), mv('terrain-pulse')]), d = idle();
+  const wb = a.moves[0], tp = a.moves[1];
+  assert.equal(E.resolveMove(a, d, wb, {}).power, 50);
+  const rain = E.resolveMove(a, d, wb, { weather: 'rain' });
+  assert.equal(rain.power, 100); assert.equal(rain.type, T('water'));
+  assert.equal(E.resolveMove(a, d, wb, { weather: 'sand' }).type, T('rock'));
+  const t = E.resolveMove(a, d, tp, { terrain: 'grassy', attGrounded: true });
+  assert.equal(t.power, 100); assert.equal(t.type, T('grass'));
+  assert.equal(E.resolveMove(a, d, tp, { terrain: 'grassy', attGrounded: false }).power, 50);
+});
+
+test('2단계: 라이징볼트·와이드포스·그래스슬라이더는 필드 보너스, 아이언롤러는 필드가 있어야 하고 필드를 없앤다', () => {
+  const a = mk('A', ['electric'], {}, [mv('rising-voltage')]), d = idle();
+  assert.equal(E.resolveMove(a, d, a.moves[0], { terrain: 'electric', defGrounded: true }).power, 140);
+  assert.equal(E.resolveMove(a, d, a.moves[0], { terrain: 'electric', defGrounded: false }).power, 70);
+  const p = mk('P', ['psychic'], {}, [mv('expanding-force')]);
+  assert.equal(E.resolveMove(p, d, p.moves[0], { terrain: 'psychic', attGrounded: true }).power, 120);
+  const g = mk('G', ['grass'], { spe: 1 }, [mv('grassy-glide')]), fast = mk('F', ['normal'], { spe: 300 }, [atk({ power: 20 })]);
+  const bt = duel(g, fast); bt.field.terrain = 'grassy'; bt.field.terrainTurns = 5;
+  const ev = bt.playTurn(M0, M0);
+  assert.equal(ev.filter(e => e.t === 'move')[0].side, 0, '그래스필드에서는 우선도 +1');
+  const s = mk('S', ['steel'], { spe: 300 }, [mv('steel-roller')]);
+  assert.ok(has(duel(s, idle()).playTurn(M0, M0), '실패'), '필드가 없으면 실패');
+  const bt2 = duel(mk('S', ['steel'], { spe: 300 }, [mv('steel-roller')]), idle()); bt2.field.terrain = 'misty'; bt2.field.terrainTurns = 5;
+  bt2.playTurn(M0, M0);
+  assert.equal(bt2.field.terrain, null);
+});
+
+test('2단계: 지구던지기·나이트헤드는 100, 분노의앞니·카타스트로피는 절반, 죽기살기는 체력 차이만큼', () => {
+  const dmg = (ident, att, def) => dmgOf(duel(att, def).playTurn(M0, M0));
+  const a = mk('A', ['fighting'], { spe: 300 }, [mv('seismic-toss')]), d = idle();
+  assert.equal(dmg('seismic-toss', a, d), 100);
+  const g = mk('G', ['ghost'], { spe: 300, atk: 1, spa: 1 }, [mv('night-shade')]);
+  assert.equal(dmg('night-shade', g, mk('D', ['psychic'], {}, [splash()])), 100);
+  const f = mk('F', ['normal'], { spe: 300 }, [mv('super-fang')]);
+  assert.equal(dmg('super-fang', f, idle()), 150);
+  const r = mk('R', ['dark'], { spe: 300 }, [mv('ruination')]);
+  assert.equal(dmg('ruination', r, idle()), 150);
+  const e = mk('E', ['normal'], { spe: 300 }, [mv('endeavor')]); e.hp = 100;
+  assert.equal(dmg('endeavor', e, idle()), 200);
+  const e2 = mk('E', ['normal'], { spe: 300 }, [mv('endeavor')]);
+  assert.ok(has(duel(e2, idle()).playTurn(M0, M0), '실패'), '상대 체력이 더 적거나 같으면 실패');
+});
+
+test('2단계: 고정 피해는 타입 상성의 무효만 따르고 능력치·급소의 영향을 받지 않는다', () => {
+  const a = mk('A', ['fighting'], { spe: 300, atk: 1 }, [mv('seismic-toss')]);
+  assert.ok(has(duel(a, mk('G', ['ghost'], {}, [splash()])).playTurn(M0, M0), '효과가 없'), '격투는 고스트에 무효');
+  const est = E.estimateDamage(mk('A', ['fighting'], {}, [mv('seismic-toss')]), idle(), mv('seismic-toss'));
+  assert.equal(est.max, 100);
+});
+
+test('2단계: 일격필살 — 맞으면 쓰러뜨리고 명중률은 30%, 얼음 타입에는 절대영도가 통하지 않는다', () => {
+  const a = mk('A', ['ground'], { spe: 300 }, [mv('fissure')]), d = idle();
+  const ev = duel(a, d, R(0.1)).playTurn(M0, M0);
+  assert.equal(d.hp, 0); assert.ok(has(ev, '일격필살'));
+  const a2 = mk('A', ['ground'], { spe: 300 }, [mv('fissure')]), d2 = idle();
+  const ev2 = duel(a2, d2, R(0.5)).playTurn(M0, M0);
+  assert.ok(ev2.some(e => e.t === 'miss'), '명중률 30%');
+  assert.equal(data.moves[idOf('fissure')].ac, 30);
+  assert.equal(E.estimateDamage(a, idle(), mv('fissure')).expected, 90);
+  assert.ok(has(duel(mk('A', ['ground'], { spe: 300 }, [mv('fissure')]), mk('F', ['flying'], {}, [splash()]), R(0.1)).playTurn(M0, M0), '효과가 없'), '비행에는 땅 기술 무효');
+});
+
+test('2단계: 토해내기는 비축한 만큼 강하고 쓰면 방어·특방이 원래대로, 비축이 없으면 실패', () => {
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('stockpile'), mv('spit-up')]);
+  const bt = duel(a, idle());
+  assert.ok(has(bt.playTurn(M1, M0), '실패'));
+  bt.playTurn(M0, M0); bt.playTurn(M0, M0);
+  assert.equal(a.stock, 2); assert.equal(a.stages.def, 2);
+  assert.equal(E.resolveMove(a, bt.active(1), a.moves[1], {}).power, 200);
+  bt.playTurn(M1, M0);
+  assert.equal(a.stock, 0); assert.equal(a.stages.def, 0); assert.equal(a.stages.spd, 0);
+});
+
+test('2단계: AI 는 가변 위력·고정 피해를 현재 상황에 맞게 평가한다 (체력이 적을 때 바둥바둥, 높은 체력에는 카운터가 아닌 분화)', () => {
+  const brain = AI.create(E, { seed: 1 });
+  const weak = mk('A', ['normal'], { spe: 300 }, [mv('flail'), atk({ power: 60 })]); weak.hp = 8;
+  assert.equal(brain.chooseAction(duel(weak, mk('D', ['normal'], { hp: 100 }, [splash()])), 0, 'hard').index, 0);
+  const strong = mk('B', ['normal'], { spe: 300 }, [mv('flail'), atk({ power: 60 })]);
+  assert.equal(brain.chooseAction(duel(strong, mk('D', ['normal'], { hp: 100 }, [splash()])), 0, 'hard').index, 1);
+});

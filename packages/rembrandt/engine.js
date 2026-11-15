@@ -236,11 +236,11 @@
       o = o || {};
       if (move.cls === 'status') return { damage: 0, eff: 1, crit: false };   // 변화기는 데미지가 없다
       const phys = move.cls === 'phys';
-      const atkKey = phys ? 'atk' : 'spa';
+      const atkKey = move.fx.useDefAsAtk ? 'def' : phys ? 'atk' : 'spa';       // 바디프레스: 방어 능력치로 공격
       const c = o.ctx;
       let defKey = (phys || move.fx.useDef) ? 'def' : 'spd';
       if (c && c.wonder) defKey = defKey === 'def' ? 'spd' : 'def';       // 원더룸
-      const A = effectiveStat(att, atkKey, o.crit ? { crit: true, attacking: true } : null);
+      const A = effectiveStat(move.fx.useTargetAtk ? def : att, atkKey, o.crit ? { crit: true, attacking: true } : null);   // 속임수: 상대의 공격 능력치
       let D = effectiveStat(def, defKey, o.crit ? { crit: true, attacking: false } : null);
       const eff = moveEff(move, def, c);
       if (eff === 0) return { damage: 0, eff: 0, crit: !!o.crit };
@@ -271,6 +271,40 @@
       return { damage: Math.max(1, dmg), eff, crit: !!o.crit };
     }
 
+    const kgOf = mon => Math.max(0.1, (mon.wt || 100) / 10);
+    const WB_TYPE = { sun: FIRE, rain: WATER, sand: ROCK, snow: ICE };
+    const TP_TYPE = { electric: ELECTRIC, grassy: GRASS, misty: FAIRY, psychic: PSYCHIC };
+    /** 가변 위력 기술의 위력(과 웨더볼류의 타입) 계산 — 배틀 상태 없이 두 포켓몬과 날씨·필드만으로 정해진다 */
+    function applyDyn(att, def, m, c) {
+      const fx = m.fx, hpR = mon => mon.hp / mon.maxHp;
+      let p = m.power, type = m.type;
+      switch (fx.dyn) {
+        case 'wtTarget': { const kg = kgOf(def); p = kg < 10 ? 20 : kg < 25 ? 40 : kg < 50 ? 60 : kg < 100 ? 80 : kg < 200 ? 100 : 120; break; }
+        case 'wtRatio': { const r = kgOf(att) / kgOf(def); p = r >= 5 ? 120 : r >= 4 ? 100 : r >= 3 ? 80 : r >= 2 ? 60 : 40; break; }
+        case 'hp150': p = Math.max(1, Math.floor(150 * hpR(att))); break;
+        case 'flail': { const f = Math.floor(48 * att.hp / att.maxHp); p = f <= 1 ? 200 : f <= 4 ? 150 : f <= 9 ? 100 : f <= 16 ? 80 : f <= 32 ? 40 : 20; break; }
+        case 'hardPress': p = Math.max(1, Math.floor(100 * hpR(def))); break;
+        case 'crushGrip': p = Math.max(1, Math.floor(120 * hpR(def))); break;
+        case 'gyro': p = Math.min(150, Math.floor(25 * effectiveStat(def, 'spe') / effectiveStat(att, 'spe')) + 1); break;
+        case 'electroBall': { const r = effectiveStat(att, 'spe') / effectiveStat(def, 'spe'); p = r >= 4 ? 150 : r >= 3 ? 120 : r >= 2 ? 80 : r >= 1 ? 60 : 40; break; }
+        case 'stored': p = 20 + 20 * STAT_KEYS.reduce((a, k) => a + Math.max(0, att.stages[k]), 0); break;
+        case 'spitUp': p = 100 * Math.max(1, att.stock || 0); break;
+        case 'weatherBall': if (c && c.weather) { p = 100; type = WB_TYPE[c.weather]; } else p = 50; break;
+        case 'terrainPulse': if (c && c.terrain && c.attGrounded) { p = 100; type = TP_TYPE[c.terrain]; } else p = 50; break;
+        case 'risingVoltage': if (c && c.terrain === 'electric' && c.defGrounded) p *= 2; break;
+        case 'expandingForce': if (c && c.terrain === 'psychic' && c.attGrounded) p = Math.floor(p * 1.5); break;
+        default: break;
+      }
+      return Object.assign({}, m, { power: p, type });
+    }
+    /** 고정 피해 (지구던지기류·분노의앞니·죽기살기·카타스트로피) */
+    function fixedDamage(att, def, kind) {
+      if (kind === 'level') return 100;
+      if (kind === 'half') return Math.max(1, Math.floor(def.hp / 2));
+      if (kind === 'endeavor') return Math.max(0, def.hp - att.hp);
+      return 0;
+    }
+
     /**
      * 이번에 쓰는 기술의 실제 모습: 타입(잠재댄스)·분류(셸암즈·테라버스트)·위력(가변 위력 기술)을 정한 복사본.
      * 배틀 상태가 필요 없는 값만 쓰므로 AI 의 데미지 추정(estimateDamage)과 실제 실행(runAttack)이 같은 결과를 낸다.
@@ -280,6 +314,7 @@
       if (move.cls === 'status' || !fx) return move;
       let m = move;
       if (fx.typeBy === 'user') m = Object.assign({}, m, { type: att.types[0] });
+      if (fx.dyn) m = applyDyn(att, def, m, ctx);
       if (fx.autoCls) {                                          // 공격·특공 중 더 큰 피해가 나오는 쪽
         const a = calcDamage(att, def, Object.assign({}, m, { cls: 'phys' }), { roll: 100, ctx }).damage;
         const b = calcDamage(att, def, Object.assign({}, m, { cls: 'spec' }), { roll: 100, ctx }).damage;
@@ -292,6 +327,12 @@
     function estimateDamage(att, def, move0, ctx) {
       if (move0.cls === 'status') return { min: 0, max: 0, avg: 0, expected: 0, eff: 1 };
       const move = resolveMove(att, def, move0, ctx);
+      if (move.fx.fixed || move.fx.ohko) {                         // 고정 피해 · 일격필살
+        const eff0 = moveEff(move, def, ctx);
+        const d = eff0 === 0 ? 0 : move.fx.ohko ? def.hp : fixedDamage(att, def, move.fx.fixed);
+        const a0 = move.fx.neverMiss || move.acc === null ? 1 : move.acc / 100;
+        return { min: d, max: d, avg: d, expected: d * a0, eff: eff0 };
+      }
       const lo = calcDamage(att, def, move, { roll: 85, ctx }).damage;
       const hi = calcDamage(att, def, move, { roll: 100, ctx }).damage;
       const eff = moveEff(move, def, ctx);
@@ -323,7 +364,7 @@
       const stages = {};
       STAT_KEYS.forEach(k => { stages[k] = 0; });
       return Object.assign({
-        name: spec.name, dataId: spec.dataId || null, tag: spec.tag || null,
+        name: spec.name, dataId: spec.dataId || null, tag: spec.tag || null, wt: spec.wt || 100,
         types: spec.types.slice(), natTypes: spec.types.slice(), stats: st, maxHp: st.hp, hp: st.hp,
         moves: spec.moves.map(m => Object.assign({}, m, { maxPp: m.maxPp || m.pp, fx: m.fx || {} })),
         status: null, sleepTurns: 0, toxCount: 0, confusion: 0, flinch: false, fainted: false, stages, base: null,
@@ -337,7 +378,7 @@
       if (!p) throw new Error(`알 수 없는 포켓몬 ID: ${dataId}`);
       return makeCustomMon({
         name: opts.name || p.k, dataId: Number(dataId), tag: opts.tag || null,
-        types: p.t, stats: p.s, moves: (opts.moves || p.m).map(makeMove),
+        types: p.t, stats: p.s, wt: p.wt, moves: (opts.moves || p.m).map(makeMove),
       });
     }
 
@@ -771,6 +812,13 @@
       }
 
       const AIL_RANDOM = { tri: ['par', 'brn', 'frz'], dire: ['psn', 'par', 'slp'] };
+      /** 쓰기 전에 실패하는 조건 (조건부 기술) */
+      function attackFails(si, user, target, fx) {
+        if (fx.needTerrain && !field.terrain) return true;                                  // 아이언롤러
+        if (fx.dyn === 'spitUp' && !user.stock) return true;                                // 토해내기
+        if (fx.fixed === 'endeavor' && target.hp <= user.hp) return true;                   // 죽기살기
+        return false;
+      }
       function runAttack(si, orig, struggle, acted) {
         const foe = 1 - si;
         const user = active(si);
@@ -779,6 +827,7 @@
         const ctx = ctxFor(si);
         const move = resolveMove(user, target, retype(si, orig, struggle), ctx);
         const fx = move.fx;
+        if (attackFails(si, user, target, fx)) { fail(); return; }
         if (target.protect && !fx.breakProtect && protectBlocksAttack(target.protect, move)) {
           text(`${J(nm(foe, target), '은/는')} 공격으로부터 몸을 지켰다!`);
           if (move.contact) protectCounter(si, user, target.protect);
@@ -807,10 +856,11 @@
         const bond = target.destinyBond, grudge = target.grudge;          // 쓰러지면 volatile 이 지워지므로 미리 기억
         for (let i = 0; i < hits && !target.fainted; i++) {
           if (i > 0 && fx.multiAcc && !fx.neverMiss && move.acc !== null && !hitCheck(user, target, move.acc, false)) break;   // 삼연킥류: 빗나가면 거기서 끝
-          const crit = noCrit ? false : (fx.crit === 2 || user.laserFocus > 0 || rng() < CRIT_RATE[critStage]);
-          const roll = 85 + Math.floor(rng() * 16);
+          const fixed = fx.fixed || fx.ohko;
+          const crit = fixed || noCrit ? false : (fx.crit === 2 || user.laserFocus > 0 || rng() < CRIT_RATE[critStage]);
+          const roll = fixed ? 100 : 85 + Math.floor(rng() * 16);
           const hm = fx.escalate ? Object.assign({}, move, { power: move.power * (i + 1) }) : move;       // 1타 ×1, 2타 ×2, 3타 ×3
-          const res = calcDamage(user, target, hm, { crit, roll, ctx });
+          const res = fx.ohko ? { damage: target.hp } : fx.fixed ? { damage: fixedDamage(user, target, fx.fixed) } : calcDamage(user, target, hm, { crit, roll, ctx });
           if (target.sub > 0) {                       // 대타가 대신 맞는다
             const take = Math.min(target.sub, res.damage);
             target.sub -= take; total += take;
@@ -826,9 +876,10 @@
           emitDamage(foe, target, dealt, { move: move.name, crit, eff });
           if (target.status === 'frz' && move.type === FIRE) { target.status = null; emit({ t: 'status', side: foe, kind: 'thaw', text: `${nm(foe, target)}의 얼음이 녹았다!` }); }
           if (crit) emit({ t: 'crit', side: foe, text: '급소에 맞았다!' });
-          if (i === 0 && eff !== 1) {
+          if (i === 0 && eff !== 1 && !fixed) {
             emit({ t: 'effective', side: foe, eff, text: eff > 1 ? '효과가 굉장했다!' : '효과가 별로인 듯하다...' });
           }
+          if (fx.ohko) text('일격필살!');
           faintCheck(foe, target);
         }
         if (landed > 1) emit({ t: 'hits', count: landed, text: `${landed}번 맞았다!` });
@@ -870,7 +921,12 @@
       /** 공격이 맞은 뒤에 일어나는 기술별 부가 효과 */
       function attackAfter(si, user, target, move, fx, landed, total) {
         const foe = 1 - si;
+        if (fx.dyn === 'spitUp' && user.stock > 0) {                       // 토해내기: 비축을 쏟아내고 방어·특방이 원래대로
+          const n = user.stock; user.stock = 0;
+          if (!user.fainted) { changeStage(si, user, 'def', -n); changeStage(si, user, 'spd', -n); emitVol(si, user); }
+        }
         if (landed <= 0) return;
+        if (fx.needTerrain && field.terrain) { text(TERRAIN_END[field.terrain]); field.terrain = null; field.terrainTurns = 0; emitField(); }       // 아이언롤러
         if (!target.fainted) {
           if (fx.clearFoeStages) { STAT_KEYS.forEach(k => { target.stages[k] = 0; }); text(`${tn(foe, target)}의 능력 변화가 원래대로 돌아왔다!`); emit({ t: 'stages', side: foe, stages: Object.assign({}, target.stages) }); }
           if (fx.cureFoeStatus && target.status === fx.cureFoeStatus) cureStatus(foe, target);
@@ -1716,7 +1772,7 @@
           const ord = mon.nextOrder; mon.nextOrder = 0;       // 당신먼저 / 순서미루기
           return {
             si, a, struggle, move, mon, ord,
-            pri: a.type === 'switch' ? 100 : move.pri || 0,
+            pri: a.type === 'switch' ? 100 : (move.pri || 0) + (move.fx.priTerrain && field.terrain === move.fx.priTerrain && grounded(mon) ? 1 : 0),
             speed: speedOf(si),
             tie: rng(),
           };
@@ -1778,7 +1834,7 @@
     }
 
     return {
-      createBattle, makeMon, makeCustomMon, makeMove, calcDamage, estimateDamage,
+      createBattle, makeMon, makeCustomMon, makeMove, calcDamage, estimateDamage, resolveMove,
       typeMultiplier, effectiveStat, describeEffect, statusImmune, healAmountFor, STRUGGLE, josa, mulberry32, data,
     };
   }
