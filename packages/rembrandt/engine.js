@@ -177,7 +177,7 @@
       // 3단계
       prevMove: -1, stock: 0, turnsOut: 0, lockOn: 0, laserFocus: 0, fsG: false, fsD: false, cursed: false, destinyBond: false, grudge: false, imprison: false,
       snatching: false, coat: false, powdered: false, electrified: false, octolock: false, tarred: false, levitate: 0, float: 0, embargo: 0, healBlock: 0,
-      simple: false, insomnia: false, added: 0, ov: null, charging: null, nextOrder: 0, boostNext: 0, noRetreat: false, mimicOrig: null,
+      simple: false, insomnia: false, added: 0, syrup: 0, ov: null, charging: null, nextOrder: 0, boostNext: 0, noRetreat: false, mimicOrig: null,
     };
   }
 
@@ -204,7 +204,15 @@
       if (c) {
         if (moveType === GROUND && c.defLevitate && !c.gravity) return 0;     // 전자부유·텔레키네시스
         if (moveType === FIRE && c.tar) m *= 2;                                // 타르샷
+        if (c.freezeDry && defTypes.includes(WATER)) m *= defTypes.filter(t => t === WATER).length ? 4 : 1;   // 프리즈드라이: 물 타입에 효과가 굉장 (반감 → 2배)
       }
+      return m;
+    }
+    /** 기술 자체의 특수 상성(프리즈드라이·플라잉프레스)까지 반영한 효과 배율 */
+    function moveEff(move, def, c) {
+      const c2 = move.fx && move.fx.freezeDry ? Object.assign({}, c, { freezeDry: true }) : c;
+      let m = typeMultiplier(move.type, def.types, c2);
+      if (move.fx && move.fx.dual) m *= typeMultiplier(move.fx.dual, def.types, c);
       return m;
     }
 
@@ -234,7 +242,7 @@
       if (c && c.wonder) defKey = defKey === 'def' ? 'spd' : 'def';       // 원더룸
       const A = effectiveStat(att, atkKey, o.crit ? { crit: true, attacking: true } : null);
       let D = effectiveStat(def, defKey, o.crit ? { crit: true, attacking: false } : null);
-      const eff = typeMultiplier(move.type, def.types, c);
+      const eff = moveEff(move, def, c);
       if (eff === 0) return { damage: 0, eff: 0, crit: !!o.crit };
       let power = move.power;
       if (c) {
@@ -263,24 +271,48 @@
       return { damage: Math.max(1, dmg), eff, crit: !!o.crit };
     }
 
+    /**
+     * 이번에 쓰는 기술의 실제 모습: 타입(잠재댄스)·분류(셸암즈·테라버스트)·위력(가변 위력 기술)을 정한 복사본.
+     * 배틀 상태가 필요 없는 값만 쓰므로 AI 의 데미지 추정(estimateDamage)과 실제 실행(runAttack)이 같은 결과를 낸다.
+     */
+    function resolveMove(att, def, move, ctx) {
+      const fx = move.fx;
+      if (move.cls === 'status' || !fx) return move;
+      let m = move;
+      if (fx.typeBy === 'user') m = Object.assign({}, m, { type: att.types[0] });
+      if (fx.autoCls) {                                          // 공격·특공 중 더 큰 피해가 나오는 쪽
+        const a = calcDamage(att, def, Object.assign({}, m, { cls: 'phys' }), { roll: 100, ctx }).damage;
+        const b = calcDamage(att, def, Object.assign({}, m, { cls: 'spec' }), { roll: 100, ctx }).damage;
+        m = Object.assign({}, m, { cls: a >= b ? 'phys' : 'spec' });
+      }
+      return m;
+    }
+
     /** AI/UI 용 데미지 추정 (급소 제외, 평균 난수) */
-    function estimateDamage(att, def, move, ctx) {
-      if (move.cls === 'status') return { min: 0, max: 0, avg: 0, expected: 0, eff: 1 };
+    function estimateDamage(att, def, move0, ctx) {
+      if (move0.cls === 'status') return { min: 0, max: 0, avg: 0, expected: 0, eff: 1 };
+      const move = resolveMove(att, def, move0, ctx);
       const lo = calcDamage(att, def, move, { roll: 85, ctx }).damage;
       const hi = calcDamage(att, def, move, { roll: 100, ctx }).damage;
-      const eff = typeMultiplier(move.type, def.types, ctx);
+      const eff = moveEff(move, def, ctx);
       const fx = move.fx;
-      const hits = fx.hits ? (fx.hits[0] === 2 && fx.hits[1] === 5 ? 3.1 : (fx.hits[0] + fx.hits[1]) / 2) : 1;
       const acc = fx.neverMiss || move.acc === null ? 1 : move.acc / 100;
+      let hits = fx.hits ? (fx.hits[0] === 2 && fx.hits[1] === 5 ? 3.1 : (fx.hits[0] + fx.hits[1]) / 2) : 1;
+      let mult = hits;
+      if (fx.multiAcc) {                                          // 매 타 명중 판정: 빗나가면 멈춘다 (삼연킥·찍찍베기)
+        mult = 0; let alive = 1;
+        for (let i = 0; i < hits; i++) { mult += alive * (fx.escalate ? i + 1 : 1); alive *= acc; }
+        hits = mult;
+      } else if (fx.escalate) mult = hits * (hits + 1) / 2;
       // min/max/avg: 맞았을 때의 데미지, expected: 명중률까지 반영한 기대값
-      return { min: lo * hits, max: hi * hits, avg: (lo + hi) / 2 * hits, expected: (lo + hi) / 2 * hits * acc, eff };
+      return { min: lo * (fx.multiAcc ? 1 : mult), max: hi * mult, avg: (lo + hi) / 2 * mult, expected: (lo + hi) / 2 * mult * acc, eff };
     }
 
     // ───────────── 포켓몬/기술 생성 ─────────────
     function makeMove(id) {
       const m = data.moves[id];
       if (!m) throw new Error(`알 수 없는 기술 ID: ${id}`);
-      return { id: Number(id), name: m.k, type: m.t, cls: m.c === 'p' ? 'phys' : m.c === 'n' ? 'status' : 'spec', power: m.pw, acc: m.ac, pp: m.pp, maxPp: m.pp, pri: m.pr, fx: m.fx || {},
+      return { id: Number(id), name: m.k, type: m.t, cls: m.c === 'p' ? 'phys' : m.c === 'n' ? 'status' : 'spec', power: m.pw, acc: m.ac, pp: m.pp, maxPp: m.pp, pri: m.pr, fx: m.fx || {}, ident: m.e,
         contact: !!m.ct, reflectable: !!m.rf, snatchable: !!m.sn };
     }
 
@@ -738,14 +770,16 @@
         return move;
       }
 
+      const AIL_RANDOM = { tri: ['par', 'brn', 'frz'], dire: ['psn', 'par', 'slp'] };
       function runAttack(si, orig, struggle, acted) {
         const foe = 1 - si;
         const user = active(si);
         const target = active(foe);
         if (target.fainted) { fail(); return; }
-        const move = retype(si, orig, struggle);
+        const ctx = ctxFor(si);
+        const move = resolveMove(user, target, retype(si, orig, struggle), ctx);
         const fx = move.fx;
-        if (target.protect && protectBlocksAttack(target.protect, move)) {
+        if (target.protect && !fx.breakProtect && protectBlocksAttack(target.protect, move)) {
           text(`${J(nm(foe, target), '은/는')} 공격으로부터 몸을 지켰다!`);
           if (move.contact) protectCounter(si, user, target.protect);
           return;
@@ -759,8 +793,7 @@
           }
         }
 
-        const ctx = ctxFor(si);
-        const eff = typeMultiplier(move.type, target.types, ctx);
+        const eff = moveEff(move, target, ctx);
         if (eff === 0) {
           emit({ t: 'effective', side: foe, eff: 0, text: `${nm(foe, target)}에게는 효과가 없는 것 같다...` });
           return;
@@ -773,9 +806,11 @@
         const noCrit = sides[foe].cond.lucky > 0;                         // 주술
         const bond = target.destinyBond, grudge = target.grudge;          // 쓰러지면 volatile 이 지워지므로 미리 기억
         for (let i = 0; i < hits && !target.fainted; i++) {
+          if (i > 0 && fx.multiAcc && !fx.neverMiss && move.acc !== null && !hitCheck(user, target, move.acc, false)) break;   // 삼연킥류: 빗나가면 거기서 끝
           const crit = noCrit ? false : (fx.crit === 2 || user.laserFocus > 0 || rng() < CRIT_RATE[critStage]);
           const roll = 85 + Math.floor(rng() * 16);
-          const res = calcDamage(user, target, move, { crit, roll, ctx });
+          const hm = fx.escalate ? Object.assign({}, move, { power: move.power * (i + 1) }) : move;       // 1타 ×1, 2타 ×2, 3타 ×3
+          const res = calcDamage(user, target, hm, { crit, roll, ctx });
           if (target.sub > 0) {                       // 대타가 대신 맞는다
             const take = Math.min(target.sub, res.damage);
             target.sub -= take; total += take;
@@ -820,13 +855,35 @@
         // 추가 효과 (대상: 풀죽음 → 상태이상 → 능력 변화 / 자신: 능력 변화)
         if (!target.fainted && landed > 0) {
           if (fx.flinch && !acted[foe] && rng() * 100 < fx.flinch) target.flinch = true;
-          if (fx.ail && rng() * 100 < fx.ail.chance) inflict(foe, target, fx.ail.kind, true);
+          if (fx.ail && rng() * 100 < fx.ail.chance) {
+            const pool = AIL_RANDOM[fx.ail.kind];             // 트라이어택(마비·화상·얼음) · 페이탈클로(독·마비·잠듦)
+            inflict(foe, target, pool ? pool[Math.floor(rng() * pool.length)] : fx.ail.kind, true);
+          }
           (fx.tgt || []).forEach(s => { if (!target.fainted && rng() * 100 < s.chance) changeStage(foe, target, s.stat, s.change, true); });
         }
         if (landed > 0 && !user.fainted) {
           (fx.self || []).forEach(s => { if (rng() * 100 < s.chance) changeStage(si, user, s.stat, s.change); });
         }
+        attackAfter(si, user, target, move, fx, landed, total);
       }
+
+      /** 공격이 맞은 뒤에 일어나는 기술별 부가 효과 */
+      function attackAfter(si, user, target, move, fx, landed, total) {
+        const foe = 1 - si;
+        if (landed <= 0) return;
+        if (!target.fainted) {
+          if (fx.clearFoeStages) { STAT_KEYS.forEach(k => { target.stages[k] = 0; }); text(`${tn(foe, target)}의 능력 변화가 원래대로 돌아왔다!`); emit({ t: 'stages', side: foe, stages: Object.assign({}, target.stages) }); }
+          if (fx.cureFoeStatus && target.status === fx.cureFoeStatus) cureStatus(foe, target);
+          if (fx.ppCut) {
+            const last = target.moves[target.lastMove];
+            if (last && last.pp > 0) { const cut = Math.min(fx.ppCut, last.pp); last.pp -= cut; text(`${nm(foe, target)}의 ${last.name}의 PP가 ${cut} 줄었다!`); }
+          }
+          if (fx.syrup && !target.syrup) { target.syrup = 3; text(`${J(tn(foe, target), '은/는')} 끈적한 시럽을 뒤집어썼다!`); }
+          if ((fx.trapFoe || fx.trapBoth) && !target.types.includes(GHOST) && !target.trapped) { target.trapped = true; text(`${J(tn(foe, target), '은/는')} 이제 도망칠 수 없다!`); emitVol(foe, target); }
+        }
+        if (fx.trapBoth && !user.fainted && !user.trapped && !user.types.includes(GHOST)) { user.trapped = true; emitVol(si, user); }
+      }
+      const tn = (s2, m2) => nm(s2, m2);
 
       // ───────── 변화기 ─────────
       const FOE_TARGETED = ['ail', 'tgt', 'seed', 'taunt', 'encore', 'disable', 'torment', 'yawn', 'attract', 'nightmare', 'trap', 'spite', 'soak', 'phaze', 'painSplit', 'transform', 'reqFoeStatus',
@@ -1507,6 +1564,10 @@
           else if (mon.status === 'tox') { dmg = Math.max(1, Math.floor(mon.maxHp * mon.toxCount / 16)); mon.toxCount = Math.min(15, mon.toxCount + 1); label = '독'; }
           if (!label) return;
           hurt(si, mon, dmg, mon.status, `${J(nm(si, mon), '은/는')} ${label} 데미지를 입고 있다!`);
+        });
+        // 5.4) 시럽봄: 3턴 동안 매 턴 스피드 −1
+        each((si, mon) => {
+          if (mon.syrup > 0) { mon.syrup--; changeStage(si, mon, 'spe', -1, true); }
         });
         // 5.5) 저주 / 문어굳히기
         each((si, mon) => {

@@ -248,6 +248,41 @@ function buildStatusMoves(raw, defs, unverified) {
   return out;
 }
 
+// ───────────────────────── 특수 처리 공격기 (tools/battle-attack-moves.json) ─────────────────────────
+/**
+ * 기본 후보(buildMoves)에 들어가지 못한 공격기 중 엔진이 특수 처리하는 기술. 단계별(stage)로 늘려 간다.
+ * 위력이 비어 있는 기술은 정의의 pw 를 대표값으로 쓴다. 대표 공격기(m) 자동 선정에는 쓰지 않는다(기존 포켓몬의 기본 구성이 바뀌지 않도록).
+ */
+function buildAdvancedAttacks(raw, defs) {
+  const byIdent = new Map(raw.moves.map(m => [m.identifier, m]));
+  const out = new Map(), problems = [];
+  for (const [ident, def] of Object.entries(defs)) {
+    const m = byIdent.get(ident);
+    if (!m) { problems.push(`${ident}: PokeAPI 에 없음`); continue; }
+    if (!['2', '3'].includes(m.damage_class_id)) { problems.push(`${ident}: 공격기가 아님`); continue; }
+    const id = Number(m.id), fx = structuredClone(def.fx || {});
+    const power = def.pw !== undefined ? def.pw : num(m.power);
+    if (!power || power < 1) problems.push(`${ident}: 위력이 없습니다 (pw 를 지정하세요)`);
+    const meta = raw.meta.get(id) || {};
+    if (!def.skipCheck) {
+      const have = {};
+      for (const c of raw.statChanges.get(id) || []) have[STAT_KEY[c.stat]] = Math.sign(c.change);
+      const want = {};
+      for (const side of ['tgt', 'self']) for (const c of fx[side] || []) want[c.stat] = Math.sign(c.change);
+      for (const [k, v] of Object.entries(have)) if (want[k] !== v) problems.push(`${ident}: 능력 변화 불일치 ${k} 원본=${v} 정의=${want[k]}`);
+      const hits = [num(meta.min_hits), num(meta.max_hits)];
+      if (hits[0] && hits[1] && (!fx.hits || fx.hits[0] !== hits[0] || fx.hits[1] !== hits[1])) problems.push(`${ident}: 다단 히트 불일치 원본=${hits} 정의=${fx.hits}`);
+    }
+    if (m.accuracy === '') fx.neverMiss = true;
+    out.set(id, {
+      id, e: ident, type: num(m.type_id), cls: num(m.damage_class_id) === 2 ? 'phys' : 'spec', power,
+      acc: num(m.accuracy) || null, pp: num(m.pp), pri: num(m.priority) || 0, fx, stage: def.stage || 1, adv: true,
+    });
+  }
+  if (problems.length) { console.error('특수 공격기 정의 문제:\n  ' + problems.join('\n  ')); process.exit(1); }
+  return out;
+}
+
 // ───────────────────────── 점수 / 선정 ─────────────────────────
 const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
 
@@ -357,6 +392,9 @@ async function main() {
   for (const r of csv('move_flag_map')) { const id = Number(r.move_id); if (!flagMap.has(id)) flagMap.set(id, new Set()); flagMap.get(id).add(Number(r.move_flag_id)); }
   const moveRows = csv('moves');
   const moves = buildMoves({ moves: moveRows, meta, statChanges }, overrides);
+  const advDefs = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'battle-attack-moves.json'), 'utf8')).moves;
+  for (const k of Object.keys(advDefs)) if (moves.has(Number((moveRows.find(r => r.identifier === k) || {}).id))) { console.error(`특수 공격기가 이미 기본 후보에 있습니다: ${k}`); process.exit(1); }
+  const advMoves = buildAdvancedAttacks({ moves: moveRows, meta, statChanges }, advDefs);
   const statusJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'battle-status-moves.json'), 'utf8'));
   const statusDefs = statusJson.moves, statusWeights = statusJson.weights || {};
   for (const k of Object.keys(statusWeights)) if (!statusDefs[k]) { console.error(`weights 에 정의되지 않은 변화기: ${k}`); process.exit(1); }
@@ -379,13 +417,18 @@ async function main() {
   const defaultOfSpecies = new Map(pokeRows.filter(r => r.is_default === '1').map(r => [Number(r.species_id), Number(r.id)]));
 
   // 습득 기술 (포켓몬 → 기술 집합), 기술별 습득 종 수
-  const learnset = new Map(), learnersBySpecies = new Map(), statusLearnset = new Map();
+  const learnset = new Map(), learnersBySpecies = new Map(), statusLearnset = new Map(), advLearnset = new Map();
   const speciesOfPoke = new Map(pokeRows.map(r => [Number(r.id), Number(r.species_id)]));
   for (const r of csv('pokemon_moves')) {
     const pid = Number(r.pokemon_id), mid = Number(r.move_id);
     if (statusMoves.has(mid)) {
       if (!statusLearnset.has(pid)) statusLearnset.set(pid, new Set());
       statusLearnset.get(pid).add(mid);
+      continue;
+    }
+    if (advMoves.has(mid)) {
+      if (!advLearnset.has(pid)) advLearnset.set(pid, new Set());
+      advLearnset.get(pid).add(mid);
       continue;
     }
     if (!moves.has(mid)) continue;
@@ -433,7 +476,8 @@ async function main() {
     const p = { id, t, b, e: r.identifier };
     const ctx = { sdMoves, learnerCount, globalFame };
     const picked = selectMoves(p, candidates, ctx);
-    learnOut[id] = [...learnIds].sort((a, b2) => a - b2);
+    const advIds = advLearnset.get(id) || advLearnset.get(defId) || new Set();
+    learnOut[id] = [...learnIds, ...advIds].sort((a, b2) => a - b2);
     if (picked.length < 4) stats.fewMoves.push(id);
 
     // 변화기: 배울 수 있는 것(sm, id 순) / 그중 Showdown 랜덤배틀 세트에 나오는 것(ss)
@@ -449,6 +493,7 @@ async function main() {
       k: ko, e: r.identifier, sp: speciesId, t, b, s,
       bst: b.reduce((a, x) => a + x, 0),
       leg: sp.is_mythical === '1' ? 2 : sp.is_legendary === '1' ? 1 : 0,
+      wt: Number(r.weight) || 0,                       // 몸무게(0.1kg) — 안다리걸기·헤비봄버 등
       m: picked,
       sm: sLearn,
       ss: sRec,
@@ -490,8 +535,9 @@ async function main() {
     for (const mid of ids) {
       if (mid >= 1296) throw new Error(`기술 ID 가 36진수 2글자를 넘습니다: ${mid}`);
       if (!moveOut[mid] && !extraMoves[mid]) {
-        const m = moves.get(mid);
+        const m = moves.get(mid) || advMoves.get(mid);
         extraMoves[mid] = { k: moveKo.get(mid) || m.e, e: m.e, t: m.type, c: m.cls === 'phys' ? 'p' : 's', pw: m.power, ac: m.acc, pp: m.pp, pr: m.pri, fx: m.fx };
+        if ((flagMap.get(mid) || new Set()).has(1)) extraMoves[mid].ct = 1;               // 접촉 기술
       }
     }
     learnPacked[pid] = ids.map(i => i.toString(36).padStart(2, '0')).join('');
@@ -510,7 +556,7 @@ async function main() {
     '  g.BATTLE_LEARN = L;\n})(typeof window !== "undefined" ? window : globalThis);\n');
   console.log(`학습 가능 공격기 파일: ${path.relative(ROOT, OUT_LEARN)} (${(fs.statSync(OUT_LEARN).size / 1024).toFixed(0)}KB, 추가 기술 ${Object.keys(extraMoves).length}개)`);
   console.log(`생성 완료: ${path.relative(ROOT, OUT)} (${(fs.statSync(OUT).size / 1024).toFixed(0)}KB)`);
-  console.log(`포켓몬 ${data.meta.pokemonCount}종/폼, 기술 ${data.meta.moveCount}개 (지원 가능 공격기 후보 ${moves.size}개, 변화기 ${statusMoves.size}개)`);
+  console.log(`포켓몬 ${data.meta.pokemonCount}종/폼, 기술 ${data.meta.moveCount}개 (지원 가능 공격기 후보 ${moves.size}개 + 특수 공격기 ${advMoves.size}개, 변화기 ${statusMoves.size}개)`);
   const smAvg = Object.values(pokemon).reduce((a, p) => a + p.sm.length, 0) / data.meta.pokemonCount;
   console.log(`변화기 평균 습득 ${smAvg.toFixed(1)}개 / 변화기를 못 배우는 포켓몬 ${Object.values(pokemon).filter(p => !p.sm.length).length}종`);
   console.log(`Showdown 세트 매칭 ${stats.sd} / 미매칭 ${stats.noSd}`);
