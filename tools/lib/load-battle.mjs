@@ -11,11 +11,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 export function loadBattle() {
   const sandbox = {};
   vm.createContext(sandbox);
-  for (const f of ['packages/rembrandt/data/battle-data.js', 'packages/rembrandt/data/battle-learnsets.js', 'packages/rembrandt/engine.js', 'packages/rembrandt/ai.js', 'packages/rembrandt/party.js']) {
+  for (const f of ['packages/rembrandt/data/battle-data.js', 'packages/rembrandt/data/battle-learnsets.js', 'packages/rembrandt/engine.js', 'packages/rembrandt/ai.js', 'packages/rembrandt/party.js', 'packages/rembrandt/boss.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
   }
   return {
     data: sandbox.BATTLE_DATA, engine: sandbox.BattleEngine, createEngine: sandbox.createBattleEngine,
-    ai: sandbox.BattleAI, party: sandbox.BattleParty, learn: sandbox.BATTLE_LEARN,
+    ai: sandbox.BattleAI, party: sandbox.BattleParty, boss: sandbox.BattleBoss, learn: sandbox.BATTLE_LEARN,
   };
 }

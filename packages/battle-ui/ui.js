@@ -31,7 +31,7 @@
     easy:   { label: '쉬움',   desc: '상대 파티가 약하고 실수도 잦아요.' },
     normal: { label: '보통',   desc: '내 파티와 비슷한 강도, 대체로 최선의 수를 둬요.' },
     hard:   { label: '어려움', desc: '상대 파티가 더 강하고 늘 최선의 수를 둬요.' },
-    hell:   { label: '지옥',   desc: '가장 강한 전설 파티에 능력치 ×1.5. 내가 고른 행동까지 읽고 대응해요. 사실상 이길 수 없어요.' },
+    hell:   { label: '지옥',   desc: '내 팀을 보고 가장 잘 이기는 조합을 짜고, 내가 고른 행동까지 읽어 최선의 수를 계산해요.' },
   };
 
   let E = null, AIlib = null, PT = null, PRT = null, brain = null;
@@ -44,7 +44,7 @@
     party: [],                 // 씰 ID 3개
     opp: [],                   // 상대 데이터 ID 3개
     sets: { mine: {}, opp: [] }, // 이번 배틀의 기술 구성(공격기+변화기). mine = { 씰ID: [기술ID…] }, opp = [[…], […], […]]
-    q: '', sort: 'bst',
+    q: '', sort: 'bst', buildToken: 0,
     speed: 1, skip: false, hints: true, showHistory: false,
     record: { w: 0, l: 0, d: 0, byLevel: { easy: [0, 0, 0], normal: [0, 0, 0], hard: [0, 0, 0], hell: [0, 0, 0] } },
     battle: null, U: null, busy: false, entries: [], curMove: null, log: [], finished: false,
@@ -223,7 +223,7 @@
       <div class="bt-card p-3 sm:p-4">
         <h3 class="text-sm font-black text-slate-900 mb-2">난이도</h3>
         <div class="bt-seg" role="tablist">${Object.keys(LEVELS).map(k => `<button data-act="level" data-v="${k}" class="${S.level === k ? 'on' : ''}">${LEVELS[k].label}</button>`).join('')}</div>
-        <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">${esc(LEVELS[S.level].desc)}<br><span class="text-slate-400">${S.level === 'hell' ? '상대 파티: 가장 강한 조합 · 능력치 ×1.5' : `상대 파티 종족값 합계 ≈ 내 합계 ${PT.OFFSET[S.level] >= 0 ? '+' : '−'}${Math.abs(PT.OFFSET[S.level])}`}</span></p>
+        <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">${esc(LEVELS[S.level].desc)}<br><span class="text-slate-400">${S.level === 'hell' ? '상대 파티: 내 팀을 겨냥해 새로 짠 조합' : `상대 파티 종족값 합계 ≈ 내 합계 ${PT.OFFSET[S.level] >= 0 ? '+' : '−'}${Math.abs(PT.OFFSET[S.level])}`}</span></p>
       </div>
       <button class="bt-btn primary w-full !py-3 !text-sm" data-act="start" ${ready ? '' : 'disabled'}>${ready ? '배틀 준비!' : '파티를 완성해 주세요'}</button>`;
     refreshIcons();
@@ -315,14 +315,35 @@
   }
 
   // ═════════════════════ 상대 공개(VS) 화면 ═════════════════════
+  /** 지옥 난이도: 내 팀을 보고 가장 잘 이기는 조합을 짠다 (몇 초 걸려 진행 화면을 보여 준다). 끝나면 true, 다른 요청에 밀렸으면 false */
+  async function buildHellOpponent(entries) {
+    const my = ++S.buildToken;
+    S.screen = 'building';
+    root.innerHTML = `<div class="max-w-xl mx-auto"><div class="bt-card p-6 text-center"><div class="text-sm font-black text-slate-800">내 팀을 겨냥한 상대를 짜는 중…</div>
+      <div class="h-2 rounded bg-slate-200 mt-4 overflow-hidden"><i id="bt-bprog" class="block h-full" style="width:0;background:linear-gradient(90deg,#6366f1,#ec4899)"></i></div><div id="bt-bmsg" class="text-[11px] text-slate-500 font-bold mt-2">분석 중…</div></div></div>`;
+    const B = window.BattleBoss.create({ E, AI: AIlib, PT, data: D(), learn: window.BATTLE_LEARN });
+    const team = await B.build(entries.map(e => ({ id: e.id, moves: S.sets.mine[e.seal.id] })), {
+      rng: Math.random, budgetMs: 6000,
+      onProgress: (f, msg) => { if (my !== S.buildToken) return; const bar = $('#bt-bprog'), m = $('#bt-bmsg'); if (bar) bar.style.width = (f * 100).toFixed(0) + '%'; if (m) m.textContent = msg; },
+    });
+    if (my !== S.buildToken) return false;
+    S.opp = team.map(t => t.id); S.sets.opp = team.map(t => t.moves.slice());
+    return true;
+  }
   function newOpponent() {
     const ids = partyEntries().map(e => e.id);
+    if (S.level === 'hell' && window.BattleBoss) {
+      const rng0 = E.mulberry32(Math.floor(Math.random() * 2 ** 31));
+      S.sets = { mine: {}, opp: [] };
+      partyEntries().forEach(e => { S.sets.mine[e.seal.id] = PRT.pickMoveset(e.id, rng0); });
+      return buildHellOpponent(partyEntries()).catch(err => { console.error(err); S.level = 'hard'; newOpponent(); return true; });
+    }
     S.opp = PRT.generateOpponent({ playerIds: ids, level: S.level, rng: Math.random });
     // 이번 배틀에서 쓸 기술 구성을 양쪽 모두 무작위로 정한다 (공격기 2~3 + 변화기 1~2)
     const rng = E.mulberry32(Math.floor(Math.random() * 2 ** 31));
     S.sets = { mine: {}, opp: [] };
     partyEntries().forEach(e => { S.sets.mine[e.seal.id] = PRT.pickMoveset(e.id, rng); });
-    S.opp.forEach(id => S.sets.opp.push(S.level === 'hell' ? E.data.pokemon[id].m.slice() : PRT.pickMoveset(id, rng)));   // 지옥: 가장 센 공격기 4개
+    S.opp.forEach(id => S.sets.opp.push(PRT.pickMoveset(id, rng)));
   }
   const setOf = (kind, key, id) => (kind === 'mine' ? S.sets.mine[key] : S.sets.opp[key]) || PRT.pickMoveset(id, Math.random);
 
@@ -367,7 +388,7 @@
     if (mine.length !== 3 || S.opp.length !== 3) return;
     const parties = [mine.map(sealToMon), S.opp.map((id, i) => E.makeMon(id, { name: PRT.displayName(id), moves: setOf('opp', i, id) }))];
     const seed = Math.floor(Math.random() * 2 ** 31);
-    S.battle = E.createBattle({ parties, names: ['나', '상대'], seed, statMult: PT.statMult(S.level) });
+    S.battle = E.createBattle({ parties, names: ['나', '상대'], seed });
     brain = AIlib.create(E, { seed: seed ^ 0x9e3779b9 });
     S.entries = mine;
     S.log = []; S.finished = false; S.busy = true; S.skip = false; S.showHistory = false; S.curMove = null;
@@ -893,9 +914,9 @@
       }
       case 'auto': autoParty(); break;
       case 'level': S.level = t.dataset.v; save(); renderParty(); break;
-      case 'start': if (PRT.validate(partyEntries().map(x => x.id)).ok) { newOpponent(); renderPreview(); } break;
+      case 'start': if (PRT.validate(partyEntries().map(x => x.id)).ok) Promise.resolve(newOpponent()).then(ok => { if (ok !== false) renderPreview(); }); break;
       case 'back': renderSelect(); break;
-      case 'reroll': newOpponent(); renderPreview(); break;
+      case 'reroll': Promise.resolve(newOpponent()).then(ok => { if (ok !== false) renderPreview(); }); break;
       case 'fight': startBattle(); break;
       case 'move': if (!S.busy) submit({ type: 'move', index: Number(t.dataset.i) }); break;
       case 'switch-open': openSwitchPanel(); break;
@@ -908,7 +929,7 @@
       case 'skip': if (S.busy) S.skip = true; break;
       case 'history': S.showHistory = !S.showHistory; { const h = $('#bt-history'); h.classList.toggle('hidden', !S.showHistory); t.classList.toggle('on', S.showHistory); if (S.showHistory) renderHistory(); } break;
       case 'rematch': startBattle(); break;
-      case 'new-opp': newOpponent(); renderPreview(); break;
+      case 'new-opp': Promise.resolve(newOpponent()).then(ok => { if (ok !== false) renderPreview(); }); break;
       case 'back-select': renderSelect(); break;
       case 'to-archive': if (typeof switchNavTab === 'function') switchNavTab('archive'); break;
       default: break;
