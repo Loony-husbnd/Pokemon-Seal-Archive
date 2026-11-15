@@ -22,3 +22,10 @@
 - 포켓몬의 임시 상태가 크게 늘었습니다(`freshVolatile` 참고). 모두 교체·기절하면 사라지며, 타입 변경과 흉내내기로 바뀐 기술 칸도 원래대로 돌아옵니다.
 - 필드: `battle.field.{gravity, wonder, magicRoom, mud, waterSport, fairyLock}`, 진영: `cond.lucky`. 화면용 `field` 이벤트에 모두 실립니다.
 - 특성·도구가 필요한 기술은 비슷한 효과로 대체했습니다(표는 루트 README 참고). 싱글 배틀에서 원작도 효과가 없는 8개는 `fx.dead`/`fx.splash`이며 무작위 구성에서 뽑히지 않습니다.
+
+## 특수 공격기 (1.3, 168개 → 공격기 525개)
+- 정의 `tools/battle-attack-moves.json`(`stage` 1~4, `pw` 대표 위력, `fx`). 새 효과 키는 `tools/build-battle-data.mjs` 상단 주석과 `tools/validate-battle-data.mjs` 의 `ATTACK_FX_KEYS` 에 함께 적습니다.
+- 대표 공격기(`m`) 선정에는 쓰지 않고 `BATTLE_LEARN`(배울 수 있는 공격기)에만 들어갑니다. 테스트·시뮬레이터는 `tools/lib/load-battle.mjs` 가 `battle-learnsets.js` 까지 불러와 쓰므로 새 공격기를 그대로 쓸 수 있습니다.
+- `E.resolveMove(att, def, move, ctx)`: 이번에 쓰는 기술의 타입·분류·위력(가변 위력)을 정합니다. `E.describeAttack(move)`: 특수 처리 설명, `E.variablePower(move)`: 위력이 가변인가.
+- 이번 턴의 사정(맞은 기록·직전 기술 실패·능력 상승 등)은 포켓몬 임시 상태(`hurtTurn` `lastHit` `hitsTaken` `failedLast` `boostedTurn` `loweredTurn`)와 `battle.ctx(side)` 로 전달됩니다.
+- 충전·난동 중에는 `legalActions` 가 나머지 기술을 `usable:false`(`why: '충전 중'|'난동 중'`)로 막고, 파괴광선류의 반동은 다음 행동 때 자동으로 소모됩니다.

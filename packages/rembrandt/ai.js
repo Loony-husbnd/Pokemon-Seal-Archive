@@ -480,6 +480,43 @@
       return v * c.status;
     }
 
+    /**
+     * 특수 공격기의 사용 조건·성공 확률 보정. 돌려주는 값: -1 이면 쓸 수 없다(실패가 확정), 아니면 점수에 곱할 배율.
+     * 상대가 이번 턴 무엇을 고를지는 모르므로 '공격기를 고를 확률'을 0.65 로 어림한다.
+     */
+    function attackAdjust(me, foe, mv, B) {
+      const fx = mv.fx || {};
+      const foeAtks = foe.moves.filter(m => m.pp > 0 && m.cls !== 'status');
+      const field = B ? B.field : {};
+      let k = 1;
+      if (fx.firstTurn && me.turnsOut > 0) return -1;
+      if (fx.reqFoeStatus && !fx.reqFoeStatus.includes(foe.status)) return -1;
+      if (fx.onlySleep && me.status !== 'slp') return -1;
+      if (fx.needTerrain && !field.terrain) return -1;
+      if (fx.dyn === 'spitUp' && !me.stock) return -1;
+      if (fx.fixed === 'endeavor' && foe.hp <= me.hp) return -1;
+      if (fx.lastResort && !(me.moves.length > 1 && me.moves.every((m, i) => m.fx === fx || me.used[i]))) return -1;
+      if (fx.needFoeAttack) { if (!foeAtks.length) return -1; k *= 0.65; }
+      if (fx.needFoePriority) { if (!foeAtks.some(m => m.pri > 0)) return -1; k *= 0.5; }
+      if (fx.focusPunch) k *= foeAtks.length ? 0.3 : 1;                        // 먼저 맞으면 집중이 깨진다
+      if (fx.counter) {
+        const cls = fx.counter === 'phys' ? 'phys' : fx.counter === 'spec' ? 'spec' : null;
+        if (!foeAtks.some(m => !cls || m.cls === cls)) return -1;
+        k *= 0.5;
+      }
+      if (fx.finalGambit) return -2;                                           // 별도 계산(확정 KO 일 때만)
+      if (fx.selfKO) return -3;                                                // 별도 계산(확정 KO 이거나 곧 쓰러질 때만)
+      if (fx.loseType && !me.types.includes(fx.loseType)) return -1;
+      if (fx.delay) { if (B && B.sides.some(sd => sd.cond.future)) return -1; k *= 0.5; }
+      if (fx.charge2) k *= fx.chargeSkip && field.weather === fx.chargeSkip ? 1 : 0.55;   // 첫 턴을 힘 모으는 데 쓴다
+      if (fx.recharge) k *= 0.55;                                              // 다음 턴을 쉰다
+      if (fx.rampage) k *= 0.85;
+      if (fx.crash) k *= 0.85;
+      if (fx.glaive) k *= 0.6;
+      if (foe.invul && !fx.neverMiss) k *= 0.08;                               // 공중·땅속에 있는 상대에게는 거의 맞지 않는다
+      return k;
+    }
+
     /** 사용 가능한 기술의 점수표 */
     function scoreMoves(me, foe, meFaster, level, env) {
       const c = cfg(level), rows = [];
@@ -492,6 +529,20 @@
         if (me.status === 'slp' && me.sleepTurns > 1) { rows.push({ index, score: -0.5, est, mv }); return; }   // 잠든 채로는 행동할 수 없다
         const acc = accOf(mv), fx = mv.fx || {};
         if (est.eff === 0) { rows.push({ index, score: -1, est, mv }); return; }
+        const adj = attackAdjust(me, foe, mv, env && env.B);
+        if (adj === -1) { rows.push({ index, score: -1, est, mv }); return; }
+        if (adj === -2) {                                                      // 목숨걸기: 확정으로 쓰러뜨릴 수 있을 때만
+          rows.push({ index, score: me.hp >= foe.hp ? foe.hp + foe.maxHp * 0.6 - me.hp * 0.2 : -1, est, mv }); return;
+        }
+        if (adj === -3) {                                                      // 자폭: 확실히 쓰러뜨리거나, 어차피 곧 쓰러질 때만
+          const ko = est.min >= foe.hp;
+          rows.push({ index, score: ko || me.hp <= me.maxHp * 0.25 ? Math.min(est.expected, foe.hp) * (ko ? 1 : 0.7) + (ko ? foe.maxHp * 0.5 : 0) - me.hp * 0.2 : -1, est, mv }); return;
+        }
+        if (fx.counter) {                                                      // 반격기: 상대가 줄 피해에 비례 (피해량은 실제로 맞아 봐야 안다)
+          const cls = fx.counter === 'phys' ? 'phys' : fx.counter === 'spec' ? 'spec' : null;
+          const guess = Math.max(0, ...foe.moves.filter(m => m.pp > 0 && m.cls !== 'status' && (!cls || m.cls === cls)).map(m => E.estimateDamage(foe, me, m, env && env.B ? env.B.ctx(1 - env.si) : undefined).expected));
+          rows.push({ index, score: Math.min(guess * (cls ? 2 : 1.5), foe.hp) * 0.5, est, mv }); return;
+        }
         let score = Math.min(est.expected, foe.hp);
         // KO 가능성: 확정 KO(최소 데미지로도) > 난수에 따라 KO
         const kill = est.min >= foe.hp ? 1 : est.max >= foe.hp ? 0.5 : 0;
@@ -500,6 +551,14 @@
           if (mv.pri > 0 && !meFaster) bonus *= 1.8;               // 상대가 더 빠를 때 우선도 KO 는 값지다
           score += bonus;
         }
+        score *= adj;
+        if (fx.pivot && env && env.B) {                                         // 유턴류: 불리할 때 맞고 빠지면 이득
+          const rs = env.B.sides[env.si].party.filter((m, i) => !m.fainted && i !== env.B.sides[env.si].active).length;
+          if (rs && !me.trapped && !me.noRetreat) score += me.maxHp * (bestOf(foe, me, env.B.ctx(1 - env.si)) >= me.hp * 0.5 ? 0.25 : 0.04);
+        }
+        if (fx.bind && !foe.bound) score += foe.maxHp * 0.1;
+        if (fx.forceOut && env && env.B) score += env.B.sides[1 - env.si].party.filter(m => !m.fainted).length > 1 ? foe.maxHp * 0.05 + Object.values(foe.stages).reduce((a, x) => a + Math.max(0, x), 0) * 0.1 * foe.maxHp : 0;
+        if (fx.selfDamagePct) score -= me.maxHp * fx.selfDamagePct / 100 * 0.5;
         if (fx.recoil) score -= est.expected * fx.recoil / 100 * 0.4;
         if (fx.drain && me.hp < me.maxHp * 0.6) score += est.expected * fx.drain / 100 * 0.5;
         if (fx.ail && !foe.status) score += foe.maxHp * 0.05 * fx.ail.chance / 100;

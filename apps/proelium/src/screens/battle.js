@@ -217,7 +217,7 @@ export function mount(root, { go, params }) {
       ? `<button class="mvc" style="--c:#8a8fa8;grid-column:1/-1" data-act="move" data-i="0"><b>발버둥</b><small>쓸 수 있는 기술이 없어요 · 반동 피해</small></button>`
       : me.moves.map((m, i) => {
         const lm = la.moves[i], col = TYPE_HEX[m.type], st = m.cls === 'status', h = !st && effHint(m.type, foe.types);
-        const meta = st ? esc(Eng.describeEffect(m)) : `${m.cls === 'phys' ? '물리' : '특수'} · 위력 ${m.power} · ${m.acc === null || (m.fx && m.fx.neverMiss) ? '필중' : '명중 ' + m.acc}`;
+        const meta = st ? esc(Eng.describeEffect(m)) : `${m.cls === 'phys' ? '물리' : '특수'} · 위력 ${Eng.variablePower(m) ? '가변' : m.power} · ${m.acc === null || (m.fx && m.fx.neverMiss) ? '필중' : '명중 ' + m.acc}${Eng.describeAttack(m) ? ' · ' + esc(Eng.describeAttack(m)) : ''}`;
         return `<button class="mvc${st ? ' st' : ''}${isLite(m.type) ? ' lite' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${lm.usable ? '' : 'disabled'} title="${i + 1}번 키">
           <span class="g">${TYPE_GLYPH[m.type]}</span><b>${esc(m.name)}</b><small>${meta}</small><em>PP ${m.pp}/${m.maxPp}</em>
           ${lm.why ? `<u class="why">${esc(lm.why)}</u>` : h ? `<u class="hint ${h[0]}">${h[1]}</u>` : ''}</button>`;
