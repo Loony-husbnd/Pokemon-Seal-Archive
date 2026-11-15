@@ -136,3 +136,7 @@
 .rc-art { width: 104px; height: 104px; } .res-card b { font-size: 15px; } .res-card small { color: var(--mute); font-weight: 700; }
 .res-stats { display: flex; gap: clamp(14px, 4vw, 40px); padding: 14px clamp(18px, 4vw, 36px); border-radius: 999px; } .res-stats div { display: flex; flex-direction: column; align-items: center; } .res-stats b { font-family: var(--display); font-style: italic; font-size: 24px; } .res-stats small { color: var(--mute); font-size: 11px; font-weight: 700; }
 .res-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+.res-share { display: flex; align-items: flex-start; gap: 8px; max-width: 360px; margin-top: 4px; font-size: 13px; color: var(--muted, #9aa3bd); cursor: pointer; text-align: left; }
+.res-share input { margin-top: 3px; accent-color: #ffb21f; }
+.res-share small { display: block; opacity: .75; font-size: 11px; }

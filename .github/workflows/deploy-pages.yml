@@ -20,6 +20,8 @@ jobs:
       - run: npm install
       - run: npm run check:boundaries && npm run test:battle
       - run: npm run build
+        env:
+          VITE_LOG_ENDPOINT: ${{ vars.LOG_ENDPOINT }}   # Proelium 배틀 기록 수집 주소 (비우면 전송 꺼짐)
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
   deploy:

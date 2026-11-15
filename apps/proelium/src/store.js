@@ -18,6 +18,7 @@ export const store = {
   team: cleanTeam(load('team', null)),
   level: ['easy', 'normal', 'hard', 'hell'].includes(load('level', 'normal')) ? load('level', 'normal') : 'normal',
   sound: load('sound', true),
+  shareLogs: load('shareLogs', true),             // 결과 화면에서 배틀 기록을 AI 개선용으로 보낼지
   record: Object.assign({ w: 0, l: 0, d: 0, streak: 0, best: 0 }, load('record', {})),
-  save() { put('team', this.team); put('level', this.level); put('sound', this.sound); put('record', this.record); },
+  save() { put('team', this.team); put('level', this.level); put('sound', this.sound); put('shareLogs', this.shareLogs); put('record', this.record); },
 };

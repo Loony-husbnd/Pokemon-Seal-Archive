@@ -2,6 +2,7 @@ import { store } from '../store.js';
 import { D, E, esc, formLabel, monImg, TYPE_HEX, TYPE_GLYPH, isLite, typeName, moveInfo } from '../dex.js';
 import { sfx } from '../sfx.js';
 import { wait } from '../fx.js';
+import { createRecorder } from '../telemetry.js';
 
 const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중', eva: '회피' };
 const STATUS_KO = { par: '마비', brn: '화상', psn: '독', tox: '맹독', slp: '수면', frz: '얼음' };
@@ -23,6 +24,7 @@ export function mount(root, { go, params }) {
   const brain = AI.create(Eng, { seed: seed ^ 0x9e3779b9 });
   let alive = true, speed = Number(sessionStorage.getItem('proelium:speed')) || 1, skip = false, resolveChoice = null;
   const dmgBy = [0, 0, 0]; let kos = 0;
+  const rec = createRecorder({ seed, level, mine, opp });
 
   // 화면용 상태(이벤트를 따라 갱신): 엔진은 한 턴을 한꺼번에 계산하므로, 연출 중간 상태를 따로 들고 있어야 한다
   const U = {
@@ -263,27 +265,27 @@ export function mount(root, { go, params }) {
     renderPlate(0); renderPlate(1); renderField();
     await dly(400);
     await banner('READY?', 'ready', 800); await banner('FIGHT!', 'fight', 700);
-    await play(B.start());
-    let result = null;
+    await play(rec.step('start', B, () => B.start()));
+    let result = null, surrendered = false;
     while (alive && B.phase !== 'ended') {
       if (B.phase === 'switch') {
         for (const si of B.pending.slice()) {
           if (!alive) return;
           const idx = si === 0 ? await partyPicker('다음 포켓몬을 골라 주세요', false) : brain.chooseReplacement(B, 1, level);
-          await play(B.replace(si, idx));
+          await play(rec.step('replace', B, () => B.replace(si, idx), { side: si, to: idx }));
         }
         continue;
       }
       const a0 = await choose();
-      if (a0.type === 'surrender') { result = 1; break; }
+      if (a0.type === 'surrender') { result = 1; surrendered = true; rec.step('surrender', B, () => [], { a: [a0, null] }); break; }
       const a1 = brain.chooseAction(B, 1, level, a0);              // 지옥 난이도는 내가 고른 행동을 미리 본다
       lock();
-      await play(B.playTurn(a0, a1));
+      await play(rec.step('turn', B, () => B.playTurn(a0, a1), { a: [a0, a1] }));
     }
     if (!alive) return;
     const winner = result !== null ? result : B.winner;
     await dly(900);
-    go('result', { winner, turns: B.turn, mine, opp, level, dmg: dmgBy, kos });
+    go('result', { winner, turns: B.turn, mine, opp, level, dmg: dmgBy, kos, log: rec.finish(winner, B.turn, surrendered) });
   }
   run().catch(err => { console.error(err); say('오류가 발생했어요. 홈으로 돌아가 주세요.'); });
   return () => { alive = false; root.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };
