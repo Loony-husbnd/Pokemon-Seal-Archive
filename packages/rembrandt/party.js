@@ -16,7 +16,8 @@
   'use strict';
 
   const LEGEND_FROM = 2000;      // 목표 종족값 합계가 이보다 크면 전설·환상도 상대로 나올 수 있다
-  const OFFSET = { easy: -120, normal: 0, hard: 90 };
+  const OFFSET = { easy: -120, normal: 0, hard: 90, hell: 2000 };      // 지옥: 가장 강한 조합(전설 포함)을 고른다
+  const STAT_MULT = { hell: 1.5 };                                      // 지옥: 상대 능력치 ×1.5
   const REGION = { alola: '알로라', galar: '가라르', hisui: '히스이', paldea: '팔데아' };
 
   function create(data, opts) {
@@ -63,7 +64,7 @@
       const level = OFFSET[o.level] === undefined ? 'normal' : o.level;
       const playerTotal = total(o.playerIds);
       const target = Math.max(750, playerTotal + OFFSET[level]);
-      const allowLegend = hasLegend(o.playerIds) || target > LEGEND_FROM;     // 높은 목표는 전설 없이 맞출 수 없다
+      const allowLegend = hasLegend(o.playerIds) || target > LEGEND_FROM || level === 'hell';     // 높은 목표는 전설 없이 맞출 수 없다
 
       const sorted = pool.filter(id => allowLegend || !P[id].leg).sort((a, b) => P[a].bst - P[b].bst || a - b);
       const avg = target / 3;
@@ -188,5 +189,5 @@
     return { validate, generateOpponent, displayName, speciesLabel, pickMoveset, total, pool, OFFSET };
   }
 
-  global.BattleParty = { create, OFFSET };
+  global.BattleParty = { create, OFFSET, STAT_MULT, statMult: level => [1, STAT_MULT[level] || 1] };
 })(typeof window !== 'undefined' ? window : globalThis);

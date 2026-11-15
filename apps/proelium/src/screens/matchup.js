@@ -3,13 +3,13 @@ import { D, E, PT, esc, formLabel, monImg, TYPE_HEX, TYPE_GLYPH, isLite, moveInf
 import { sfx } from '../sfx.js';
 
 const cardVars = id => { const t = D().pokemon[id].t; return `--c1:${TYPE_HEX[t[0]]};--c2:${TYPE_HEX[t[1] || t[0]]}`; };
-const LEVELS = [['easy', '쉬움', '실수가 잦은 상대'], ['normal', '보통', '비슷한 강도'], ['hard', '어려움', '늘 최선의 수']];
+const LEVELS = [['easy', '쉬움', '실수가 잦은 상대'], ['normal', '보통', '비슷한 강도'], ['hard', '어려움', '늘 최선의 수'], ['hell', '지옥', '이길 수 없는 상대']];
 
 /** 내 팀과 비슷한 강도의 상대 3마리 (종족값 합계를 내 팀에 맞추고, 기술은 무작위. 상한은 없다) */
 export function makeOpponent(mine, level) {
   const P = PT().create(D());
   const ids = P.generateOpponent({ playerIds: mine.map(t => t.id), level, rng: Math.random });
-  return ids.map(id => ({ id, moves: recommendMoves(id, Math.floor(Math.random() * 2 ** 31)) }));
+  return ids.map(id => ({ id, moves: level === 'hell' ? D().pokemon[id].m.slice() : recommendMoves(id, Math.floor(Math.random() * 2 ** 31)) }));   // 지옥: 가장 센 공격기 4개
 }
 
 export function mount(root, { go, params }) {

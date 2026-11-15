@@ -31,6 +31,7 @@
     easy:   { label: '쉬움',   desc: '상대 파티가 약하고 실수도 잦아요.' },
     normal: { label: '보통',   desc: '내 파티와 비슷한 강도, 대체로 최선의 수를 둬요.' },
     hard:   { label: '어려움', desc: '상대 파티가 더 강하고 늘 최선의 수를 둬요.' },
+    hell:   { label: '지옥',   desc: '가장 강한 전설 파티에 능력치 ×1.5. 내가 고른 행동까지 읽고 대응해요. 사실상 이길 수 없어요.' },
   };
 
   let E = null, AIlib = null, PT = null, PRT = null, brain = null;
@@ -45,7 +46,7 @@
     sets: { mine: {}, opp: [] }, // 이번 배틀의 기술 구성(공격기+변화기). mine = { 씰ID: [기술ID…] }, opp = [[…], […], […]]
     q: '', sort: 'bst',
     speed: 1, skip: false, hints: true, showHistory: false,
-    record: { w: 0, l: 0, d: 0, byLevel: { easy: [0, 0, 0], normal: [0, 0, 0], hard: [0, 0, 0] } },
+    record: { w: 0, l: 0, d: 0, byLevel: { easy: [0, 0, 0], normal: [0, 0, 0], hard: [0, 0, 0], hell: [0, 0, 0] } },
     battle: null, U: null, busy: false, entries: [], curMove: null, log: [], finished: false,
   };
 
@@ -67,6 +68,7 @@
         if (raw.speed) S.speed = [1, 2, 3].includes(raw.speed) ? raw.speed : 1;
         if (typeof raw.hints === 'boolean') S.hints = raw.hints;
         if (raw.record) S.record = Object.assign(S.record, raw.record);
+        S.record.byLevel = Object.assign({ easy: [0, 0, 0], normal: [0, 0, 0], hard: [0, 0, 0], hell: [0, 0, 0] }, S.record.byLevel);
       }
     } catch (e) { /* 저장소를 못 읽어도 동작에는 지장 없음 */ }
   }
@@ -221,7 +223,7 @@
       <div class="bt-card p-3 sm:p-4">
         <h3 class="text-sm font-black text-slate-900 mb-2">난이도</h3>
         <div class="bt-seg" role="tablist">${Object.keys(LEVELS).map(k => `<button data-act="level" data-v="${k}" class="${S.level === k ? 'on' : ''}">${LEVELS[k].label}</button>`).join('')}</div>
-        <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">${esc(LEVELS[S.level].desc)}<br><span class="text-slate-400">상대 파티 종족값 합계 ≈ 내 합계 ${PT.OFFSET[S.level] >= 0 ? '+' : '−'}${Math.abs(PT.OFFSET[S.level])}</span></p>
+        <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">${esc(LEVELS[S.level].desc)}<br><span class="text-slate-400">${S.level === 'hell' ? '상대 파티: 가장 강한 조합 · 능력치 ×1.5' : `상대 파티 종족값 합계 ≈ 내 합계 ${PT.OFFSET[S.level] >= 0 ? '+' : '−'}${Math.abs(PT.OFFSET[S.level])}`}</span></p>
       </div>
       <button class="bt-btn primary w-full !py-3 !text-sm" data-act="start" ${ready ? '' : 'disabled'}>${ready ? '배틀 준비!' : '파티를 완성해 주세요'}</button>`;
     refreshIcons();
@@ -320,7 +322,7 @@
     const rng = E.mulberry32(Math.floor(Math.random() * 2 ** 31));
     S.sets = { mine: {}, opp: [] };
     partyEntries().forEach(e => { S.sets.mine[e.seal.id] = PRT.pickMoveset(e.id, rng); });
-    S.opp.forEach(id => S.sets.opp.push(PRT.pickMoveset(id, rng)));
+    S.opp.forEach(id => S.sets.opp.push(S.level === 'hell' ? E.data.pokemon[id].m.slice() : PRT.pickMoveset(id, rng)));   // 지옥: 가장 센 공격기 4개
   }
   const setOf = (kind, key, id) => (kind === 'mine' ? S.sets.mine[key] : S.sets.opp[key]) || PRT.pickMoveset(id, Math.random);
 
@@ -365,7 +367,7 @@
     if (mine.length !== 3 || S.opp.length !== 3) return;
     const parties = [mine.map(sealToMon), S.opp.map((id, i) => E.makeMon(id, { name: PRT.displayName(id), moves: setOf('opp', i, id) }))];
     const seed = Math.floor(Math.random() * 2 ** 31);
-    S.battle = E.createBattle({ parties, names: ['나', '상대'], seed });
+    S.battle = E.createBattle({ parties, names: ['나', '상대'], seed, statMult: PT.statMult(S.level) });
     brain = AIlib.create(E, { seed: seed ^ 0x9e3779b9 });
     S.entries = mine;
     S.log = []; S.finished = false; S.busy = true; S.skip = false; S.showHistory = false; S.curMove = null;
@@ -766,7 +768,7 @@
     const B = S.battle;
     let events;
     try {
-      const oppAction = brain.chooseAction(B, 1, S.level);
+      const oppAction = brain.chooseAction(B, 1, S.level, action);      // 지옥 난이도는 내가 고른 행동을 미리 본다
       delete oppAction.reason;
       events = B.playTurn(action, oppAction);
     } catch (e) {
