@@ -118,14 +118,24 @@
 
     // ───────────── 시뮬레이션 ─────────────
     const mkMons = team => team.map(t => E.makeMon(t.id, { moves: t.moves }));
-    function simulate(playerTeam, bossTeam, seed) {
-      const bt = E.createBattle({ parties: [mkMons(playerTeam), mkMons(bossTeam)], seed, maxTurns: 100 });
+    /**
+     * 한 판 모의 대전. 내 팀(플레이어)이 어떻게 나와도 이기는 팀을 짜려고, 매 판 플레이어의 선봉과 플레이 방식을 바꾼다.
+     *   variant % 3 → 플레이어가 먼저 내보내는 포켓몬(출전 순서는 사람이 정한다)
+     *   variant % 2 → 플레이어 방식: 0 = 최대 피해 위주('hard'), 1 = 예측해서 받아내는 노련한 사람('savvy')
+     * 지옥 AI 쪽은 실전과 같이 플레이어가 고른 행동을 보고 대응한다('peek').
+     */
+    const LEADS = 3, VARIANTS = 6;
+    function simulate(playerTeam, bossTeam, seed, variant) {
+      const v = variant || 0, r = v % LEADS, lvP = v % 2 ? 'savvy' : 'hard';
+      const rot = playerTeam.map((_, i) => playerTeam[(i + r) % playerTeam.length]);
+      const bt = E.createBattle({ parties: [mkMons(rot), mkMons(bossTeam)], seed, maxTurns: 100 });
       const a = AI.create(E, { seed }), b = AI.create(E, { seed: seed + 5 });
       bt.start();
       let guard = 0;
       while (bt.phase !== 'ended' && ++guard < 400) {
-        if (bt.phase === 'switch') { for (const p of bt.pending.slice()) if (bt.phase === 'switch' && bt.pending.includes(p)) bt.replace(p, (p === 0 ? a : b).chooseReplacement(bt, p, 'hard')); continue; }
-        bt.playTurn(a.chooseAction(bt, 0, 'hard'), b.chooseAction(bt, 1, 'hard'));
+        if (bt.phase === 'switch') { for (const p of bt.pending.slice()) if (bt.phase === 'switch' && bt.pending.includes(p)) bt.replace(p, p === 0 ? a.chooseReplacement(bt, p, lvP) : b.chooseReplacement(bt, p, 'peek')); continue; }
+        const pa = a.chooseAction(bt, 0, lvP);
+        bt.playTurn(pa, b.chooseAction(bt, 1, 'peek', pa));
       }
       if (bt.phase !== 'ended') {
         const hp = s => bt.sides[s].party.reduce((x, m) => x + (m.fainted ? 0 : m.hp / m.maxHp), 0);
@@ -133,7 +143,13 @@
       }
       return bt.winner === 1 ? 1 : bt.winner === 0 ? 0 : 0.5;
     }
-    const winRate = (playerTeam, bossTeam, n, seed0) => { let s = 0; for (let i = 0; i < n; i++) s += simulate(playerTeam, bossTeam, seed0 + i * 31); return s / n; };
+    let simCount = 0;
+    /** variants 목록의 각 변형으로 한 판씩. [{ v, r }] (r: 지옥 쪽 결과 0~1) */
+    const evalVariants = (playerTeam, bossTeam, variants, seed0) => variants.map(v => { simCount++; return { v, r: simulate(playerTeam, bossTeam, seed0 + v * 31, v) }; });
+    const mean = rs => rs.reduce((a, x) => a + x.r, 0) / Math.max(1, rs.length);
+    const winRate = (playerTeam, bossTeam, n, seed0) => mean(evalVariants(playerTeam, bossTeam, Array.from({ length: n }, (_, i) => i), seed0));
+    /** 평균과 '가장 불리한 선봉에서의 평균'을 섞은 점수: 어떤 선봉이 나와도 잘 이기는 팀이 좋다 */
+    const robust = rs => { const by = [0, 1, 2].map(l => mean(rs.filter(x => x.v % LEADS === l))).filter((_, l) => rs.some(x => x.v % LEADS === l)); return 0.7 * mean(rs) + 0.3 * Math.min(...by); };
 
     // ───────────── 후보 풀 ─────────────
     // 플레이어가 고를 수 있는 모든 포켓몬(무한다이맥스·원시회귀·왕관 폼 등 포함)이 후보다. 사람이 할 수 있는 선택은 AI 도 할 수 있어야 한다.
@@ -155,8 +171,10 @@
     async function build(playerTeam, o) {
       o = o || {};
       const rng = o.rng || Math.random, budget = o.budgetMs || 6000, t0 = nowMs();
+      simCount = 0;
       const progress = (f, msg) => { if (o.onProgress) o.onProgress(f, msg); };
-      const left = () => budget - (nowMs() - t0);
+      // 작업량은 시간이 아니라 횟수로 정해 기기 속도와 무관하게 같은 품질이 나오게 한다. 시간은 극단적으로 느릴 때(예산의 2.5배)만 중단하는 안전장치다.
+      const stop = () => nowMs() - t0 > budget * 2.5;
       const foes = mkMons(playerTeam);
       const all = candidatePool().sort((a, b) => P[b].bst - P[a].bst);
       const mySp = new Set(playerTeam.map(t => P[t.id].sp));
@@ -187,34 +205,40 @@
         if (i % 6 === 5) await tick();
       }
       shortlist.sort((a, b) => b.rank - a.rank);
-      const pickN = left() > budget * 0.6 ? 12 : left() > budget * 0.4 ? 10 : 8;
-      const finalists = shortlist.slice(0, pickN);
+      const finalists = shortlist.slice(0, 10);
 
-      // 3) 3마리 조합을 3대3 으로 비교
+      // 3) 3마리 조합을 3대3 으로 비교 — 1차: 모든 조합을 2판(선봉·플레이 방식 다르게), 2차: 상위 12개를 8판(선봉 3종 × 방식 2종) 정밀 평가
       progress(0.4, '조합을 비교하는 중…');
       const trios = [];
       for (let a = 0; a < finalists.length; a++) for (let b = a + 1; b < finalists.length; b++) for (let c = b + 1; c < finalists.length; c++) trios.push([finalists[a], finalists[b], finalists[c]]);
-      const ok = trio => new Set(trio.map(t => P[t.id].sp)).size === 3 && trio.every(t => !mySp.has(P[t.id].sp) || true);
+      const dupPenalty = trio => { const types = trio.flatMap(t => P[t.id].t); return (types.length - new Set(types).size) * 0.015; };   // 약점 공유 감점
       const evalTrios = [];
-      const simsPer = left() > budget * 0.5 ? 5 : 3;
       let ti = 0;
-      for (const trio of trios.filter(ok)) {
+      for (const trio of trios.filter(t => new Set(t.map(x => P[x.id].sp)).size === 3)) {
         const bossTeam = trio.map(t => ({ id: t.id, moves: t.moves }));
-        const wr = winRate(playerTeam, bossTeam, simsPer, 500 + ti * 13);
-        // 속성이 한쪽으로 몰리면 약간 감점 (같은 약점을 공유하면 한 번에 무너진다)
-        const types = trio.flatMap(t => P[t.id].t), dup = types.length - new Set(types).size;
-        evalTrios.push({ trio, wr, adj: wr - dup * 0.015 + (rng() - 0.5) * 0.02 });
-        if (++ti % 6 === 0) { await tick(); progress(0.4 + 0.3 * ti / trios.length, '조합을 비교하는 중…'); }
-        if (left() < budget * 0.35) break;
+        const rs = evalVariants(playerTeam, bossTeam, [0, 3], 500 + ti * 13);
+        evalTrios.push({ trio, bossTeam, rs, adj: mean(rs) - dupPenalty(trio) });
+        if (++ti % 6 === 0) { await tick(); progress(0.4 + 0.25 * ti / trios.length, '조합을 비교하는 중…'); }
+        if (stop()) break;
       }
       evalTrios.sort((a, b) => b.adj - a.adj);
-      const near = evalTrios.filter(t => t.adj >= evalTrios[0].adj - 0.03).slice(0, 4);      // 비슷한 점수면 무작위로 골라 다양하게
-      let best = near[Math.floor(rng() * near.length)] || evalTrios[0];
+      const finalTrios = evalTrios.slice(0, 12);
+      progress(0.66, '유력한 조합을 정밀하게 겨루는 중…');
+      for (let k = 0; k < finalTrios.length; k++) {
+        const t = finalTrios[k];
+        t.rs = t.rs.concat(evalVariants(playerTeam, t.bossTeam, [1, 2, 4, 5, 6, 7], 500 + k * 13 + 7));
+        t.adj = robust(t.rs) - dupPenalty(t.trio) + (rng() - 0.5) * 0.02;
+        if (k % 3 === 2) await tick();
+        if (stop()) break;
+      }
+      finalTrios.sort((a, b) => b.adj - a.adj);
+      const near = finalTrios.filter(t => t.adj >= finalTrios[0].adj - 0.03).slice(0, 3);      // 비슷한 점수면 무작위로 골라 다양하게
+      let best = near[Math.floor(rng() * near.length)] || finalTrios[0];
       let team = best.trio.map(t => ({ id: t.id, moves: t.moves.slice() }));
 
       // 4) 기술 개선: 각 포켓몬의 남는 칸(공격기 3개 + 1칸)에 변화기/네 번째 공격기 후보를 넣어 보고 이기는 쪽을 택한다
       progress(0.72, '기술 구성을 다듬는 중…');
-      for (let k = 0; k < team.length && left() > budget * 0.12; k++) {
+      for (let k = 0; k < team.length && !stop(); k++) {
         const id = team[k].id;
         const atkList = pickAttacks(id, foes);
         const options = [];
@@ -224,9 +248,9 @@
         const variants = [atkList.slice(0, 4)].concat(options.map(m => atkList.slice(0, 3).concat(m)));
         for (const v of variants) {
           const trial = team.map((t, j) => (j === k ? { id, moves: v } : t));
-          const wr = winRate(playerTeam, trial, 5, 900 + k * 17);
+          const wr = winRate(playerTeam, trial, VARIANTS, 900 + k * 17);
           if (wr > bestWr + 1e-9) { bestWr = wr; bestSet = v; }
-          if (left() < budget * 0.1) break;
+          if (stop()) break;
         }
         team[k] = { id, moves: bestSet.slice(0, 4) };
         await tick();
@@ -237,13 +261,14 @@
       const orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
       let bestOrder = orders[0], bestW = -1;
       for (const ord of orders) {
-        if (left() < 0 && bestW >= 0) break;
-        const w = winRate(playerTeam, ord.map(i => team[i]), 5, 1300);
+        if (stop() && bestW >= 0) break;
+        const w = winRate(playerTeam, ord.map(i => team[i]), VARIANTS, 1300);
         if (w > bestW + 1e-9) { bestW = w; bestOrder = ord; }
       }
       team = bestOrder.map(i => team[i]);
       // 기술이 4개 미만이면 대표 공격기로 채운다
       team.forEach(t => { for (const m of P[t.id].m) if (t.moves.length < 4 && !t.moves.includes(m)) t.moves.push(m); });
+      if (o.stats) { o.stats.sims = simCount; o.stats.ms = nowMs() - t0; o.stats.trios = evalTrios.length; }
       progress(1, '완료');
       return team;
     }
