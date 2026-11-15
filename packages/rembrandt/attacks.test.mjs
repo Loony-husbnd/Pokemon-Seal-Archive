@@ -302,3 +302,217 @@ test('2단계: AI 는 가변 위력·고정 피해를 현재 상황에 맞게 �
   const strong = mk('B', ['normal'], { spe: 300 }, [mv('flail'), atk({ power: 60 })]);
   assert.equal(brain.chooseAction(duel(strong, mk('D', ['normal'], { hp: 100 }, [splash()])), 0, 'hard').index, 1);
 });
+
+// ═════════════ 3단계: 조건부 위력 · 반격 · 선공 조건 ═════════════
+test('3단계: 객기는 상태이상이면 위력 2배이고 화상의 공격 감소를 받지 않는다', () => {
+  const a = mk('A', ['normal'], {}, [mv('facade')]), d = idle();
+  const base = E.resolveMove(a, d, a.moves[0], {}).power;
+  a.status = 'brn';
+  assert.equal(E.resolveMove(a, d, a.moves[0], {}).power, base * 2);
+  const brn = E.calcDamage(a, d, E.resolveMove(a, d, a.moves[0], {}), { roll: 100 }).damage;
+  const clean = mk('B', ['normal'], {}, [mv('facade')]); clean.status = 'par';
+  assert.equal(brn, E.calcDamage(clean, d, E.resolveMove(clean, d, clean.moves[0], {}), { roll: 100 }).damage, '화상이어도 감소 없음');
+  const c = mk('C', ['normal'], {}, [mv('facade')]);
+  assert.equal(E.resolveMove(c, d, c.moves[0], {}).power, base);
+});
+
+test('3단계: 베놈쇼크(독)·병상첨병(상태이상)·브라인(체력 절반 이하)', () => {
+  const a = mk('A', ['poison'], {}, [mv('venoshock'), mv('hex'), mv('brine')]), d = idle();
+  const p = i => E.resolveMove(a, d, a.moves[i], {}).power;
+  const base = [p(0), p(1), p(2)];
+  d.status = 'psn';
+  assert.equal(p(0), base[0] * 2); assert.equal(p(1), base[1] * 2); assert.equal(p(2), base[2]);
+  d.status = 'brn'; assert.equal(p(0), base[0]); assert.equal(p(1), base[1] * 2);
+  d.status = null; d.hp = 150; assert.equal(p(2), base[2] * 2);
+});
+
+test('3단계: 승부굳히기·보복·눈사태·원수갚기·분풀이·분함의발구르기·객기류 — 이번 턴 사정으로 위력 2배', () => {
+  const d = idle();
+  const a = mk('A', ['dark'], { spe: 300 }, [mv('assurance'), mv('payback'), mv('lash-out')]);
+  const pw = (i, ctx) => E.resolveMove(a, d, a.moves[i], ctx).power;
+  const b0 = [pw(0, {}), pw(1, {}), pw(2, {})];
+  assert.equal(pw(0, { foeHurt: true }), b0[0] * 2);
+  assert.equal(pw(1, { actedAfter: true }), b0[1] * 2);
+  assert.equal(pw(2, { meLowered: true }), b0[2] * 2);
+  const t = mk('T', ['ground'], {}, [mv('stomping-tantrum'), mv('temper-flare'), mv('acrobatics'), mv('retaliate'), mv('avalanche')]);
+  const q = (i, ctx) => E.resolveMove(t, d, t.moves[i], ctx).power;
+  assert.equal(q(0, { prevFailed: true }), q(0, {}) * 2); assert.equal(q(1, { prevFailed: true }), q(1, {}) * 2);
+  assert.equal(q(2, {}), 110, '도구가 없으면 위력 2배');
+  assert.equal(q(3, { allyFaintedPrev: true }), q(3, {}) * 2); assert.equal(q(4, { meHurt: true }), q(4, {}) * 2);
+});
+
+test('3단계: 보복은 내가 상대보다 늦게 움직였을 때, 승부굳히기는 이미 다친 상대에게 실제로 2배가 된다', () => {
+  const slow = mk('S', ['dark'], { spe: 1 }, [mv('payback')]), fast = mk('F', ['normal'], { spe: 300 }, [atk({ power: 10 })]);
+  const bt = duel(slow, fast);
+  const ev = bt.playTurn(M0, M0);
+  const mine = ev.filter(e => e.t === 'damage' && e.side === 1)[0].amount;
+  const fast2 = mk('F', ['normal'], { spe: 1 }, [atk({ power: 10 })]), slow2 = mk('S', ['dark'], { spe: 300 }, [mv('payback')]);
+  const mine2 = duel(slow2, fast2).playTurn(M0, M0).filter(e => e.t === 'damage' && e.side === 1)[0].amount;
+  assert.ok(mine > mine2 * 1.8, `늦게 움직이면 2배 (${mine} vs ${mine2})`);
+});
+
+test('3단계: 질투의불꽃·매혹의보이스는 이번 턴 능력이 올라간 상대에게만 상태이상을 건다', () => {
+  const a = mk('A', ['fire'], { spe: 1 }, [mv('burning-jealousy')]), b = mk('B', ['normal'], { spe: 300 }, [mv('swords-dance')]);
+  duel(a, b).playTurn(M0, M0);
+  assert.equal(b.status, 'brn');
+  const c = mk('C', ['fire'], { spe: 1 }, [mv('burning-jealousy')]), d = mk('D', ['normal'], { spe: 300 }, [splash()]);
+  duel(c, d).playTurn(M0, M0);
+  assert.equal(d.status, null);
+  const e = mk('E', ['fairy'], { spe: 1 }, [mv('alluring-voice')]), f = mk('F', ['normal'], { spe: 300 }, [mv('swords-dance')]);
+  duel(e, f).playTurn(M0, M0);
+  assert.ok(f.confusion > 0);
+});
+
+test('3단계: 카운터·미러코트는 받은 피해의 2배, 메탈버스트·앙갚음은 1.5배, 맞지 않았으면 실패', () => {
+  const run = (ident, att, type, cls) => {
+    const a = mk('A', [type], { spe: 1, hp: 1000 }, [mv(ident)]), b = mk('B', ['normal'], { spe: 300 }, [atk({ cls, power: 60 })]);
+    const ev = duel(a, b).playTurn(M0, M0);
+    const taken = ev.filter(e => e.t === 'damage' && e.side === 0).reduce((s, e) => s + e.amount, 0);
+    const dealt = ev.filter(e => e.t === 'damage' && e.side === 1).reduce((s, e) => s + e.amount, 0);
+    return { taken, dealt, ev };
+  };
+  let r = run('counter', null, 'fighting', 'phys'); assert.equal(r.dealt, r.taken * 2);
+  r = run('mirror-coat', null, 'psychic', 'spec'); assert.equal(r.dealt, r.taken * 2);
+  r = run('counter', null, 'fighting', 'spec'); assert.equal(r.dealt, 0, '특수 공격에는 카운터가 통하지 않는다'); assert.ok(has(r.ev, '실패'));
+  r = run('metal-burst', null, 'steel', 'spec'); assert.equal(r.dealt, Math.floor(r.taken * 1.5));
+  r = run('comeuppance', null, 'dark', 'phys'); assert.equal(r.dealt, Math.floor(r.taken * 1.5));
+  const first = mk('A', ['fighting'], { spe: 300 }, [mv('counter')]);
+  assert.ok(has(duel(first, idle()).playTurn(M0, M0), '실패'), '맞은 적이 없으면 실패');
+});
+
+test('3단계: 목숨걸기는 자신의 체력만큼 피해를 주고 쓰러진다', () => {
+  const a = mk('A', ['fighting'], { spe: 300 }, [mv('final-gambit')]), a2 = idle();
+  a.hp = 120;
+  const bt = duel([a, a2], idle());
+  bt.playTurn(M0, M0);
+  assert.equal(bt.active(1).hp, 300 - 120); assert.equal(a.fainted, true);
+});
+
+test('3단계: 분노의주먹은 맞은 횟수, 성묘는 쓰러진 동료 수에 따라 강해진다', () => {
+  const a = mk('A', ['ghost'], {}, [mv('rage-fist'), mv('last-respects')]), d = idle();
+  assert.equal(E.resolveMove(a, d, a.moves[0], {}).power, 50);
+  a.hitsTaken = 3; assert.equal(E.resolveMove(a, d, a.moves[0], {}).power, 200);
+  a.hitsTaken = 50; assert.equal(E.resolveMove(a, d, a.moves[0], {}).power, 350, '상한 350');
+  assert.equal(E.resolveMove(a, d, a.moves[1], { faints: 2 }).power, 150);
+  const x = mk('X', ['dark'], { spe: 300 }, [mv('last-respects')]), x2 = mk('X2', ['normal'], {}, [atk()]), x3 = mk('X3', ['normal'], {}, [atk()]);
+  x2.hp = 0; x2.fainted = true; x3.hp = 0; x3.fainted = true;
+  const bt = duel([x, x2, x3], idle());
+  assert.equal(bt.ctx(0).faints, 2);
+});
+
+test('3단계: 분노의주먹은 실제로 맞을 때마다 쌓인다', () => {
+  const a = mk('A', ['dark'], { spe: 1, hp: 2000 }, [mv('rage-fist')]), b = mk('B', ['normal'], { spe: 300 }, [atk({ power: 10 })]);
+  const bt = duel(a, b);
+  bt.playTurn(M0, M0); bt.playTurn(M0, M0);
+  assert.equal(a.hitsTaken, 2);
+});
+
+test('3단계: 에코보이스는 연속으로 쓰이면 위력이 40씩 오른다 / 연속자르기는 맞힐 때마다 2배(최대 160)', () => {
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('echoed-voice')]), d = mk('D', ['normal'], { hp: 9000 }, [splash()]);
+  const bt = duel(a, d);
+  const pw = () => E.resolveMove(a, d, a.moves[0], bt.ctx(0)).power;
+  assert.equal(pw(), 40);
+  bt.playTurn(M0, M0); assert.equal(pw(), 80);
+  bt.playTurn(M0, M0); assert.equal(pw(), 120);
+  const f = mk('F', ['bug'], { spe: 300 }, [mv('fury-cutter'), splash()]);
+  const bt2 = duel(f, mk('D', ['normal'], { hp: 9000, def: 900 }, [splash()]), R(0.01));
+  const p2 = () => E.resolveMove(f, bt2.active(1), f.moves[0], bt2.ctx(0)).power;
+  assert.equal(p2(), 40);
+  bt2.playTurn(M0, M0); assert.equal(p2(), 80);
+  bt2.playTurn(M0, M0); bt2.playTurn(M0, M0); assert.equal(p2(), 160);
+  bt2.playTurn(M1, M0); assert.equal(p2(), 40, '다른 기술을 쓰면 처음부터');
+});
+
+test('3단계: 집단구타는 건강한 동료 수만큼 때리고 프레젠트는 피해 또는 회복', () => {
+  const a = mk('A', ['dark'], { spe: 300 }, [mv('beat-up')]), a2 = idle(), a3 = idle(); a3.status = 'brn';
+  const ev = duel([a, a2, a3], idle()).playTurn(M0, M0);
+  assert.equal(ev.filter(e => e.t === 'damage' && e.side === 1).length, 2, '상태이상인 동료는 제외');
+  const heals = new Set();
+  for (let i = 0; i < 40; i++) {
+    const p = mk('P', ['normal'], { spe: 300 }, [mv('present')]), t = idle(); t.hp = 100;
+    const e = duel(p, t, E.mulberry32(i + 1)).playTurn(M0, M0);
+    heals.add(t.hp > 100 ? 'heal' : 'dmg');
+  }
+  assert.ok(heals.has('heal') && heals.has('dmg'));
+});
+
+test('3단계: 꿈먹기는 잠든 상대에게만 통하고 절반을 흡수한다 / 비장의무기는 다른 기술을 다 쓴 뒤에만', () => {
+  const a = mk('A', ['psychic'], { spe: 300 }, [mv('dream-eater')]), d = idle();
+  assert.ok(has(duel(a, d).playTurn(M0, M0), '실패'));
+  const b = mk('B', ['psychic'], { spe: 300 }, [mv('dream-eater')]), e = idle(); e.status = 'slp'; e.sleepTurns = 3; b.hp = 100;
+  const ev = duel(b, e).playTurn(M0, M0);
+  assert.ok(b.hp > 100, '흡수');
+  const l = mk('L', ['normal'], { spe: 300 }, [mv('last-resort'), splash(), atk()]);
+  const bt = duel(l, idle());
+  assert.ok(has(bt.playTurn(M0, M0), '실패'));
+  bt.playTurn(M1, M0); assert.ok(has(bt.playTurn(M0, M0), '실패'));
+  bt.playTurn({ type: 'move', index: 2 }, M0);
+  assert.ok(dmgOf(bt.playTurn(M0, M0)) > 0, '다 쓴 뒤에는 통한다');
+});
+
+test('3단계: 기습은 우선도 +1 로 먼저 움직여 공격기를 고른 상대를 때리고, 변화기를 고른 상대에게는 실패', () => {
+  const a = mk('A', ['dark'], { spe: 1 }, [mv('sucker-punch')]), b = mk('B', ['normal'], { spe: 300 }, [atk()]);
+  const ev = duel(a, b).playTurn(M0, M0);
+  assert.ok(ev.filter(e => e.t === 'damage' && e.side === 1).length > 0);
+  const c = mk('C', ['dark'], { spe: 1 }, [mv('sucker-punch')]), d = mk('D', ['normal'], { spe: 300 }, [splash()]);
+  assert.ok(has(duel(c, d).playTurn(M0, M0), '실패'));
+  const e = mk('E', ['electric'], { spe: 1 }, [mv('thunderclap')]);
+  assert.ok(has(duel(e, mk('F', ['normal'], {}, [splash()])).playTurn(M0, M0), '실패'));
+});
+
+test('3단계: 기선제압은 우선도 기술을 고른 상대에게만 통하고 풀죽게 한다', () => {
+  const a = mk('A', ['fighting'], { spe: 1 }, [mv('upper-hand')]), b = mk('B', ['normal'], { spe: 300 }, [atk({ pri: 1 })]);
+  const ev = duel(a, b).playTurn(M0, M0);
+  assert.ok(ev.filter(e => e.t === 'damage' && e.side === 1).length > 0);
+  assert.equal(ev.filter(e => e.t === 'damage' && e.side === 0).length, 0, '풀이 죽어 움직이지 못했다');
+  const c = mk('C', ['fighting'], { spe: 1 }, [mv('upper-hand')]), d = mk('D', ['normal'], { spe: 300 }, [atk()]);
+  assert.ok(has(duel(c, d).playTurn(M0, M0), '실패'));
+});
+
+test('3단계: 속이기·만나자마자는 등장한 첫 턴에만 성공한다', () => {
+  for (const id of ['fake-out', 'first-impression']) {
+    const a = mk('A', ['normal'], { spe: 300 }, [mv(id)]);
+    const bt = duel(a, idle());
+    assert.ok(dmgOf(bt.playTurn(M0, M0)) > 0, id);
+    assert.ok(has(bt.playTurn(M0, M0), '실패'), id);
+  }
+  const f = mk('F', ['normal'], { spe: 300 }, [mv('fake-out')]), b = mk('B', ['normal'], { spe: 1 }, [atk()]);
+  const ev = duel(f, b).playTurn(M0, M0);
+  assert.equal(ev.filter(e => e.t === 'damage' && e.side === 0).length, 0, '속이기에 풀이 죽었다');
+});
+
+test('3단계: 힘껏펀치는 먼저 맞으면 집중이 깨지고, 부리캐논은 접촉한 상대에게 화상을 입힌다', () => {
+  const a = mk('A', ['fighting'], { spe: 300 }, [mv('focus-punch')]), b = mk('B', ['normal'], { spe: 100 }, [atk()]);
+  const ev = duel(a, b).playTurn(M0, M0);
+  assert.ok(has(ev, '집중이 깨져'), '느린 상대의 공격이 먼저 들어간다? 우선도 −3 이라 마지막');
+  const c = mk('C', ['flying'], { spe: 300 }, [mv('beak-blast')]), d = mk('D', ['normal'], { spe: 100 }, [atk({ contact: true })]);
+  const ev2 = duel(c, d).playTurn(M0, M0);
+  assert.equal(d.status, 'brn');
+  const e = mk('E', ['flying'], { spe: 300 }, [mv('beak-blast')]), f = mk('F', ['normal'], { spe: 100 }, [atk({ contact: false })]);
+  duel(e, f).playTurn(M0, M0);
+  assert.equal(f.status, null, '접촉하지 않으면 화상 없음');
+});
+
+test('3단계: 코골기는 잠든 동안에만 쓸 수 있다', () => {
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('snore'), splash()]);
+  const bt = duel(a, idle());
+  assert.equal(bt.legalActions(0).moves[0].usable, false);
+  a.status = 'slp'; a.sleepTurns = 3;
+  assert.equal(bt.legalActions(0).moves[0].usable, true);
+  assert.ok(dmgOf(bt.playTurn(M0, M0)) > 0, '자면서 때린다');
+});
+
+test('3단계 AI: 실패가 확정인 기술은 쓰지 않는다 (속이기 2턴째·기습 상대가 변화기뿐·비장의무기·카운터)', () => {
+  const brain = AI.create(E, { seed: 2 });
+  const a = mk('A', ['normal'], { spe: 300 }, [mv('fake-out'), atk({ power: 20 })]);
+  const bt = duel(a, idle());
+  assert.equal(brain.chooseAction(bt, 0, 'hard').index, 0, '첫 턴에는 속이기');
+  bt.playTurn(M1, M0);
+  assert.equal(brain.chooseAction(bt, 0, 'hard').index, 1, '그 뒤에는 쓰지 않는다');
+  const s = mk('S', ['dark'], { spe: 300 }, [mv('sucker-punch'), atk({ power: 20 })]);
+  assert.equal(brain.chooseAction(duel(s, idle()), 0, 'hard').index, 1);
+  const l = mk('L', ['normal'], { spe: 300 }, [mv('last-resort'), atk({ power: 20 })]);
+  assert.equal(brain.chooseAction(duel(l, mk('D', ['normal'], {}, [atk()])), 0, 'hard').index, 1);
+  const c = mk('C', ['fighting'], { spe: 300 }, [mv('counter'), atk({ power: 20 })]);
+  assert.equal(brain.chooseAction(duel(c, mk('D', ['normal'], {}, [atk({ cls: 'spec' })])), 0, 'hard').index, 1, '특수 공격뿐인 상대에게 카운터는 쓰지 않는다');
+});
