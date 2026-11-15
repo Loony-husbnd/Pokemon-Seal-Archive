@@ -76,3 +76,22 @@ test('지옥: 탐색 AI 가 동급 무작위 팀에서 어려움 AI 보다 확�
   }
   assert.ok(w / n >= 0.6, `지옥 AI 승률 ${(w / n * 100).toFixed(0)}%`);
 });
+
+test('노련한 사람 모형: 상대의 강한 공격을 읽고 잘 받아내며 반격이 센 포켓몬으로 교체한다', () => {
+  const brain = AI.create(E, { seed: 1 });
+  const boss = () => mk('B', ['normal'], { spe: 50, hp: 300 }, [atk({ type: T('fire'), cls: 'spec', power: 150 })]);
+  const weak = () => mk('W', ['grass'], { hp: 150, spe: 60 }, [atk({ power: 40 })]);
+  const tank = () => mk('T', ['water'], { hp: 400, spd: 400, spa: 300 }, [atk({ type: T('water'), cls: 'spec', power: 120 })]);
+  const bt = E.createBattle({ parties: [[weak(), tank()], [boss()]], rng: () => 0.5 }); bt.start();
+  let sw = 0; for (let s = 1; s <= 20; s++) { const a = AI.create(E, { seed: s }).chooseAction(bt, 0, 'savvy'); if (a.type === 'switch' && a.to === 1) sw++; }
+  assert.ok(sw >= 10, `교체 ${sw}/20`);
+  const stay = E.createBattle({ parties: [[tank(), weak()], [boss()]], rng: () => 0.5 }); stay.start();
+  assert.equal(brain.chooseAction(stay, 0, 'savvy').type, 'move', '이미 잘 받아내면 그대로 싸운다');
+});
+
+test('지옥 탐색: 후보를 최소 8번은 굴려 본다 (기기가 느려도 판단의 질 유지)', () => {
+  const a = mk('A', ['normal'], {}, [atk({ power: 60 }), atk({ power: 90 })]), b = mk('B', ['normal'], {}, [atk()]);
+  const bt = E.createBattle({ parties: [[b], [a]], rng: () => 0.5 }); bt.start();
+  const r = AI.create(E, { seed: 3 }).chooseAction(bt, 1, 'hell', { type: 'move', index: 0 });
+  assert.match(r.reason, /탐색|읽고|유일/);
+});

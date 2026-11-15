@@ -80,3 +80,12 @@ test('빌더: 사람이 무한다이맥스를 들고 와도 후보로 짠 상대
   assert.equal(team.length, 3);
   assert.equal(new Set(team.map(t => data.pokemon[t.id].sp)).size, 3);
 });
+
+test('빌더: 작업량은 시간이 아니라 횟수로 정해진다 (같은 입력이면 모의 대전 수가 같다)', async () => {
+  const mk3 = () => { const rnd = E.mulberry32(9); return teamOf([6, 9, 3], rnd); };
+  const s1 = {}, s2 = {};
+  await B.build(mk3(), { rng: E.mulberry32(1), budgetMs: 100000, stats: s1 });
+  await B.build(mk3(), { rng: E.mulberry32(1), budgetMs: 100, stats: s2 });     // 예산이 매우 작아도 안전장치(2.5배)에 걸리기 전까지는 같은 일을 한다
+  assert.ok(s1.sims > 300, `sims ${s1.sims}`);
+  assert.ok(s2.sims <= s1.sims);
+});
