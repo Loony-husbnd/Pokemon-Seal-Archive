@@ -9,8 +9,8 @@
  *   쉬움  : 실수가 잦고(최선 기술 55%) 먼저 교체하지 않는다
  *   보통  : 대체로 최선(85%), 확실히 불리할 때만 교체
  *   어려움: 항상 최선 + 선공 KO/우선도/상성 교체까지 계산
- *   지옥  : 어려움 + 플레이어가 이번 턴 고른 행동을 미리 보고(chooseAction 의 4번째 인자) 그에 맞는 최선의 수를 둔다.
- *           (상대 파티·능력치도 따로 강화된다: BattleParty 의 hell 설정)
+ *   지옥  : 어려움 + 플레이어가 이번 턴 고른 행동을 미리 보고(chooseAction 의 4번째 인자) 후보 행동마다 배틀을 복제해 끝까지 굴려 보고(탐색)
+ *           가장 이기는 수를 고른다. 사람이 할 수 있는 판단만 쓴다(능력치 배율 같은 반칙은 없다).
  *
  * AI 는 엔진과 별도의 난수(opts.rng 또는 seed)를 쓰므로 엔진의 시드 재현성을 해치지 않는다.
  */
@@ -21,7 +21,7 @@
     easy:   { label: '쉬움',   best: 0.55, switchChance: 0,   ko: 0.6, replaceBest: 0.5,  status: 0.7 },
     normal: { label: '보통',   best: 0.85, switchChance: 0.6, ko: 1,   replaceBest: 0.85, status: 1 },
     hard:   { label: '어려움', best: 1,    switchChance: 1,   ko: 1.3, replaceBest: 1,    status: 1.1 },
-    hell:   { label: '지옥',   best: 1,    switchChance: 1,   ko: 1.5, replaceBest: 1,    status: 1.2, peek: true },
+    hell:   { label: '지옥',   best: 1,    switchChance: 1,   ko: 1.5, replaceBest: 1,    status: 1.2, peek: true, search: true },
   };
 
   function create(E, opts) {
@@ -647,11 +647,63 @@
       return best ? Object.assign({ reason: '지옥: 읽고 대응' }, best.action) : { type: 'move', index: 0 };
     }
 
+    // ───────────── 탐색 (지옥 난이도) ─────────────
+    const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    /** 복제한 배틀을 끝까지(또는 상한 턴까지) 굴려 si 쪽의 결과를 0~1 로 돌려준다. 양쪽은 '어려움' AI. */
+    function playOut(b, si, brains, turnCap) {
+      let guard = 0;
+      while (b.phase !== 'ended' && b.turn < turnCap && ++guard < 400) {
+        if (b.phase === 'switch') {
+          for (const p of b.pending.slice()) if (b.phase === 'switch' && b.pending.includes(p)) b.replace(p, brains[p].chooseReplacement(b, p, 'hard'));
+          continue;
+        }
+        const a0 = brains[0].chooseAction(b, 0, 'hard'), a1 = brains[1].chooseAction(b, 1, 'hard');
+        b.playTurn(a0, a1);
+      }
+      const hpSum = s2 => b.sides[s2].party.reduce((a, m) => a + (m.fainted ? 0 : m.hp / m.maxHp), 0);
+      // 이기더라도 체력을 많이 남기고 빨리 이기는 쪽이 낫고, 지더라도 상대 체력을 많이 깎은 쪽이 낫다 (동점일 때 더 좋은 수를 고르기 위해)
+      if (b.phase === 'ended') {
+        if (b.winner === si) return 0.9 + 0.1 * clampN(hpSum(si) / 3, 0, 1) - Math.min(0.03, b.turn * 0.0004);
+        if (b.winner === 1 - si) return 0.1 * (1 - clampN(hpSum(1 - si) / 3, 0, 1));
+        return 0.5;
+      }
+      const mine = hpSum(si), theirs = hpSum(1 - si);
+      return clampN(0.5 + (mine - theirs) / 6, 0.02, 0.98);                      // 시간 초과: 남은 체력 비율로 판단
+    }
+    /** 후보 행동들을 같은 조건으로 번갈아 굴려 평균 결과가 가장 좋은 것을 고른다 */
+    function searchBest(battle, si, candidates, evalOne, budgetMs) {
+      const t0 = nowMs(), sum = candidates.map(() => 0), cnt = candidates.map(() => 0);
+      for (let round = 0; round < 40; round++) {
+        for (let i = 0; i < candidates.length; i++) { sum[i] += evalOne(candidates[i], round * 97 + i); cnt[i]++; }
+        if (round >= 3 && nowMs() - t0 > budgetMs) break;
+      }
+      let bi = 0;
+      for (let i = 1; i < candidates.length; i++) if (sum[i] / cnt[i] > sum[bi] / cnt[bi]) bi = i;
+      return { index: bi, value: sum[bi] / cnt[bi], rounds: cnt[bi] };
+    }
+    function searchChoose(battle, si, la, foeAction, budgetMs) {
+      const cands = [];
+      la.moves.forEach(m => { if (m.usable) cands.push({ type: 'move', index: m.index }); });
+      la.switches.forEach(i => cands.push({ type: 'switch', to: i }));
+      if (!cands.length) return null;
+      if (cands.length === 1) return Object.assign({ reason: '지옥: 유일한 선택' }, cands[0]);
+      const foeSi = 1 - si;
+      const brains = [create(E, { seed: 11 }), create(E, { seed: 12 })];
+      const best = searchBest(battle, si, cands, (act, k) => {
+        const b = battle.fork(7000 + k);
+        const a = si === 0 ? [act, foeAction] : [foeAction, act];
+        b.playTurn(a[0], a[1]);
+        return playOut(b, si, brains, battle.turn + 40);
+      }, budgetMs || 350);
+      return Object.assign({ reason: `지옥: 탐색 ${(best.value * 100).toFixed(0)}%` }, cands[best.index]);
+    }
+
     function chooseAction(battle, si, level, foeAction) {
       const c = cfg(level);
       const la = battle.legalActions(si);
       if (la.mustStruggle) return { type: 'move', index: 0, reason: '발버둥' };
       if (c.peek && foeAction && foeAction.type !== 'surrender') {
+        if (c.search && battle.fork) { try { const r = searchChoose(battle, si, la, foeAction, c.budgetMs); if (r) return r; } catch (e) { /* 복제할 수 없는 상황이면 아래 규칙 기반으로 */ } }
         const r = peekChoose(battle, si, c, la, foeAction);
         if (r) return r;
       }
@@ -699,6 +751,20 @@
 
     function chooseReplacement(battle, si, level) {
       const c = cfg(level);
+      if (c.search && battle.fork && battle.phase === 'switch') {                 // 지옥: 교체해 들어올 포켓몬도 굴려 보고 고른다
+        const opts = battle.replaceOptions ? battle.replaceOptions(si) : [];
+        if (opts.length > 1) {
+          try {
+            const brains = [create(E, { seed: 21 }), create(E, { seed: 22 })];
+            const best = searchBest(battle, si, opts, (idx, k) => {
+              const b = battle.fork(9000 + k);
+              b.replace(si, idx);
+              return playOut(b, si, brains, battle.turn + 40);
+            }, c.budgetMs || 250);
+            return opts[best.index];
+          } catch (e) { /* 규칙 기반으로 */ }
+        }
+      }
       const foe = battle.active(1 - si);
       const alive = battle.replaceOptions ? battle.replaceOptions(si).slice() : [];
       if (!battle.replaceOptions) battle.sides[si].party.forEach((mon, i) => { if (!mon.fainted) alive.push(i); });

@@ -19,7 +19,7 @@ export function mount(root, { go, params }) {
   const Eng = E(), AI = window.BattleAI;
   const seed = Math.floor(Math.random() * 2 ** 31);
   const mkMon = t => Eng.makeMon(t.id, { name: formLabel(t.id), moves: t.moves });
-  const B = Eng.createBattle({ parties: [mine.map(mkMon), opp.map(mkMon)], names: ['나', '상대'], seed, statMult: window.BattleParty.statMult(level) });   // 지옥: 상대 능력치 ×1.5
+  const B = Eng.createBattle({ parties: [mine.map(mkMon), opp.map(mkMon)], names: ['나', '상대'], seed });
   const brain = AI.create(Eng, { seed: seed ^ 0x9e3779b9 });
   let alive = true, speed = Number(sessionStorage.getItem('proelium:speed')) || 1, skip = false, resolveChoice = null;
   const dmgBy = [0, 0, 0]; let kos = 0;

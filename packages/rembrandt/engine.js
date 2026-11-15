@@ -228,6 +228,20 @@
     };
   }
 
+  /** 객체 그래프 깊은 복사 (같은 객체를 가리키는 참조는 복사본에서도 같은 객체를 가리킨다). 배틀 복제(fork)에 쓴다 */
+  function deepClone(root) {
+    const seen = new Map();
+    const walk = v => {
+      if (v === null || typeof v !== 'object') return v;
+      if (seen.has(v)) return seen.get(v);
+      const out = Array.isArray(v) ? [] : {};
+      seen.set(v, out);
+      if (Array.isArray(v)) for (let i = 0; i < v.length; i++) out[i] = walk(v[i]);
+      else for (const k of Object.keys(v)) out[k] = walk(v[k]);
+      return out;
+    };
+    return walk(root);
+  }
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const stageMult = n => (n >= 0 ? (2 + n) / 2 : 2 / (2 - n));
   const accStageMult = n => (n >= 0 ? (3 + n) / 3 : 3 / (3 - n));
@@ -472,12 +486,6 @@
       const names = opts.names || ['나', '상대'];
       const maxTurns = opts.maxTurns || 500;
       if (!opts.parties || opts.parties.length !== 2 || opts.parties.some(p => !p.length)) throw new Error('양쪽 파티가 필요합니다.');
-      if (opts.statMult) {                                  // 능력치 배율 (opts.statMult = [내 쪽, 상대 쪽]) — 최고 난이도 '지옥'이 쓴다
-        opts.parties.forEach((party, i) => {
-          const m = opts.statMult[i] || 1;
-          if (m !== 1) party.forEach(mon => { Object.keys(mon.stats).forEach(k => { mon.stats[k] = Math.floor(mon.stats[k] * m); }); mon.maxHp = mon.stats.hp; mon.hp = mon.maxHp; });
-        });
-      }
 
       // 한쪽 진영에 걸리는 효과(함정·벽·순풍 …) / 양쪽에 걸리는 필드(날씨·필드·트릭룸)
       const newCond = () => ({ rocks: false, spikes: 0, tspikes: 0, web: false, reflect: 0, lightscreen: 0, veil: 0, tailwind: 0, safeguard: 0, mist: 0, lucky: 0, wish: null, hw: null, future: null });
@@ -2071,6 +2079,21 @@
 
       /** 지금 교체로 내보낼 수 있는 파티 인덱스 (쓰러지지 않았고 현재 나와 있지 않은 포켓몬) */
       B.replaceOptions = reservesOf;
+
+      /**
+       * 지금 상태를 복제한 새 배틀을 돌려준다 (탐색용: '이렇게 하면 어떻게 되나'를 실제 엔진으로 굴려 본다).
+       * 포켓몬·진영·필드 상태를 깊은 복사하고, 난수는 새 시드로 다시 시작한다. 턴 진행 도중(교체 대기 중인 교체 기술 등)에는 쓸 수 없다.
+       */
+      B.fork = function (seed) {
+        if (T || B.pivot) throw new Error('턴 도중에는 복제할 수 없습니다.');
+        const g = deepClone({ parties: sides.map(s => s.party), lastUsed: B.lastUsed, conds: sides.map(s => s.cond), echo: B.echo });
+        const nb = createBattle({ parties: g.parties, names, seed: seed === undefined ? Math.floor(rng() * 2 ** 31) : seed, maxTurns });
+        nb.sides.forEach((sd, i) => { sd.active = sides[i].active; sd.cond = g.conds[i]; });
+        Object.assign(nb.field, field);
+        nb.turn = B.turn; nb.phase = B.phase; nb.winner = B.winner; nb.pending = B.pending.slice();
+        nb.lastUsed = g.lastUsed; nb.echo = g.echo; nb.faintTurn = B.faintTurn.slice();
+        return nb;
+      };
 
       B.snapshot = function () {
         return {
