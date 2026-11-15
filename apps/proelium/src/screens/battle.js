@@ -6,11 +6,13 @@ import { wait } from '../fx.js';
 const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중', eva: '회피' };
 const STATUS_KO = { par: '마비', brn: '화상', psn: '독', tox: '맹독', slp: '수면', frz: '얼음' };
 const VOL_KO = { seeded: '씨뿌리기', taunt: '도발', encore: '앙코르', disable: '봉인', torment: '트집', yawn: '졸림', aquaRing: '아쿠아링', ingrain: '뿌리', sub: '대타', trapped: '가두기',
-  attract: '헤롱헤롱', nightmare: '악몽', perish: '멸망', focus: '기합', protect: '방어' };
+  attract: '헤롱헤롱', nightmare: '악몽', perish: '멸망', focus: '기합', protect: '방어',
+  cursed: '저주', octolock: '문어굳히기', lockOn: '록온', laserFocus: '집중', foresight: '간파', levitate: '부유', embargo: '금제', healBlock: '회복봉인', simple: '단순', insomnia: '불면',
+  tarred: '타르', noRetreat: '배수의진', imprison: '봉인술', destinyBond: '길동무', boostNext: '도우미', charging: '충전 중', stock: '비축' };
 const WEATHER_UI = { sun: '☀ 쾌청', rain: '☔ 비', sand: '🌪 모래바람', snow: '❄ 눈' };
 const TERRAIN_UI = { electric: '⚡ 일렉트릭필드', grassy: '🌿 그래스필드', misty: '🌫 미스트필드', psychic: '🔮 사이코필드' };
 const condList = c => [c.rocks && '스텔스록', c.spikes && `압정×${c.spikes}`, c.tspikes && `독압정×${c.tspikes}`, c.web && '끈적네트', c.reflect && '리플렉터', c.lightscreen && '빛의장막',
-  c.veil && '오로라베일', c.tailwind && '순풍', c.safeguard && '신비의부적', c.mist && '미스트'].filter(Boolean);
+  c.veil && '오로라베일', c.tailwind && '순풍', c.safeguard && '신비의부적', c.mist && '미스트', c.lucky && '주술'].filter(Boolean);
 
 export function mount(root, { go, params }) {
   const { mine, opp, level } = params;
@@ -86,6 +88,12 @@ export function mount(root, { go, params }) {
     if (f.weather) tags.push(WEATHER_UI[f.weather]);
     if (f.terrain) tags.push(TERRAIN_UI[f.terrain]);
     if (f.room) tags.push('🌀 트릭룸');
+    if (f.gravity) tags.push('⬇ 중력');
+    if (f.wonder) tags.push('🌀 원더룸');
+    if (f.magicRoom) tags.push('🌀 매직룸');
+    if (f.mud) tags.push('흙놀이');
+    if (f.waterSport) tags.push('물놀이');
+    if (f.fairyLock) tags.push('🔒 페어리록');
     $('#fieldbar').innerHTML = tags.map(t => `<span>${esc(t)}</span>`).join('');
     $('#wx').className = 'wx' + (f.weather ? ' ' + f.weather : '') + (f.terrain ? ' t-' + f.terrain : '');
   }
@@ -164,7 +172,7 @@ export function mount(root, { go, params }) {
         const m = cur(ev.side); m.hp = ev.hp; updateHp(ev.side); sfx.heal();
         const c = centerOf(ev.side);
         for (let i = 0; i < 8; i++) spawn('sparkle', '✦', { x: c.x + (Math.random() - .5) * 120, y: c.y + 20 }, `animation-delay:${i * 60}ms`, 1200);
-        float(ev.side, `+${ev.amount}`, 'heal'); say(ev.text); await pulse($('#mon-' + ev.side), 'healfx', 700); break;
+        if (ev.amount > 0) float(ev.side, `+${ev.amount}`, 'heal'); say(ev.text); await pulse($('#mon-' + ev.side), 'healfx', 700); break;
       }
       case 'status': {
         const m = cur(ev.side);
@@ -181,10 +189,12 @@ export function mount(root, { go, params }) {
         say(ev.text); await dly(700); break;
       }
       case 'stages': cur(ev.side).stages = Object.assign({}, ev.stages); renderPlate(ev.side); if (ev.text) { say(ev.text); await dly(600); } break;
-      case 'cure': { const s = U.side[ev.side]; for (const i of ev.indexes) { s.party[i].status = null; if (i === s.active) s.party[i].confusion = false; } renderPlate(ev.side); sfx.heal(); say(ev.text); await dly(700); break; }
+      case 'cure': { const s = U.side[ev.side]; for (const i of ev.indexes) { s.party[i].status = null; if (i === s.active) s.party[i].confusion = false; } renderPlate(ev.side); sfx.heal(); if (ev.text) { say(ev.text); await dly(700); } break; }
+      case 'sync': cur(ev.side).status = ev.status; renderPlate(ev.side); break;
+      case 'revive': { const m = U.side[ev.side].party[ev.index]; m.fainted = false; m.hp = ev.hp; m.maxHp = ev.maxHp; m.status = null; renderPlate(ev.side); sfx.heal(); say(ev.text); await dly(900); break; }
       case 'vol': cur(ev.side).vol = ev.flags; renderPlate(ev.side); break;
       case 'types': cur(ev.side).types = ev.types; renderPlate(ev.side); renderMon(ev.side, false); break;
-      case 'field': U.field = { weather: ev.weather, terrain: ev.terrain, room: ev.room, sides: ev.sides }; renderField(); renderPlate(0); renderPlate(1); await dly(450); break;
+      case 'field': U.field = { weather: ev.weather, terrain: ev.terrain, room: ev.room, gravity: ev.gravity, wonder: ev.wonder, magicRoom: ev.magicRoom, mud: ev.mud, waterSport: ev.waterSport, fairyLock: ev.fairyLock, sides: ev.sides }; renderField(); renderPlate(0); renderPlate(1); await dly(450); break;
       case 'faint': {
         const m = cur(ev.side); m.fainted = true; m.hp = 0; m.status = null; m.confusion = false; m.stages = {}; m.vol = {}; m.types = m.origTypes.slice();
         if (ev.side === 1) kos++;

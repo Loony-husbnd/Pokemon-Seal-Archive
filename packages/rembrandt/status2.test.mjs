@@ -506,12 +506,17 @@ test('능력 상승 신규: 소울비트(체력 33% 소모, 전부 +1), 날카�
 });
 
 // ───────────── 데이터 ─────────────
-test('데이터: 변화기 150개 (1단계 50 + 2단계 100)와 효과 형식', () => {
+test('데이터: 변화기 270개 (1단계 50 + 2단계 100 + 3단계 120)와 효과 형식', () => {
   const st = Object.entries(data.moves).filter(([, m]) => m.c === 'n');
-  assert.equal(st.length, 150);
+  assert.equal(st.length, 270);
   const known = new Set(['ail', 'tgt', 'self', 'heal', 'rest', 'hpCost', 'powder', 'typeImmune', 'weather', 'terrain', 'room', 'hazard', 'defog', 'screen', 'side', 'seed', 'taunt',
     'encore', 'disable', 'torment', 'yawn', 'aquaRing', 'ingrain', 'wish', 'roost', 'sandHeal', 'weatherHeal', 'focus', 'attract', 'nightmare', 'perish', 'protect', 'sub',
-    'painSplit', 'phaze', 'transform', 'splash', 'haze', 'metronome', 'sleepTalk', 'trap', 'spite', 'soak', 'randStat', 'reqFoeStatus', 'cure', 'cureFoe']);
+    'painSplit', 'phaze', 'transform', 'splash', 'haze', 'metronome', 'sleepTalk', 'trap', 'spite', 'soak', 'randStat', 'reqFoeStatus', 'cure', 'cureFoe',
+    // 3단계
+    'selfTrap', 'tidy', 'charge2', 'strengthSap', 'tar', 'terrainHeal', 'dead', 'faintSelf', 'revive', 'pivot', 'stockpile', 'swallow', 'gravity', 'wonder', 'magicRoom', 'sport', 'ion', 'electrify',
+    'fairyLock', 'courtChange', 'mimic', 'sketch', 'mirrorMove', 'copycat', 'meFirst', 'assist', 'naturePower', 'repeat', 'copyStages', 'typeChange', 'addType', 'setType', 'swapTypes', 'rolePlay',
+    'giveTypes', 'doodle', 'swapStages', 'invertStages', 'swapStat', 'ownSwap', 'splitStats', 'psychoShift', 'statusSwap', 'clearBoosts', 'embargo', 'healBlock', 'simple', 'insomnia', 'recycle',
+    'levitate', 'telekinesis', 'foresight', 'lockOn', 'laserFocus', 'curse', 'destinyBond', 'grudge', 'imprison', 'snatch', 'coat', 'dust', 'octolock', 'nextOrder', 'boostNext']);
   for (const [, m] of st) {
     assert.equal(m.pw, 0, m.e);
     const keys = Object.keys(m.fx);
@@ -523,7 +528,7 @@ test('데이터: 변화기 150개 (1단계 50 + 2단계 100)와 효과 형식', 
 });
 
 // ───────────── 무작위 대량 시험: 어떤 조합이든 엔진이 멈추거나 깨지지 않아야 한다 ─────────────
-test('무작위 대량 시험: 변화기 150개를 섞은 배틀 400판이 오류 없이 끝난다', () => {
+test('무작위 대량 시험: 변화기 270개를 섞은 배틀 400판이 오류 없이 끝난다', () => {
   const statusIds = Object.keys(data.moves).filter(i => data.moves[i].c === 'n').map(Number);
   const attackIds = Object.keys(data.moves).filter(i => data.moves[i].c !== 'n').map(Number);
   const rnd = E.mulberry32(77);
@@ -541,7 +546,7 @@ test('무작위 대량 시험: 변화기 150개를 섞은 배틀 400판이 오�
     while (bt.phase !== 'ended') {
       if (++guard > 400) throw new Error('끝나지 않음');
       if (bt.phase === 'switch') {
-        bt.pending.slice().forEach(s => bt.replace(s, bt.sides[s].party.findIndex(m => !m.fainted)));
+        bt.pending.slice().forEach(s => { if (bt.phase === 'switch' && bt.pending.includes(s)) bt.replace(s, bt.replaceOptions(s)[0]); });
         continue;
       }
       const pickAction = si => {

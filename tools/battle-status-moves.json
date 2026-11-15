@@ -1,5 +1,5 @@
 {
- "_doc": "변화기 150개(1단계 50 + 2단계 100). 키 = PokeAPI identifier. 이름·타입·명중·PP·우선도는 PokeAPI 에서, 효과(fx)는 여기서 정의한다. 스키마는 tools/build-battle-data.mjs 상단 참고.",
+ "_doc": "변화기 270개(1단계 50 + 2단계 100 + 3단계 120). 키 = PokeAPI identifier. 이름·타입·명중·PP·우선도는 PokeAPI 에서, 효과(fx)는 여기서 정의한다. 스키마는 tools/build-battle-data.mjs 상단 참고.",
  "moves": {
   "poison-powder": {
    "ail": {
@@ -1072,6 +1072,638 @@
   "lunar-blessing": {
    "heal": 25,
    "cure": "self"
+  },
+  "spicy-extract": {
+   "tgt": [
+    {
+     "stat": "atk",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "def",
+     "change": -2,
+     "chance": 100
+    }
+   ]
+  },
+  "gear-up": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "magnetic-flux": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "aromatic-mist": {
+   "self": [
+    {
+     "stat": "spd",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "flower-shield": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "rototiller": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "extreme-evoboost": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "def",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spe",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "no-retreat": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spe",
+     "change": 1,
+     "chance": 100
+    }
+   ],
+   "selfTrap": true
+  },
+  "stuff-cheeks": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "decorate": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "coaching": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "take-heart": {
+   "self": [
+    {
+     "stat": "spa",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 1,
+     "chance": 100
+    }
+   ],
+   "cure": "self"
+  },
+  "teatime": {
+   "heal": 25
+  },
+  "shelter": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "tidy-up": {
+   "self": [
+    {
+     "stat": "atk",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spe",
+     "change": 1,
+     "chance": 100
+    }
+   ],
+   "tidy": true
+  },
+  "dragon-cheer": {
+   "focus": true
+  },
+  "geomancy": {
+   "self": [
+    {
+     "stat": "spa",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 2,
+     "chance": 100
+    },
+    {
+     "stat": "spe",
+     "change": 2,
+     "chance": 100
+    }
+   ],
+   "charge2": true
+  },
+  "captivate": {
+   "tgt": [
+    {
+     "stat": "spa",
+     "change": -2,
+     "chance": 100
+    }
+   ]
+  },
+  "gastro-acid": {
+   "tgt": [
+    {
+     "stat": "def",
+     "change": -1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": -1,
+     "chance": 100
+    }
+   ]
+  },
+  "strength-sap": {
+   "tgt": [
+    {
+     "stat": "atk",
+     "change": -1,
+     "chance": 100
+    }
+   ],
+   "strengthSap": true
+  },
+  "tar-shot": {
+   "tgt": [
+    {
+     "stat": "spe",
+     "change": -1,
+     "chance": 100
+    }
+   ],
+   "tar": true
+  },
+  "heal-pulse": {
+   "heal": 50
+  },
+  "floral-healing": {
+   "heal": 50,
+   "terrainHeal": "grassy"
+  },
+  "celebrate": {
+   "splash": true
+  },
+  "happy-hour": {
+   "splash": true
+  },
+  "hold-hands": {
+   "splash": true
+  },
+  "ally-switch": {
+   "dead": "ally"
+  },
+  "follow-me": {
+   "dead": "ally"
+  },
+  "rage-powder": {
+   "dead": "ally"
+  },
+  "spotlight": {
+   "dead": "ally"
+  },
+  "bestow": {
+   "dead": "item"
+  },
+  "healing-wish": {
+   "faintSelf": "wish"
+  },
+  "lunar-dance": {
+   "faintSelf": "dance"
+  },
+  "memento": {
+   "tgt": [
+    {
+     "stat": "atk",
+     "change": -2,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": -2,
+     "chance": 100
+    }
+   ],
+   "faintSelf": "memento"
+  },
+  "revival-blessing": {
+   "revive": true
+  },
+  "teleport": {
+   "pivot": "out"
+  },
+  "baton-pass": {
+   "pivot": "baton"
+  },
+  "parting-shot": {
+   "tgt": [
+    {
+     "stat": "atk",
+     "change": -1,
+     "chance": 100
+    },
+    {
+     "stat": "spa",
+     "change": -1,
+     "chance": 100
+    }
+   ],
+   "pivot": "out"
+  },
+  "shed-tail": {
+   "pivot": "shed"
+  },
+  "chilly-reception": {
+   "weather": "snow",
+   "pivot": "out"
+  },
+  "stockpile": {
+   "self": [
+    {
+     "stat": "def",
+     "change": 1,
+     "chance": 100
+    },
+    {
+     "stat": "spd",
+     "change": 1,
+     "chance": 100
+    }
+   ],
+   "stockpile": true
+  },
+  "swallow": {
+   "swallow": true
+  },
+  "gravity": {
+   "gravity": true
+  },
+  "wonder-room": {
+   "wonder": true
+  },
+  "magic-room": {
+   "magicRoom": true
+  },
+  "mud-sport": {
+   "sport": "mud"
+  },
+  "water-sport": {
+   "sport": "water"
+  },
+  "ion-deluge": {
+   "ion": true
+  },
+  "electrify": {
+   "electrify": true
+  },
+  "fairy-lock": {
+   "fairyLock": true
+  },
+  "court-change": {
+   "courtChange": true
+  },
+  "lucky-chant": {
+   "side": "lucky"
+  },
+  "kings-shield": {
+   "protect": "king"
+  },
+  "spiky-shield": {
+   "protect": "spiky"
+  },
+  "baneful-bunker": {
+   "protect": "bunker"
+  },
+  "obstruct": {
+   "protect": "obstruct"
+  },
+  "silk-trap": {
+   "protect": "silk"
+  },
+  "burning-bulwark": {
+   "protect": "burning"
+  },
+  "max-guard": {
+   "protect": "maxguard"
+  },
+  "quick-guard": {
+   "protect": "quick"
+  },
+  "crafty-shield": {
+   "protect": "crafty"
+  },
+  "wide-guard": {
+   "protect": "wide"
+  },
+  "mat-block": {
+   "protect": "mat"
+  },
+  "mimic": {
+   "mimic": true
+  },
+  "sketch": {
+   "sketch": true
+  },
+  "mirror-move": {
+   "mirrorMove": true
+  },
+  "copycat": {
+   "copycat": true
+  },
+  "me-first": {
+   "meFirst": true
+  },
+  "assist": {
+   "assist": true
+  },
+  "nature-power": {
+   "naturePower": true
+  },
+  "instruct": {
+   "repeat": true
+  },
+  "psych-up": {
+   "copyStages": true
+  },
+  "conversion": {
+   "typeChange": "move"
+  },
+  "conversion-2": {
+   "typeChange": "resist"
+  },
+  "camouflage": {
+   "typeChange": "terrain"
+  },
+  "reflect-type": {
+   "typeChange": "mirror"
+  },
+  "trick-or-treat": {
+   "addType": 8
+  },
+  "forests-curse": {
+   "addType": 12
+  },
+  "magic-powder": {
+   "setType": 14,
+   "powder": true
+  },
+  "skill-swap": {
+   "swapTypes": true
+  },
+  "role-play": {
+   "rolePlay": true
+  },
+  "entrainment": {
+   "giveTypes": true
+  },
+  "doodle": {
+   "doodle": true
+  },
+  "power-swap": {
+   "swapStages": [
+    "atk",
+    "spa"
+   ]
+  },
+  "guard-swap": {
+   "swapStages": [
+    "def",
+    "spd"
+   ]
+  },
+  "heart-swap": {
+   "swapStages": "all"
+  },
+  "topsy-turvy": {
+   "invertStages": true
+  },
+  "speed-swap": {
+   "swapStat": "spe"
+  },
+  "power-trick": {
+   "ownSwap": [
+    "atk",
+    "def"
+   ]
+  },
+  "power-shift": {
+   "ownSwap": [
+    "atk",
+    "def"
+   ]
+  },
+  "power-split": {
+   "splitStats": [
+    "atk",
+    "spa"
+   ]
+  },
+  "guard-split": {
+   "splitStats": [
+    "def",
+    "spd"
+   ]
+  },
+  "psycho-shift": {
+   "psychoShift": true
+  },
+  "trick": {
+   "statusSwap": true
+  },
+  "switcheroo": {
+   "statusSwap": true
+  },
+  "corrosive-gas": {
+   "clearBoosts": true
+  },
+  "embargo": {
+   "embargo": true
+  },
+  "heal-block": {
+   "healBlock": true
+  },
+  "simple-beam": {
+   "simple": true
+  },
+  "worry-seed": {
+   "insomnia": true
+  },
+  "recycle": {
+   "recycle": true
+  },
+  "magnet-rise": {
+   "levitate": true
+  },
+  "telekinesis": {
+   "telekinesis": true
+  },
+  "foresight": {
+   "foresight": "ghost"
+  },
+  "odor-sleuth": {
+   "foresight": "ghost"
+  },
+  "miracle-eye": {
+   "foresight": "dark"
+  },
+  "lock-on": {
+   "lockOn": true
+  },
+  "mind-reader": {
+   "lockOn": true
+  },
+  "laser-focus": {
+   "laserFocus": true
+  },
+  "curse": {
+   "curse": true
+  },
+  "destiny-bond": {
+   "destinyBond": true
+  },
+  "grudge": {
+   "grudge": true
+  },
+  "imprison": {
+   "imprison": true
+  },
+  "snatch": {
+   "snatch": true
+  },
+  "magic-coat": {
+   "coat": true
+  },
+  "powder": {
+   "dust": true
+  },
+  "octolock": {
+   "octolock": true
+  },
+  "after-you": {
+   "nextOrder": 1
+  },
+  "quash": {
+   "nextOrder": -1
+  },
+  "helping-hand": {
+   "boostNext": true
   }
  },
  "_weights_doc": "Holo 무작위 기술 구성에서 각 변화기가 뽑히는 비중(기본 1). tools/simulate-status-moves.mjs 의 측정값(공격기 4번째 칸을 이 기술로 바꿨을 때의 승률 변화)을 바탕으로 한다.",
@@ -1121,12 +1753,43 @@
   "quiver-dance": 1.3,
   "yawn": 1.3,
   "light-screen": 1.3,
-  "pain-split": 1.2
+  "pain-split": 1.2,
+  "snatch": 0.5,
+  "camouflage": 0.5,
+  "gravity": 0.5,
+  "embargo": 0.5,
+  "magnet-rise": 0.5,
+  "electrify": 0.5,
+  "spiky-shield": 0.5,
+  "spotlight": 0.5,
+  "guard-split": 0.5,
+  "psycho-shift": 0.5,
+  "heal-block": 0.5,
+  "me-first": 0.5,
+  "magic-room": 0.5,
+  "reflect-type": 0.5,
+  "shed-tail": 0.5,
+  "topsy-turvy": 0.3,
+  "nature-power": 0.3,
+  "corrosive-gas": 0.3,
+  "teleport": 0.3
  },
  "unverified": [
+  "baneful-bunker",
   "belly-drum",
-  "victory-dance",
-  "lunar-blessing"
+  "burning-bulwark",
+  "gastro-acid",
+  "geomancy",
+  "kings-shield",
+  "lunar-blessing",
+  "obstruct",
+  "shelter",
+  "silk-trap",
+  "spiky-shield",
+  "stockpile",
+  "take-heart",
+  "teatime",
+  "victory-dance"
  ],
  "_unverified_doc": "PokeAPI 메타데이터가 불완전해서 교차 검증(능력 변화·회복량)을 건너뛰는 기술"
 }

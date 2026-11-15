@@ -1,5 +1,5 @@
 /**
- * 배틀 AI (3단계) — 규칙 기반, 외부 API 불필요
+ * 배틀 AI (3단계) — 규칙 기반, 외부 API 불필요 (변화기 270개 평가 포함)
  *
  *   const ai = BattleAI.create(BattleEngine, { seed: 1 });
  *   ai.chooseAction(battle, 1, 'normal')       → { type:'move', index } | { type:'switch', to }
@@ -155,13 +155,219 @@
         const v = (bestOf(me, fake, ctxMe) - bestOf(me, foe, ctxMe)) * 2;
         return v > 0 ? v : -1;
       }
-      if (fx.perish || fx.splash) return -1;
+      if (fx.perish || fx.splash || fx.dead) return -1;
       if (fx.protect) {
         if (fx.protect === 'endure' || me.protectStreak > 0) return -1;
+        if (fx.protect === 'mat' && me.turnsOut > 0) return -1;
         const residual = (['psn', 'tox', 'brn'].includes(foe.status) ? foe.maxHp * 0.1 : 0) + (foe.seeded ? foe.maxHp * 0.1 : 0) + (foe.perish ? foe.maxHp * 0.3 : 0)
-          + (foe.yawn > 0 ? foe.maxHp * 0.3 : 0) + (mine.wish ? me.maxHp * 0.3 : 0) + (field.weather === 'sand' && !foe.types.some(t => GROUND_ROCK_STEEL.includes(t)) ? foe.maxHp / 16 : 0);
-        return residual > 0 ? residual : -1;
+          + (foe.yawn > 0 ? foe.maxHp * 0.3 : 0) + (mine.wish ? me.maxHp * 0.3 : 0) + (field.weather === 'sand' && !foe.types.some(t => GROUND_ROCK_STEEL.includes(t)) ? foe.maxHp / 16 : 0)
+          + (foe.cursed ? foe.maxHp * 0.2 : 0) + (foe.octolock ? foe.maxHp * 0.1 : 0);
+        const foeAtk = foe.moves.filter(m => m.pp > 0 && m.cls !== 'status');
+        const k = fx.protect;
+        let extra = 0;
+        if (['king', 'spiky', 'bunker', 'obstruct', 'silk', 'burning'].includes(k) && foeAtk.some(m => m.contact)) extra = foe.maxHp * (k === 'spiky' ? 0.1 : 0.07);
+        if (k === 'quick') extra = foeAtk.some(m => m.pri > 0) ? me.maxHp * 0.25 : -1;
+        if (k === 'crafty') extra = foe.moves.some(m => m.cls === 'status' && m.pp > 0) ? me.maxHp * 0.06 : -1;
+        if (k === 'wide') extra = foeAtk.some(m => m.fx.hits) ? me.maxHp * 0.15 : -1;
+        if (k === 'mat') extra = me.maxHp * 0.12;
+        if (extra < 0 && residual <= 0) return -1;
+        const v = residual + Math.max(0, extra);
+        return v > 0 ? v : -1;
       }
+      // ───────────── 3단계 변화기 ─────────────
+      let fbMemo = null, mbMemo = null;                         // 필요할 때만 계산한다
+      const foeBest = () => (fbMemo === null ? (fbMemo = bestOf(foe, me, ctxFoe)) : fbMemo);
+      const meBest = () => (mbMemo === null ? (mbMemo = bestOf(me, foe, ctxMe)) : mbMemo);
+      const typeGain = (meT, foeT) => {                         // 타입이 바뀌었을 때 (받는 피해 감소 + 주는 피해 증가) × 2
+        const meF = Object.assign({}, me, { types: meT || me.types }), foeF = Object.assign({}, foe, { types: foeT || foe.types });
+        return ((foeBest() - bestOf(foe, meF, ctxFoe)) + (bestOf(me, foeF, ctxMe) - meBest())) * 2;
+      };
+      const ungroundMe = me.types.includes(3) || me.levitate > 0;
+      if (fx.pivot) {                                           // 순간이동 · 배턴터치 · 막말내뱉기 · 꼬리자르기 · 썰렁개그
+        if (!reserves(si) || me.trapped || me.noRetreat) return -1;
+        const danger = foeBest() >= me.hp * 0.55 ? 0.3 : 0.03;
+        let v = me.maxHp * danger;
+        if (fx.pivot === 'baton') v += Object.values(me.stages).reduce((a, x) => a + Math.max(0, x), 0) * 0.13 * me.maxHp + (me.sub > 0 ? 0.1 * me.maxHp : 0);
+        if (fx.pivot === 'shed') { if (me.sub > 0 || hpFrac <= 0.55) return -1; v = me.maxHp * (0.22 + danger * 0.3); }
+        (fx.tgt || []).forEach(c => { v -= stageValue(foe, me, c.stat, c.change); });
+        if (fx.weather && field.weather !== fx.weather) v += me.maxHp * 0.05;
+        return v;
+      }
+      if (fx.faintSelf === 'wish' || fx.faintSelf === 'dance') {
+        const party = B ? B.sides[si].party : [];
+        const gain = party.reduce((a, m, i) => a + (!m.fainted && i !== B.sides[si].active ? (m.maxHp - m.hp) + (m.status ? m.maxHp * 0.1 : 0) : 0), 0);
+        return reserves(si) && gain > me.maxHp * 0.7 && hpFrac < 0.3 ? gain * 0.8 : -1;
+      }
+      if (fx.faintSelf === 'memento') {
+        const boosted = Object.values(foe.stages).reduce((a, x) => a + Math.max(0, x), 0);
+        return hpFrac < 0.3 && (reserves(si)) ? foe.maxHp * (0.25 + 0.05 * boosted) : -1;
+      }
+      if (fx.revive) {
+        const dead = B ? B.sides[si].party.filter(m => m.fainted).length : 0;
+        return dead ? me.maxHp * 0.55 * turnFactor : -1;
+      }
+      if (fx.swallow) {
+        if (!me.stock || me.hp >= me.maxHp) return -1;
+        return Math.min(me.maxHp - me.hp, me.maxHp * [0, 0.25, 0.5, 1][me.stock]) * (hpFrac < 0.5 ? 1 : 0.4);
+      }
+      if (fx.stockpile && me.stock >= 3) return -1;
+      if (fx.selfTrap && me.noRetreat) return -1;
+      if (fx.tidy) {
+        const val = (c, mon) => ((c.rocks ? 0.14 : 0) + (c.spikes || 0) * 0.08 + (c.tspikes || 0) * 0.09 + (c.web ? 0.07 : 0)) * mon.maxHp;
+        return stageValue(me, foe, 'atk', 1) + stageValue(me, foe, 'spe', 1) + reserves(si) * val(mine, me) - reserves(1 - si) * val(theirs, foe) + (foe.sub > 0 ? me.maxHp * 0.1 : 0);
+      }
+      if (fx.gravity) {
+        if (field.gravity > 0) return -1;
+        const v = ((foe.types.includes(3) || foe.levitate > 0) ? 0.2 : 0) + (me.moves.some(m => m.acc && m.acc < 85) ? 0.12 : 0) - (ungroundMe ? 0.15 : 0);
+        return v > 0.05 ? v * me.maxHp : -1;
+      }
+      if (fx.wonder) {
+        const sw = (a, d, ctx) => bestOf(a, d, Object.assign({}, ctx, { wonder: true })) - bestOf(a, d, ctx);
+        const v = ((field.wonder > 0 ? -1 : 1) * (sw(me, foe, ctxMe) - sw(foe, me, ctxFoe))) * 3;
+        return v > 0.04 * me.maxHp ? v * 0.6 : -1;
+      }
+      if (fx.magicRoom) {
+        const sus = (m, c) => ((m.aquaRing ? 1 : 0) + (m.ingrain ? 1 : 0)) * m.maxHp / 16 * 3 + (c.wish ? m.maxHp * 0.25 : 0);
+        const d = sus(foe, theirs) - sus(me, mine);
+        const v = field.magicRoom > 0 ? -d : d;
+        return v > 0.05 * me.maxHp ? v * 0.6 : -1;
+      }
+      if (fx.sport) {
+        const key = fx.sport === 'mud' ? 'mud' : 'waterSport', ty = fx.sport === 'mud' ? 13 : 10;
+        if (field[key] > 0) return -1;
+        const foeHas = foe.moves.some(m => m.type === ty && m.cls !== 'status'), meHas = me.moves.some(m => m.type === ty && m.cls !== 'status');
+        return foeHas && !meHas ? me.maxHp * 0.18 : -1;
+      }
+      if (fx.ion) return me.types.includes(5) && foe.moves.some(m => m.type === 1 && m.cls !== 'status') ? me.maxHp * 0.3 : -1;
+      if (fx.electrify) return meFaster && me.types.includes(5) ? me.maxHp * 0.3 : -1;
+      if (fx.fairyLock) return foe.trapped || !reserves(1 - si) ? -1 : foe.maxHp * 0.04;
+      if (fx.courtChange) {
+        const val = (c, mon) => ((c.rocks ? 0.14 : 0) + (c.spikes || 0) * 0.08 + (c.tspikes || 0) * 0.09 + (c.web ? 0.07 : 0)) * mon.maxHp;
+        const scr = c => ((c.reflect > 0) + (c.lightscreen > 0) + (c.veil > 0)) * 0.15 * me.maxHp;
+        const v = reserves(1 - si) * val(mine, foe) - reserves(si) * val(theirs, me) + scr(theirs) - scr(mine);
+        return v > 0.06 * me.maxHp ? v : -1;
+      }
+      if (fx.side === 'lucky') return mine.lucky > 0 ? -1 : me.maxHp * 0.05;
+      if (fx.mimic || fx.sketch || fx.mirrorMove) {
+        const last = foe.moves[foe.lastMove];
+        if (!last || last.fx.mimic || last.fx.sketch || last.fx.transform || (fx.mirrorMove && last.fx.mirrorMove)) return -1;
+        if (me.moves.some(m => m.id && m.id === last.id)) return -1;
+        const worth = last.cls === 'status' ? me.maxHp * 0.1 : E.estimateDamage(me, foe, last, ctxMe).expected;
+        return worth * (fx.sketch ? 0.8 : fx.mirrorMove ? 0.9 : 0.6);
+      }
+      if (fx.copycat) return B && B.lastUsed ? me.maxHp * 0.1 : -1;
+      if (fx.assist) return reserves(si) ? me.maxHp * 0.1 : -1;
+      if (fx.meFirst) return meFaster && foe.moves.some(m => m.cls !== 'status' && m.pp > 0) ? foeBest() * 1.3 * 0.6 : -1;
+      if (fx.naturePower) return meBest() * 0.8;
+      if (fx.repeat) {
+        const prev = me.moves[me.prevMove];
+        return prev && prev.pp > 0 && prev.cls !== 'status' ? E.estimateDamage(me, foe, prev, ctxMe).expected * 0.9 : -1;
+      }
+      if (fx.copyStages || fx.doodle) {
+        let v = 0;
+        for (const k of Object.keys(foe.stages)) v += stageValue(me, foe, k, foe.stages[k] - me.stages[k]);
+        if (fx.doodle) v += Math.max(0, typeGain(null, null));
+        return v > 0.06 * me.maxHp ? v : -1;
+      }
+      if (fx.swapStages) {
+        const keys = fx.swapStages === 'all' ? Object.keys(me.stages) : fx.swapStages;
+        let v = 0;
+        for (const k of keys) v += stageValue(me, foe, k, foe.stages[k] - me.stages[k]) - stageValue(foe, me, k, me.stages[k] - foe.stages[k]);
+        return v > 0.06 * me.maxHp ? v : -1;
+      }
+      if (fx.invertStages) {
+        let v = 0;
+        for (const k of Object.keys(foe.stages)) v -= stageValue(foe, me, k, -2 * foe.stages[k]);
+        return v > 0.06 * me.maxHp ? v : -1;
+      }
+      if (fx.clearBoosts) {
+        const v = Object.values(foe.stages).reduce((a, x) => a + Math.max(0, x), 0) * 0.1 * foe.maxHp;
+        return v > 0.06 * me.maxHp ? v * accOf(mv) : -1;
+      }
+      if (fx.swapStat) return E.effectiveStat(me, 'spe') < E.effectiveStat(foe, 'spe') && !(me.ov && me.ov.spe) ? me.maxHp * 0.22 : -1;
+      if (fx.splitStats) {
+        const g = fx.splitStats.reduce((a, k) => a + Math.max(0, (foe.stats[k] - me.stats[k]) / 2 / me.stats[k]), 0);
+        return g > 0.15 ? me.maxHp * Math.min(0.4, g) * 0.5 : -1;
+      }
+      if (fx.ownSwap) {
+        const [a, b] = fx.ownSwap, used = hasClass(me, a === 'atk' ? 'phys' : 'spec');
+        return !(me.ov && me.ov[a] !== undefined) && used && me.stats[b] > me.stats[a] * 1.3 ? me.maxHp * 0.2 : -1;
+      }
+      if (fx.psychoShift) return me.status && !foe.status && !E.statusImmune(foe, me.status) ? foe.maxHp * (AIL_VALUE[me.status] || 0.2) + me.maxHp * 0.2 : -1;
+      if (fx.statusSwap) {
+        const d = (AIL_VALUE[me.status] || 0) * me.maxHp - (AIL_VALUE[foe.status] || 0) * foe.maxHp;
+        return d > 0.1 * me.maxHp && !(me.status && E.statusImmune(foe, me.status)) ? d : -1;
+      }
+      if (fx.embargo) {
+        const n = foe.moves.filter(m => m.cls === 'status' && m.pp > 0 && (m.fx.self || []).some(c => c.change > 0)).length;
+        return foe.embargo > 0 || !n ? -1 : foe.maxHp * 0.06 * n;
+      }
+      if (fx.healBlock) {
+        const heals = foe.moves.some(m => m.fx.heal || m.fx.rest || m.fx.wish) || foe.aquaRing || foe.ingrain || (me.hp < me.maxHp && false);
+        return foe.healBlock > 0 ? -1 : heals ? foe.maxHp * 0.12 : foe.maxHp * 0.02;
+      }
+      if (fx.simple) {
+        let v = 0;
+        for (const k of Object.keys(foe.stages)) v -= stageValue(foe, me, k, foe.stages[k]);
+        return foe.simple || v < 0.06 * me.maxHp ? -1 : v;
+      }
+      if (fx.insomnia) return -1;
+      if (fx.recycle) { const last = me.moves[me.prevMove]; return last && last.maxPp - last.pp >= 3 ? me.maxHp * 0.03 : -1; }
+      if (fx.typeChange) {
+        const k = fx.typeChange; let best = 0;
+        const cands = [];
+        if (k === 'move') me.moves.forEach(m => { if (m !== mv && m.type && !me.types.includes(m.type)) cands.push([m.type]); });
+        else if (k === 'resist') {
+          const last = foe.moves[foe.lastMove];
+          if (last && last.type) for (let t = 1; t <= 18; t++) if (E.typeMultiplier(last.type, [t]) < 1 && !me.types.includes(t)) cands.push([t]);
+        } else if (k === 'terrain') cands.push([{ electric: 13, grassy: 12, misty: 18, psychic: 14 }[field.terrain] || 1]);
+        else if (k === 'mirror') cands.push(foe.types.slice());
+        for (const t of cands) best = Math.max(best, typeGain(t, null));
+        return best > 0.06 * me.maxHp ? best * 0.8 : -1;
+      }
+      if (fx.addType || fx.setType || fx.giveTypes || fx.swapTypes || fx.rolePlay) {
+        if (fx.addType) { if (foe.types.includes(fx.addType)) return -1; const v = typeGain(null, foe.types.slice(0, 2).concat(fx.addType)); return v > 0.06 * me.maxHp ? v * accOf(mv) : -1; }
+        if (fx.setType) { const v = typeGain(null, [fx.setType]); return v > 0.06 * me.maxHp ? v * accOf(mv) : -1; }
+        if (fx.giveTypes) { const v = typeGain(null, me.types.slice()); return v > 0.06 * me.maxHp ? v * accOf(mv) : -1; }
+        if (fx.swapTypes) { const v = typeGain(foe.types.slice(), me.types.slice()); return v > 0.06 * me.maxHp ? v * accOf(mv) : -1; }
+        const v = typeGain(me.types.includes(foe.types[0]) ? me.types : [me.types[0], foe.types[0]], null);
+        return v > 0.06 * me.maxHp ? v : -1;
+      }
+      if (fx.levitate) return !ungroundMe && !(B && field.gravity > 0) && foe.moves.some(m => m.type === 5 && m.cls !== 'status' && m.pp > 0) ? me.maxHp * 0.25 : -1;
+      if (fx.telekinesis) return foe.float > 0 || (B && field.gravity > 0) || !me.moves.some(m => m.acc && m.acc < 80) ? -1 : me.maxHp * 0.1;
+      if (fx.foresight) {
+        const ghost = fx.foresight === 'ghost', t = ghost ? 8 : 17;
+        const key = ghost ? 'fsG' : 'fsD';
+        if (foe[key]) return -1;
+        const blocked = foe.types.includes(t) && me.moves.some(m => (ghost ? (m.type === 1 || m.type === 2) : m.type === 14) && m.cls !== 'status');
+        return blocked ? me.maxHp * 0.25 : foe.stages.eva > 0 ? me.maxHp * 0.15 : -1;
+      }
+      if (fx.lockOn) return me.lockOn > 0 || !me.moves.some(m => m.cls !== 'status' && m.acc && m.acc < 90) ? -1 : me.maxHp * 0.08;
+      if (fx.laserFocus) return me.laserFocus > 0 ? -1 : me.maxHp * 0.06;
+      if (fx.curse) {
+        if (me.types.includes(8)) return foe.cursed || hpFrac < 0.6 || foe.fainted ? -1 : Math.max(-1, foe.maxHp * 0.3 - me.maxHp * 0.45) > 0 ? foe.maxHp * 0.3 - me.maxHp * 0.45 : -1;
+        const v = stageValue(me, foe, 'atk', 1) + stageValue(me, foe, 'def', 1) + stageValue(me, foe, 'spe', -1);
+        return v > 0.04 * me.maxHp ? v * (0.5 + 0.5 * hpFrac) : -1;
+      }
+      if (fx.destinyBond) return hpFrac < 0.4 ? foe.maxHp * 0.4 : -1;
+      if (fx.grudge) return hpFrac < 0.3 ? me.maxHp * 0.05 : -1;
+      if (fx.imprison) {
+        const n = me.moves.filter(m => m.id && foe.moves.some(x => x.id === m.id)).length;
+        return me.imprison || !n ? -1 : me.maxHp * 0.08 * n;
+      }
+      if (fx.snatch) {
+        const n = foe.moves.filter(m => m.snatchable && m.pp > 0 && ((m.fx.self || []).some(c => c.change > 0) || m.fx.heal)).length;
+        return n ? me.maxHp * 0.1 * n : -1;
+      }
+      if (fx.coat) {
+        const n = foe.moves.filter(m => m.reflectable && m.pp > 0).length;
+        return n ? me.maxHp * 0.1 * n : -1;
+      }
+      if (fx.dust) return foe.powdered || foe.types.includes(12) || !foe.moves.some(m => m.type === 10 && m.pp > 0) ? -1 : foe.maxHp * 0.25;
+      if (fx.octolock) return foe.octolock || foe.trapped || foe.types.includes(8) ? -1 : foe.maxHp * 0.3 * accOf(mv);
+      if (fx.nextOrder) return fx.nextOrder > 0 ? (meFaster ? -1 : me.maxHp * 0.12) : (meFaster ? -1 : foe.maxHp * 0.12);
+      if (fx.boostNext) return me.boostNext > 0 ? -1 : meBest() * 0.45;
+
       if (fx.sub) return me.sub > 0 || me.hp <= me.maxHp * 0.3 ? -1 : (hpFrac > 0.6 ? me.maxHp * 0.1 : me.maxHp * 0.03);
       if (fx.painSplit) {
         const avg = Math.floor((me.hp + foe.hp) / 2);
@@ -241,6 +447,8 @@
           }
         }
         (fx.tgt || []).forEach(s => { v -= stageValue(foe, me, s.stat, s.change); });   // 상대 능력이 내려가면 내 이득
+        if (fx.strengthSap) v += Math.min(E.effectiveStat(foe, 'atk'), me.maxHp - me.hp) * (hpFrac < 0.6 ? 0.9 : 0.3);
+        if (fx.tar && me.moves.some(m => m.type === 10 && m.cls !== 'status' && m.pp > 0)) v += foe.maxHp * 0.2;
         v *= acc;
       } else {                                                       // ── 자신에게 쓰는 기술 ──
         if (fx.rest) {
@@ -250,7 +458,7 @@
         }
         if (fx.heal) {
           if (me.hp >= me.maxHp && !(fx.cure && me.status)) return -1;
-          const amt = Math.min(E.healAmountFor(fx, me.maxHp, weather), me.maxHp - me.hp);
+          const amt = Math.min(E.healAmountFor(fx, me.maxHp, weather, B ? B.field.terrain : null), me.maxHp - me.hp);
           v = amt * (hpFrac < 0.35 ? 1.05 : hpFrac < 0.6 ? 0.85 : 0.3);
           if (foeHit >= amt) v *= 0.35;                                // 회복량보다 더 많이 맞으면 버티기 싸움에서 진다
           if (fx.cure === 'self' && me.status) v += me.maxHp * 0.2;
@@ -265,6 +473,7 @@
         if (fx.self && !fx.heal && !fx.rest) {
           if (v <= 0) return -1;                                       // 더 올릴 수 없거나 손해인 능력 변화
           v *= 0.5 + 0.5 * hpFrac;                                     // 체력이 낮을 때 판돈을 키우지 않는다
+          if (fx.charge2) v *= 0.45;                                   // 힘을 모으는 첫 턴이 있다
         }
       }
       if (doomed && !fx.heal && !fx.rest) v *= 0.3;                    // 곧 쓰러질 상황의 준비 동작은 의미가 적다
@@ -364,8 +573,8 @@
     function chooseReplacement(battle, si, level) {
       const c = cfg(level);
       const foe = battle.active(1 - si);
-      const alive = [];
-      battle.sides[si].party.forEach((mon, i) => { if (!mon.fainted) alive.push(i); });
+      const alive = battle.replaceOptions ? battle.replaceOptions(si).slice() : [];
+      if (!battle.replaceOptions) battle.sides[si].party.forEach((mon, i) => { if (!mon.fainted) alive.push(i); });
       if (!alive.length) return -1;
       if (rng() > c.replaceBest) return alive[Math.floor(rng() * alive.length)];
       let best = alive[0], bestV = -Infinity;

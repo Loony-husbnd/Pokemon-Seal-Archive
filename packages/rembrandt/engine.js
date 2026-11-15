@@ -1,5 +1,5 @@
 /**
- * 포켓몬 배틀 엔진 (2단계) — 화면과 무관한 순수 로직
+ * 포켓몬 배틀 엔진 (3단계) — 화면과 무관한 순수 로직
  *
  * 로드 순서: packages/rembrandt/data/battle-data.js → packages/rembrandt/engine.js
  *   브라우저: window.BattleEngine (기본 데이터로 만든 엔진), window.createBattleEngine(data)
@@ -19,11 +19,15 @@
  *
  * 이벤트: { t, text, ... } 배열을 돌려준다. UI 는 t 로 연출을, text 로 한국어 메시지를 쓴다.
  *   turn switch move(cls: phys|spec|status) miss damage(cause: confusion|recoil|cost|상태이상) effective crit hits heal recoil status stage faint text needSwitch end
+ *   (3단계 추가) revive(쓰러진 포켓몬 부활) sync(상태이상 교환)
  *
  * 구현 범위(1차): 데미지 공식(Gen 9, Lv100), 상성, 자속, 급소, 명중/회피, 다단 히트,
  *   풀죽음, 상태이상(화상·마비·독·맹독·잠듦·얼음), 혼란, 능력 단계, 흡수/반동, 발버둥, 교체.
  *   변화기 1단계(cls 'status'): 상대에게 상태이상·능력 하락, 자신의 능력 상승, 체력 회복(잠자기·뱃대띠 포함).
- *   특성·도구·날씨·필드·보호·대타 등 몇 턴 지속되는 효과는 아직 없다.
+ *   변화기 2단계: 날씨·필드·함정·벽·지속 효과·보호·대타. 변화기 3단계(270개 완성): 교체 기술(배턴터치·유턴류), 흉내·복사,
+ *   타입 변경, 능력 교환·분배, 방어 변종(킹실드 등), 중력·원더룸 등 필드, 길동무·저주 등.
+ *   특성·도구는 없다 (그것이 필요한 기술은 비슷한 효과로 바꿔 구현했고, 효과는 describeEffect 에 그대로 적혀 있다).
+ *   기술 도중 교체(턴 중간 교체): playTurn 이 phase 'switch' 로 멈추면 battle.replace(side, 파티 인덱스) 로 이어 간다.
  *
  * 난수 소비 순서(테스트에서 rng 를 고정할 때 참고): 선공 동률 → [행동 전 판정] → 명중 →
  *   (히트마다: 급소 → 데미지 난수) → 추가효과(풀죽음 → 상태이상 → 능력 변화 순, 확률 판정마다 1회)
@@ -33,13 +37,14 @@
 
   const STAT_KO = { atk: '공격', def: '방어', spa: '특수공격', spd: '특수방어', spe: '스피드', acc: '명중률', eva: '회피율' };
   const STAT_KEYS = ['atk', 'def', 'spa', 'spd', 'spe', 'acc', 'eva'];
-  const FLYING = 3, POISON = 4, GROUND = 5, ROCK = 6, GHOST = 8, STEEL = 9, FIRE = 10, WATER = 11, GRASS = 12, ELECTRIC = 13, PSYCHIC = 14, ICE = 15, DRAGON = 16;
+  const NORMAL = 1, FIGHTING = 2, DARK = 17, FAIRY = 18, FLYING = 3, POISON = 4, GROUND = 5, ROCK = 6, GHOST = 8, STEEL = 9, FIRE = 10, WATER = 11, GRASS = 12, ELECTRIC = 13, PSYCHIC = 14, ICE = 15, DRAGON = 16;
   const STAT_SHORT = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중', eva: '회피' };
   const AIL_KO = { par: '마비', slp: '잠듦', brn: '화상', psn: '독', tox: '맹독', frz: '얼음', cnf: '혼란' };
 
   /** 회복량 (분수로 계산해 오차가 없게 한다). 달빛류는 날씨에 따라, 모래모으기는 모래바람일 때 늘어난다 */
-  function healAmountFor(fx, maxHp, weather) {
+  function healAmountFor(fx, maxHp, weather, terrain) {
     let n = fx.heal, d = 100;
+    if (fx.terrainHeal && terrain === fx.terrainHeal) { n = 2; d = 3; }
     if (fx.weatherHeal) { if (weather === 'sun') { n = 2; d = 3; } else if (weather) { n = 1; d = 4; } else { n = 1; d = 2; } }
     if (fx.sandHeal) { if (weather === 'sand') { n = 2; d = 3; } else { n = 1; d = 2; } }
     return Math.max(1, Math.floor(maxHp * n / d));
@@ -58,8 +63,16 @@
   const TERRAIN_KO = { electric: '일렉트릭필드', grassy: '그래스필드', misty: '미스트필드', psychic: '사이코필드' };
   const HAZARD_KO = { rocks: '상대 쪽에 스텔스록', spikes: '상대 쪽에 압정(최대 3겹)', tspikes: '상대 쪽에 독압정(최대 2겹)', web: '상대 쪽에 끈적네트' };
   const SCREEN_KO = { reflect: '물리 피해 절반 5턴', lightscreen: '특수 피해 절반 5턴', veil: '모든 피해 절반 5턴(눈일 때)' };
-  const SIDE_KO = { tailwind: '스피드 2배 4턴', safeguard: '상태이상 방지 5턴', mist: '능력 하락 방지 5턴' };
-  const PROTECT_KO = { protect: '이번 턴 공격 막기', endure: '이번 턴 1만 남기고 버티기' };
+  const SIDE_KO = { tailwind: '스피드 2배 4턴', safeguard: '상태이상 방지 5턴', mist: '능력 하락 방지 5턴', lucky: '급소 방지 5턴' };
+  const PROTECT_KO = {
+    protect: '이번 턴 공격 막기', endure: '이번 턴 1만 남기고 버티기', maxguard: '이번 턴 모든 기술 막기',
+    king: '공격 막기 · 접촉한 상대 공격 −1', spiky: '공격 막기 · 접촉한 상대 체력 1/8 피해', bunker: '이번 턴 기술 막기 · 접촉한 상대 독',
+    obstruct: '공격 막기 · 접촉한 상대 방어 −2', silk: '공격 막기 · 접촉한 상대 스피드 −1', burning: '공격 막기 · 접촉한 상대 화상',
+    quick: '우선도 높은 공격 막기', crafty: '상대의 변화기 막기', wide: '다단 히트 공격 막기', mat: '등장한 첫 턴에만 · 공격 막기',
+  };
+  const PIVOT_KO = { out: '쓴 뒤 바로 교체', baton: '능력 변화를 넘기고 교체', shed: '체력 절반으로 대타를 만들어 넘기고 교체' };
+  const FAINT_KO = { wish: '자신은 쓰러지고 다음 포켓몬 체력·상태 완전 회복', dance: '자신은 쓰러지고 다음 포켓몬 체력·상태·PP 완전 회복', memento: '자신이 쓰러진다' };
+  const TYPECHANGE_KO = { move: '자신의 기술 중 하나의 타입으로 변경', resist: '상대의 마지막 기술을 반감하는 타입으로 변경', terrain: '필드에 맞는 타입으로 변경', mirror: '상대와 같은 타입으로 변경' };
   const MISC_KO = {
     seed: '씨뿌리기(매 턴 흡수)', taunt: '도발(변화기 봉인)', encore: '앙코르(같은 기술 강제)', disable: '마지막 기술 봉인', torment: '같은 기술 연속 사용 봉인',
     yawn: '다음 턴 잠듦', aquaRing: '매 턴 체력 회복', ingrain: '매 턴 회복 · 교체 불가', wish: '다음 턴 체력 회복', focus: '급소율 크게 상승',
@@ -67,18 +80,48 @@
     painSplit: '서로의 체력을 평균', phaze: '상대를 강제 교체', transform: '상대로 변신', splash: '아무 일도 일어나지 않음', haze: '모든 능력 변화 초기화',
     metronome: '무작위 기술 사용', sleepTalk: '잠든 동안 무작위 기술', trap: '상대 교체 불가', spite: '상대 기술 PP 감소', soak: '상대를 물 타입으로',
     room: '느린 쪽이 먼저(5턴)', defog: '함정·벽 제거', cureFoe: '상대 상태이상 제거', randStat: '무작위 능력 크게 상승',
+    revive: '쓰러진 동료 1마리를 체력 절반으로 부활', gravity: '중력(5턴): 모두 땅에 붙고 명중 ×5/3', wonder: '원더룸(5턴): 방어와 특수방어 뒤바뀜', magicRoom: '매직룸(5턴): 턴 종료 회복 효과 정지',
+    ion: '이번 턴 노말 기술이 전기 타입으로', electrify: '상대의 다음 기술이 전기 타입으로', fairyLock: '다음 턴 양쪽 모두 교체 불가', courtChange: '양쪽 진영의 함정·벽을 맞바꿈',
+    mimic: '상대의 마지막 기술을 이 칸에 복사(교체 전까지)', sketch: '상대의 마지막 기술을 이 칸에 영구 복사', mirrorMove: '상대의 마지막 기술을 그대로 사용', copycat: '직전에 쓰인 기술을 그대로 사용',
+    meFirst: '상대가 고른 공격기를 먼저 빼앗아 1.5배로 사용', assist: '동료의 기술을 무작위로 사용', naturePower: '필드에 맞는 공격기를 사용', repeat: '방금 쓴 자신의 기술을 한 번 더 사용',
+    copyStages: '상대의 능력 변화를 복사', invertStages: '상대의 능력 변화를 뒤집음', swapTypes: '서로의 타입을 맞바꿈', rolePlay: '상대의 첫 타입을 자신에게 추가', giveTypes: '상대를 자신과 같은 타입으로',
+    doodle: '상대의 타입과 능력 변화를 복사', psychoShift: '자신의 상태이상을 상대에게 옮김', statusSwap: '서로의 상태이상을 맞바꿈', clearBoosts: '상대의 올라간 능력을 초기화',
+    embargo: '상대가 5턴간 능력을 올릴 수 없음', healBlock: '상대가 5턴간 회복할 수 없음', simple: '상대의 능력 변화가 2배가 됨', insomnia: '상대는 잠들지 않고, 자고 있으면 깨어남',
+    recycle: '마지막으로 쓴 기술의 PP 5 회복', strengthSap: '상대의 공격 능력치만큼 회복', stockpile: '비축(최대 3): 방어·특방 상승', swallow: '비축한 만큼 회복(25/50/100%)',
+    charge2: '첫 턴은 힘을 모으고 다음 턴에 효과', tidy: '양쪽의 함정과 대타 제거', selfTrap: '이후 교체할 수 없음', levitate: '5턴간 공중에 떠서 땅 기술 무효', telekinesis: '상대를 3턴간 띄움(땅 기술 무효 · 필중)',
+    lockOn: '다음 기술이 반드시 명중', laserFocus: '다음 턴까지 급소에 반드시 명중', curse: '고스트: 체력 절반으로 상대 저주 / 그 외: 공격·방어 +1 스피드 −1',
+    destinyBond: '이 기술 뒤 쓰러지면 상대도 함께 쓰러짐', grudge: '이 기술 뒤 쓰러지면 상대 기술의 PP가 0', imprison: '내가 가진 기술을 상대가 쓰지 못함', snatch: '상대의 강화·회복 기술을 가로챔',
+    coat: '이번 턴 상대의 변화기를 되받아침', dust: '이번 턴 상대의 불꽃 기술 실패 + 체력 1/4 피해', octolock: '상대를 가두고 매 턴 방어·특방 −1', tar: '불꽃 기술이 상대에게 2배', boostNext: '다음 턴 자신의 공격 위력 1.5배',
+    nextOrder: '', terrainHeal: '', dead: '',
   };
+
+  const TYPE_NAMES = ['', '노말', '격투', '비행', '독', '땅', '바위', '벌레', '고스트', '강철', '불꽃', '물', '풀', '전기', '에스퍼', '얼음', '드래곤', '악', '페어리'];
+  const typeName = id => TYPE_NAMES[id] || '?';
 
   /** 변화기 효과를 한 줄로 요약한다 (화면용). 예: '상대 마비' · '공격 +2' · '체력 50% 회복' */
   function describeEffect(move) {
     const fx = move.fx || {}, out = [];
+    if (fx.dead) return fx.dead === 'ally' ? '싱글 배틀에서는 효과 없음(아군이 필요)' : '효과 없음(건넬 도구가 없다)';
     if (fx.weather) out.push(`날씨: ${WEATHER_KO[fx.weather]} 5턴`);
     if (fx.terrain) out.push(`${TERRAIN_KO[fx.terrain]} 5턴`);
     if (fx.hazard) out.push(HAZARD_KO[fx.hazard]);
     if (fx.screen) out.push(SCREEN_KO[fx.screen]);
     if (fx.side) out.push(SIDE_KO[fx.side]);
     if (fx.protect) out.push(PROTECT_KO[fx.protect]);
-    for (const k of Object.keys(MISC_KO)) if (fx[k]) out.push(MISC_KO[k]);
+    if (fx.pivot) out.push(PIVOT_KO[fx.pivot]);
+    if (fx.faintSelf) out.push(FAINT_KO[fx.faintSelf]);
+    if (fx.typeChange) out.push(TYPECHANGE_KO[fx.typeChange]);
+    if (fx.addType) out.push(`상대에게 ${typeName(fx.addType)} 타입 추가`);
+    if (fx.setType) out.push(`상대를 ${typeName(fx.setType)} 타입으로`);
+    if (fx.sport) out.push(fx.sport === 'mud' ? '흙놀이(5턴): 전기 기술 위력 1/3' : '물놀이(5턴): 불꽃 기술 위력 1/3');
+    if (fx.foresight) out.push(fx.foresight === 'ghost' ? '상대의 회피 무시 · 고스트에도 노말·격투 적중' : '상대의 회피 무시 · 악에도 에스퍼 적중');
+    if (fx.swapStages) out.push(fx.swapStages === 'all' ? '서로의 능력 변화를 모두 맞바꿈' : `서로의 ${fx.swapStages.map(k => STAT_SHORT[k]).join('·')} 변화를 맞바꿈`);
+    if (fx.swapStat) out.push(`서로의 ${STAT_SHORT[fx.swapStat]} 능력치를 맞바꿈`);
+    if (fx.ownSwap) out.push(`자신의 ${josa(STAT_SHORT[fx.ownSwap[0]], '과/와')} ${STAT_SHORT[fx.ownSwap[1]]} 능력치를 맞바꿈`);
+    if (fx.splitStats) out.push(`서로의 ${fx.splitStats.map(k => STAT_SHORT[k]).join('·')} 능력치를 평균으로`);
+    if (fx.nextOrder) out.push(fx.nextOrder > 0 ? '다음 턴 먼저 움직임' : '상대가 다음 턴 가장 늦게 움직임');
+    if (fx.terrainHeal) out.push('그래스필드에서는 회복량 증가');
+    for (const k of Object.keys(MISC_KO)) if (fx[k] && MISC_KO[k]) out.push(MISC_KO[k]);
     if (fx.rest) out.push('체력 전부 회복 · 잠듦');
     if (fx.heal) out.push(`체력 ${fx.weatherHeal ? '날씨별 ' : ''}${fx.heal}% 회복`);
     if (fx.cure === 'self') out.push('상태이상 회복');
@@ -131,6 +174,10 @@
       seeded: false, taunt: 0, encore: 0, encoreMove: -1, disable: 0, disableMove: -1, torment: false, yawn: 0,
       aquaRing: false, ingrain: false, roost: false, focus: false, sub: 0, protect: false, protectStreak: 0, endure: false,
       trapped: false, attract: false, nightmare: false, perish: 0, lastMove: -1,
+      // 3단계
+      prevMove: -1, stock: 0, turnsOut: 0, lockOn: 0, laserFocus: 0, fsG: false, fsD: false, cursed: false, destinyBond: false, grudge: false, imprison: false,
+      snatching: false, coat: false, powdered: false, electrified: false, octolock: false, tarred: false, levitate: 0, float: 0, embargo: 0, healBlock: 0,
+      simple: false, insomnia: false, added: 0, ov: null, charging: null, nextOrder: 0, boostNext: 0, noRetreat: false, mimicOrig: null,
     };
   }
 
@@ -142,17 +189,32 @@
     const CHART = data.chart;
 
     // ───────────── 기본 계산 ─────────────
-    function typeMultiplier(moveType, defTypes) {
+    function typeMultiplier(moveType, defTypes, c) {
       if (!moveType) return 1; // 무속성(발버둥 등)
       let m = 1;
-      for (const t of defTypes) m *= CHART[moveType - 1][t - 1];
+      for (const t of defTypes) {
+        let v = CHART[moveType - 1][t - 1];
+        if (v === 0 && c) {                      // 꿰뚫어보기·미라클아이·중력이 무효를 풀어 준다
+          if (c.fsG && t === GHOST && (moveType === NORMAL || moveType === FIGHTING)) v = 1;
+          else if (c.fsD && t === DARK && moveType === PSYCHIC) v = 1;
+          else if (c.gravity && t === FLYING && moveType === GROUND) v = 1;
+        }
+        m *= v;
+      }
+      if (c) {
+        if (moveType === GROUND && c.defLevitate && !c.gravity) return 0;     // 전자부유·텔레키네시스
+        if (moveType === FIRE && c.tar) m *= 2;                                // 타르샷
+      }
       return m;
     }
+
+    /** 능력치 원본 (파워트릭·스피드스왑 등으로 바뀐 값 포함) */
+    const baseStat = (mon, key) => (mon.ov && mon.ov[key] !== undefined ? mon.ov[key] : mon.stats[key]);
 
     function effectiveStat(mon, key, opts) {
       let stage = mon.stages[key];
       if (opts && opts.crit) stage = opts.attacking ? Math.max(0, stage) : Math.min(0, stage);
-      let v = Math.floor(mon.stats[key] * stageMult(stage));
+      let v = Math.floor(baseStat(mon, key) * stageMult(stage));
       if (key === 'spe' && mon.status === 'par') v = Math.floor(v / 2);
       return Math.max(1, v);
     }
@@ -167,14 +229,17 @@
       if (move.cls === 'status') return { damage: 0, eff: 1, crit: false };   // 변화기는 데미지가 없다
       const phys = move.cls === 'phys';
       const atkKey = phys ? 'atk' : 'spa';
-      const defKey = (phys || move.fx.useDef) ? 'def' : 'spd';
       const c = o.ctx;
+      let defKey = (phys || move.fx.useDef) ? 'def' : 'spd';
+      if (c && c.wonder) defKey = defKey === 'def' ? 'spd' : 'def';       // 원더룸
       const A = effectiveStat(att, atkKey, o.crit ? { crit: true, attacking: true } : null);
       let D = effectiveStat(def, defKey, o.crit ? { crit: true, attacking: false } : null);
-      const eff = typeMultiplier(move.type, def.types);
+      const eff = typeMultiplier(move.type, def.types, c);
       if (eff === 0) return { damage: 0, eff: 0, crit: !!o.crit };
       let power = move.power;
       if (c) {
+        if (c.helping) power = Math.floor(power * 1.5);                      // 도우미
+        if ((c.mud && move.type === ELECTRIC) || (c.waterSport && move.type === FIRE)) power = Math.floor(power / 3);   // 흙놀이·물놀이
         if (c.terrain && c.attGrounded && ((c.terrain === 'electric' && move.type === ELECTRIC) || (c.terrain === 'grassy' && move.type === GRASS) ||
             (c.terrain === 'psychic' && move.type === PSYCHIC))) power = Math.floor(power * 1.3);
         if (c.terrain === 'misty' && c.defGrounded && move.type === DRAGON) power = Math.floor(power * 0.5);
@@ -203,7 +268,7 @@
       if (move.cls === 'status') return { min: 0, max: 0, avg: 0, expected: 0, eff: 1 };
       const lo = calcDamage(att, def, move, { roll: 85, ctx }).damage;
       const hi = calcDamage(att, def, move, { roll: 100, ctx }).damage;
-      const eff = typeMultiplier(move.type, def.types);
+      const eff = typeMultiplier(move.type, def.types, ctx);
       const fx = move.fx;
       const hits = fx.hits ? (fx.hits[0] === 2 && fx.hits[1] === 5 ? 3.1 : (fx.hits[0] + fx.hits[1]) / 2) : 1;
       const acc = fx.neverMiss || move.acc === null ? 1 : move.acc / 100;
@@ -215,7 +280,8 @@
     function makeMove(id) {
       const m = data.moves[id];
       if (!m) throw new Error(`알 수 없는 기술 ID: ${id}`);
-      return { id: Number(id), name: m.k, type: m.t, cls: m.c === 'p' ? 'phys' : m.c === 'n' ? 'status' : 'spec', power: m.pw, acc: m.ac, pp: m.pp, maxPp: m.pp, pri: m.pr, fx: m.fx || {} };
+      return { id: Number(id), name: m.k, type: m.t, cls: m.c === 'p' ? 'phys' : m.c === 'n' ? 'status' : 'spec', power: m.pw, acc: m.ac, pp: m.pp, maxPp: m.pp, pri: m.pr, fx: m.fx || {},
+        contact: !!m.ct, reflectable: !!m.rf, snatchable: !!m.sn };
     }
 
     function makeCustomMon(spec) {
@@ -226,7 +292,7 @@
       STAT_KEYS.forEach(k => { stages[k] = 0; });
       return Object.assign({
         name: spec.name, dataId: spec.dataId || null, tag: spec.tag || null,
-        types: spec.types.slice(), stats: st, maxHp: st.hp, hp: st.hp,
+        types: spec.types.slice(), natTypes: spec.types.slice(), stats: st, maxHp: st.hp, hp: st.hp,
         moves: spec.moves.map(m => Object.assign({}, m, { maxPp: m.maxPp || m.pp, fx: m.fx || {} })),
         status: null, sleepTurns: 0, toxCount: 0, confusion: 0, flinch: false, fainted: false, stages, base: null,
       }, freshVolatile());
@@ -251,15 +317,16 @@
       if (!opts.parties || opts.parties.length !== 2 || opts.parties.some(p => !p.length)) throw new Error('양쪽 파티가 필요합니다.');
 
       // 한쪽 진영에 걸리는 효과(함정·벽·순풍 …) / 양쪽에 걸리는 필드(날씨·필드·트릭룸)
-      const newCond = () => ({ rocks: false, spikes: 0, tspikes: 0, web: false, reflect: 0, lightscreen: 0, veil: 0, tailwind: 0, safeguard: 0, mist: 0, wish: null });
+      const newCond = () => ({ rocks: false, spikes: 0, tspikes: 0, web: false, reflect: 0, lightscreen: 0, veil: 0, tailwind: 0, safeguard: 0, mist: 0, lucky: 0, wish: null, hw: null });
       const sides = opts.parties.map((party, i) => ({ index: i, name: names[i], party, active: 0, cond: newCond() }));
-      const field = { weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0, room: 0 };
+      const field = { weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0, room: 0, gravity: 0, wonder: 0, magicRoom: 0, mud: 0, waterSport: 0, ion: false, fairyLock: 0 };
       const B = {
         sides, field, turn: 0, phase: 'init', winner: null, pending: [], log: [],
-        rng,
+        rng, pivot: null, lastUsed: null,
       };
       let events = [];
       let curActed = [false, false];
+      let T = null;          // 진행 중인 턴 { queue, qi, acted } — 턴 도중 교체로 멈췄다가 이어 가기 위해 보관한다
 
       const emit = ev => { events.push(ev); B.log.push(ev); return ev; };
       const text = (msg, extra) => emit(Object.assign({ t: 'text', text: msg }, extra));
@@ -274,33 +341,53 @@
       function drain() { const e = events; events = []; return e; }
 
       // ───────── 상태 조회 / 화면 갱신용 이벤트 ─────────
-      const grounded = mon => !(mon.types.includes(FLYING) && !mon.roost);        // 날개쉬기 중에는 비행 타입이 아니다
-      const isTrapped = mon => !!(mon.trapped || mon.ingrain) && !mon.types.includes(GHOST);
-      const condView = c => ({ rocks: c.rocks, spikes: c.spikes, tspikes: c.tspikes, web: c.web, reflect: c.reflect, lightscreen: c.lightscreen, veil: c.veil, tailwind: c.tailwind, safeguard: c.safeguard, mist: c.mist });
-      const emitField = () => emit({ t: 'field', weather: field.weather, terrain: field.terrain, room: field.room, sides: [condView(sides[0].cond), condView(sides[1].cond)] });
+      // 중력이면 모두 땅에 붙는다. 날개쉬기·전자부유·텔레키네시스 중에는 땅에서 떠 있다
+      const grounded = mon => field.gravity > 0 || mon.ingrain || !((mon.types.includes(FLYING) && !mon.roost) || mon.levitate > 0 || mon.float > 0);
+      const isTrapped = mon => (!!(mon.trapped || mon.ingrain || mon.noRetreat) && !mon.types.includes(GHOST)) || field.fairyLock > 0;
+      const condView = c => ({ rocks: c.rocks, spikes: c.spikes, tspikes: c.tspikes, web: c.web, reflect: c.reflect, lightscreen: c.lightscreen, veil: c.veil, tailwind: c.tailwind, safeguard: c.safeguard, mist: c.mist, lucky: c.lucky });
+      const fieldView = () => ({ weather: field.weather, terrain: field.terrain, room: field.room, gravity: field.gravity, wonder: field.wonder, magicRoom: field.magicRoom, mud: field.mud, waterSport: field.waterSport, fairyLock: field.fairyLock });
+      const emitField = () => emit(Object.assign({ t: 'field' }, fieldView(), { sides: [condView(sides[0].cond), condView(sides[1].cond)] }));
       const volView = mon => ({
         seeded: mon.seeded, taunt: mon.taunt > 0, encore: mon.encore > 0, disable: mon.disable > 0, torment: mon.torment, yawn: mon.yawn > 0,
         aquaRing: mon.aquaRing, ingrain: mon.ingrain, sub: mon.sub > 0, trapped: !!mon.trapped, attract: mon.attract, nightmare: mon.nightmare,
-        perish: mon.perish, focus: mon.focus, protect: mon.protect || mon.endure,
+        perish: mon.perish, focus: mon.focus, protect: !!(mon.protect || mon.endure),
+        cursed: mon.cursed, octolock: mon.octolock, lockOn: mon.lockOn > 0, laserFocus: mon.laserFocus > 0, foresight: mon.fsG || mon.fsD, levitate: mon.levitate > 0 || mon.float > 0,
+        embargo: mon.embargo > 0, healBlock: mon.healBlock > 0, simple: mon.simple, insomnia: mon.insomnia, tarred: mon.tarred, noRetreat: mon.noRetreat, imprison: mon.imprison,
+        destinyBond: mon.destinyBond || mon.grudge, boostNext: mon.boostNext > 0, charging: !!mon.charging, stock: mon.stock,
       });
       const emitVol = (si, mon) => emit({ t: 'vol', side: si, flags: volView(mon) });
       const speedOf = si => effectiveStat(active(si), 'spe') * (sides[si].cond.tailwind > 0 ? 2 : 1);
+      const reservesOf = si => sides[si].party.map((m, i) => (!m.fainted && i !== sides[si].active ? i : -1)).filter(i => i >= 0);
       /** 같은 우선도일 때 si 쪽이 먼저 움직이는가 (트릭룸이면 느린 쪽이 먼저) */
       const outspeeds = si => (field.room > 0 ? speedOf(si) <= speedOf(1 - si) : speedOf(si) >= speedOf(1 - si));
       /** 데미지 계산에 필요한 날씨·필드·벽 정보 (si = 공격하는 쪽) */
-      const ctxFor = si => ({ weather: field.weather, terrain: field.terrain, attGrounded: grounded(active(si)), defGrounded: grounded(active(1 - si)), screens: sides[1 - si].cond });
+      const ctxFor = si => {
+        const me = active(si), foe = active(1 - si);
+        return {
+          weather: field.weather, terrain: field.terrain, attGrounded: grounded(me), defGrounded: grounded(foe), screens: sides[1 - si].cond,
+          gravity: field.gravity > 0, wonder: field.wonder > 0, mud: field.mud > 0, waterSport: field.waterSport > 0,
+          fsG: foe.fsG, fsD: foe.fsD, tar: foe.tarred, defLevitate: foe.levitate > 0 || foe.float > 0, helping: me.boostNext > 0,
+        };
+      };
 
       // ───────── 합법 행동 ─────────
       function legalActions(si) {
-        const mon = active(si);
+        const mon = active(si), foeMon = active(1 - si);
         const moves = mon.moves.map((m, index) => {
           let usable = m.pp > 0 && !mon.fainted, why = null;
           if (usable && mon.taunt > 0 && m.cls === 'status') { usable = false; why = '도발'; }
           else if (usable && mon.disable > 0 && mon.disableMove === index) { usable = false; why = '사슬묶기'; }
           else if (usable && mon.torment && mon.lastMove === index) { usable = false; why = '트집'; }
           else if (usable && m.fx.sleepTalk && mon.status !== 'slp') { usable = false; why = '잠든 동안만'; }
+          else if (usable && mon.healBlock > 0 && (m.fx.heal || m.fx.rest || m.fx.swallow || m.fx.wish)) { usable = false; why = '회복봉인'; }
+          else if (usable && foeMon && foeMon.imprison && !foeMon.fainted && foeMon.moves.some(x => x.id === m.id && m.id)) { usable = false; why = '봉인'; }
           return { index, name: m.name, pp: m.pp, maxPp: m.maxPp, usable, why };
         });
+        // 충전 중(지오컨트롤): 이어서 그 기술을 써야 한다
+        if (mon.charging) {
+          const ci = mon.moves.indexOf(mon.charging);
+          if (ci >= 0) moves.forEach((m, i) => { if (i !== ci) { m.usable = false; m.why = '충전 중'; } else { m.usable = true; m.why = null; } });
+        }
         // 앙코르: 마지막에 쓴 기술만 쓸 수 있다
         if (mon.encore > 0 && moves[mon.encoreMove] && moves[mon.encoreMove].usable) {
           moves.forEach((m, i) => { if (i !== mon.encoreMove && m.usable) { m.usable = false; m.why = '앙코르'; } });
@@ -318,6 +405,8 @@
           if (!la.switches.includes(a.to)) throw new Error(`교체할 수 없는 대상(${si}): ${a.to}`);
         } else if (la.mustStruggle) {
           return { type: 'move', index: -1 };
+        } else if (active(si).charging && active(si).moves.indexOf(active(si).charging) >= 0) {
+          return { type: 'move', index: active(si).moves.indexOf(active(si).charging) };
         } else if (!la.moves[a.index] || !la.moves[a.index].usable) {
           throw new Error(`사용할 수 없는 기술(${si}): ${a.index}`);
         }
@@ -335,18 +424,24 @@
         if (!mon.base) return;
         mon.types = mon.base.types; mon.stats = mon.base.stats; mon.moves = mon.base.moves; mon.base = null;
       }
+      function restoreMimic(mon) {
+        if (mon.mimicOrig) { mon.moves[mon.mimicOrig.index] = mon.mimicOrig.move; mon.mimicOrig = null; }
+        if (mon.natTypes) mon.types = mon.natTypes.slice();          // 타입 변경(텍스처·핼러윈·물에빠뜨리기 등)은 교체하면 원래대로
+      }
       function faintCheck(si, mon) {
         if (mon.hp <= 0 && !mon.fainted) {
           mon.fainted = true;
           mon.status = null; mon.confusion = 0;
           revertTransform(mon);
+          restoreMimic(mon);
           Object.assign(mon, freshVolatile());
           const foeMon = active(1 - si);
-          if (foeMon && foeMon.trapped) foeMon.trapped = false;
+          if (foeMon && (foeMon.trapped || foeMon.octolock)) { foeMon.trapped = false; foeMon.octolock = false; }
           emit({ t: 'faint', side: si, mon: sides[si].active, text: `${J(nm(si, mon), '은/는')} 쓰러졌다!` });
         }
       }
       function heal(si, mon, amount, msg) {
+        if (mon.healBlock > 0 && amount > 0) { emit({ t: 'text', text: `${J(nm(si, mon), '은/는')} 회복봉인 때문에 회복할 수 없다!` }); return; }
         const before = mon.hp;
         mon.hp = Math.min(mon.maxHp, mon.hp + amount);
         if (mon.hp > before) emit({ t: 'heal', side: si, amount: mon.hp - before, hp: mon.hp, maxHp: mon.maxHp, text: msg });
@@ -374,6 +469,7 @@
       };
       /** 신비의부적·필드 때문에 상태이상이 걸리지 않으면 이유(문장)를, 아니면 null */
       function statusBlockReason(si, mon, kind) {
+        if (kind === 'slp' && mon.insomnia) return `${J(nm(si, mon), '은/는')} 잠들지 않는다!`;
         if (sides[si].cond.safeguard > 0) return `${J(nm(si, mon), '은/는')} 신비의부적으로 보호받고 있다!`;
         if (grounded(mon)) {
           if (field.terrain === 'misty') return `${J(nm(si, mon), '은/는')} 미스트필드로 보호받고 있다!`;
@@ -404,6 +500,8 @@
       function changeStage(si, mon, stat, change, fromFoe) {
         const cur = mon.stages[stat];
         const label = J(STAT_KO[stat], '이/가');
+        if (change > 0 && mon.embargo > 0) { emit({ t: 'text', text: `${nm(si, mon)}의 ${label} 금제 때문에 오르지 않는다!` }); return; }
+        if (mon.simple) change *= 2;                                   // 심플빔
         if (change < 0 && fromFoe && sides[si].cond.mist > 0) {
           emit({ t: 'text', text: `${nm(si, mon)}의 ${label} 미스트에 보호받아 떨어지지 않는다!` });
           return;
@@ -458,22 +556,50 @@
         mon.confusion = 0; mon.flinch = false;
         if (mon.status === 'tox') mon.toxCount = 1;
         revertTransform(mon);
+        restoreMimic(mon);
         Object.assign(mon, freshVolatile());
         const foeMon = active(1 - si);
-        if (foeMon && foeMon.trapped) { foeMon.trapped = false; emitVol(1 - si, foeMon); }
+        if (foeMon && (foeMon.trapped || foeMon.octolock)) { foeMon.trapped = false; foeMon.octolock = false; emitVol(1 - si, foeMon); }
       }
-      function sendOut(si, to, fromName, dragged) {
+      /** 배턴터치로 다음 포켓몬에게 넘겨 주는 상태 */
+      const BATON_KEYS = ['sub', 'focus', 'aquaRing', 'ingrain', 'seeded', 'lockOn', 'laserFocus', 'levitate', 'float', 'cursed', 'embargo', 'healBlock', 'stock'];
+      function collectBaton(mon) {
+        const o = { stages: Object.assign({}, mon.stages), confusion: mon.confusion };
+        BATON_KEYS.forEach(k => { o[k] = mon[k]; });
+        return o;
+      }
+      function applyBaton(mon, o) {
+        STAT_KEYS.forEach(k => { mon.stages[k] = o.stages[k]; });
+        mon.confusion = o.confusion;
+        BATON_KEYS.forEach(k => { mon[k] = o[k]; });
+      }
+      function sendOut(si, to, fromName, dragged, passed) {
         const side = sides[si];
         const old = active(si);
         if (!old.fainted) resetOnLeave(si, old);
         side.active = to;
         const mon = active(si);
+        if (passed) {
+          if (passed.baton) applyBaton(mon, passed.baton);
+          if (passed.sub) mon.sub = passed.sub;
+        }
         const msg = dragged
           ? `${J(nm(si, mon), '이/가')} 끌려 나왔다!`
           : si === 0
             ? `${fromName ? `돌아와, ${fromName}! ` : ''}가라, ${mon.name}!`
             : `${fromName ? `상대는 ${J(fromName, '을/를')} 불러들였다! ` : ''}상대는 ${J(mon.name, '을/를')} 내보냈다!`;
         emit({ t: 'switch', side: si, to, name: mon.name, hp: mon.hp, maxHp: mon.maxHp, types: mon.types.slice(), text: msg });
+        if (passed) {
+          emit({ t: 'stages', side: si, stages: Object.assign({}, mon.stages) });
+          emitVol(si, mon);
+        }
+        if (side.cond.hw) {                                           // 치유소원·초승달춤
+          const kind = side.cond.hw; side.cond.hw = null;
+          mon.hp = mon.maxHp; mon.status = null; mon.confusion = 0; mon.toxCount = 1;
+          if (kind === 'dance') mon.moves.forEach(m => { m.pp = m.maxPp; });
+          emit({ t: 'heal', side: si, amount: 0, hp: mon.hp, maxHp: mon.maxHp, text: `${J(nm(si, mon), '은/는')} ${kind === 'dance' ? '달빛의 춤으로' : '소원의 힘으로'} 완전히 회복되었다!` });
+          emit({ t: 'cure', side: si, indexes: [to], text: '' });
+        }
         applyHazards(si, mon);
       }
 
@@ -541,15 +667,39 @@
         return false;
       }
 
+      /** 다른 기술을 복사해 쓸 수 없는 기술 (무한 반복·방어·교체 계열) */
+      const noCopy = fx => !!(fx.copycat || fx.mimic || fx.sketch || fx.meFirst || fx.assist || fx.mirrorMove || fx.transform || fx.sleepTalk || fx.protect || fx.charge2 || fx.pivot
+        || fx.faintSelf || fx.repeat || fx.metronome || fx.endure);
       function runMove(si, move, struggle, acted) {
         const user = active(si);
         const index = struggle ? -1 : user.moves.indexOf(move);
-        if (!canAct(si, user, move)) return;
-        if (!struggle && moveBlocked(si, user, move, index)) return;
-        if (!struggle) move.pp--;
+        if (active(1 - si).fainted) { user.charging = null; return; }          // 상대가 이미 쓰러져 있으면 쓸 대상이 없다 (길동무·자폭 뒤 등)
+        if (!canAct(si, user, move)) { user.charging = null; return; }
+        if (!struggle && moveBlocked(si, user, move, index)) { user.charging = null; return; }
+        const finishing = !!(move.fx && move.fx.charge2 && user.charging === move);
+        if (!struggle && !finishing) move.pp--;
+        if (finishing) user.charging = null;
         if (!(move.fx && move.fx.protect)) user.protectStreak = 0;
+        user.prevMove = user.lastMove;
         user.lastMove = index;
+        user.destinyBond = false; user.grudge = false;                          // 길동무·원념은 다음에 움직일 때까지
         emit({ t: 'move', side: si, name: move.name, type: move.type, cls: move.cls, text: `${nm(si, user)}의 ${move.name}!` });
+        if (!struggle && !noCopy(move.fx)) B.lastUsed = move;
+        if (!struggle && move.fx.charge2 && !finishing) {                         // 2턴 기술의 첫 턴
+          user.charging = move; text(`${J(nm(si, user), '은/는')} 에너지를 모으고 있다!`); emitVol(si, user); return;
+        }
+        if (user.powdered && move.type === FIRE) {                                // 분진
+          user.powdered = false;
+          text(`${J(nm(si, user), '은/는')} 분진에 불이 붙어 폭발했다!`);
+          hurt(si, user, Math.max(1, Math.floor(user.maxHp / 4)), 'powder', '');
+          return;
+        }
+        const foeMon = active(1 - si);
+        if (move.cls === 'status' && move.snatchable && foeMon.snatching && !foeMon.fainted) {      // 가로채기
+          foeMon.snatching = false;
+          text(`${J(nm(1 - si, foeMon), '은/는')} ${nm(si, user)}의 ${move.name}을(를) 가로챘다!`);
+          return execMove(1 - si, move, false, acted);
+        }
         execMove(si, move, struggle, acted);
       }
       function execMove(si, move, struggle, acted) {
@@ -557,35 +707,73 @@
         return runAttack(si, move, struggle, acted || curActed);
       }
 
-      function runAttack(si, move, struggle, acted) {
+      /** 명중 판정. 록온·텔레키네시스는 필중, 꿰뚫어보기는 상대 회피 무시, 중력은 명중 ×5/3 */
+      function hitCheck(user, target, acc, sure) {
+        if (sure) return true;
+        if (user.lockOn > 0) { user.lockOn = 0; return true; }
+        if (target.float > 0) return true;
+        const eva = (target.fsG || target.fsD) ? Math.min(0, target.stages.eva) : target.stages.eva;
+        const stage = clamp(user.stages.acc - eva, -6, 6);
+        return rng() * 100 < acc * accStageMult(stage) * (field.gravity > 0 ? 5 / 3 : 1);
+      }
+      /** 접촉 기술을 막은 방어 변종의 반격 */
+      function protectCounter(si, user, kind) {
+        if (user.fainted) return;
+        const u = nm(si, user);
+        if (kind === 'king') changeStage(si, user, 'atk', -1, true);
+        else if (kind === 'spiky') hurt(si, user, Math.max(1, Math.floor(user.maxHp / 8)), 'spiky', `${J(u, '은/는')} 니들가드의 가시에 찔렸다!`);
+        else if (kind === 'bunker') inflict(si, user, 'psn', true);
+        else if (kind === 'obstruct') changeStage(si, user, 'def', -2, true);
+        else if (kind === 'silk') changeStage(si, user, 'spe', -1, true);
+        else if (kind === 'burning') inflict(si, user, 'brn', true);
+      }
+      /** 방어 종류별로 공격기를 막는가 */
+      const protectBlocksAttack = (kind, move) => (kind === 'quick' ? move.pri > 0 : kind === 'wide' ? !!move.fx.hits : kind !== 'crafty');
+      /** 방어 종류별로 상대에게 거는 변화기를 막는가 */
+      const protectBlocksStatus = kind => kind === 'protect' || kind === 'maxguard' || kind === 'bunker' || kind === 'crafty';
+      /** 이온샤워·송전: 기술의 타입을 전기로 바꾼 복사본 */
+      function retype(si, move, struggle) {
+        if (struggle || move.type === ELECTRIC) return move;
+        if (active(si).electrified || (field.ion && move.type === NORMAL)) return Object.assign({}, move, { type: ELECTRIC });
+        return move;
+      }
+
+      function runAttack(si, orig, struggle, acted) {
         const foe = 1 - si;
         const user = active(si);
         const target = active(foe);
         if (target.fainted) { fail(); return; }
+        const move = retype(si, orig, struggle);
         const fx = move.fx;
-        if (target.protect) { text(`${J(nm(foe, target), '은/는')} 공격으로부터 몸을 지켰다!`); return; }
+        if (target.protect && protectBlocksAttack(target.protect, move)) {
+          text(`${J(nm(foe, target), '은/는')} 공격으로부터 몸을 지켰다!`);
+          if (move.contact) protectCounter(si, user, target.protect);
+          return;
+        }
         if (move.pri > 0 && field.terrain === 'psychic' && grounded(target)) { text(`${J(nm(foe, target), '은/는')} 사이코필드로 보호받고 있다!`); return; }
         // 명중
         if (!fx.neverMiss && move.acc !== null) {
-          const stage = clamp(user.stages.acc - target.stages.eva, -6, 6);
-          if (rng() * 100 >= move.acc * accStageMult(stage)) {
+          if (!hitCheck(user, target, move.acc, false)) {
             emit({ t: 'miss', side: si, text: `${nm(si, user)}의 공격은 빗나갔다!` });
             return;
           }
         }
 
-        const eff = typeMultiplier(move.type, target.types);
+        const ctx = ctxFor(si);
+        const eff = typeMultiplier(move.type, target.types, ctx);
         if (eff === 0) {
           emit({ t: 'effective', side: foe, eff: 0, text: `${nm(foe, target)}에게는 효과가 없는 것 같다...` });
           return;
         }
 
         const hits = pickHits(fx);
-        const ctx = ctxFor(si);
+        if (user.boostNext > 0) user.boostNext = 0;                       // 도우미는 한 번만
         let total = 0, landed = 0;
         const critStage = Math.min(3, (fx.crit === 1 ? 1 : 0) + (user.focus ? 2 : 0));
+        const noCrit = sides[foe].cond.lucky > 0;                         // 주술
+        const bond = target.destinyBond, grudge = target.grudge;          // 쓰러지면 volatile 이 지워지므로 미리 기억
         for (let i = 0; i < hits && !target.fainted; i++) {
-          const crit = fx.crit === 2 || rng() < CRIT_RATE[critStage];
+          const crit = noCrit ? false : (fx.crit === 2 || user.laserFocus > 0 || rng() < CRIT_RATE[critStage]);
           const roll = 85 + Math.floor(rng() * 16);
           const res = calcDamage(user, target, move, { crit, roll, ctx });
           if (target.sub > 0) {                       // 대타가 대신 맞는다
@@ -609,6 +797,10 @@
           faintCheck(foe, target);
         }
         if (landed > 1) emit({ t: 'hits', count: landed, text: `${landed}번 맞았다!` });
+        if (target.fainted && !user.fainted) {                           // 길동무 · 원념
+          if (bond) { text(`${J(nm(foe, target), '은/는')} 길동무가 되었다!`); hurt(si, user, user.hp, 'bond', ''); }
+          else if (grudge && orig.pp > 0) { orig.pp = 0; text(`${nm(si, user)}의 ${orig.name}은(는) 원념으로 PP가 0이 되었다!`); }
+        }
 
         // 흡수 / 반동
         if (fx.drain && total > 0) {
@@ -637,32 +829,190 @@
       }
 
       // ───────── 변화기 ─────────
-      const FOE_TARGETED = ['ail', 'tgt', 'seed', 'taunt', 'encore', 'disable', 'torment', 'yawn', 'attract', 'nightmare', 'trap', 'spite', 'soak', 'phaze', 'painSplit', 'transform', 'reqFoeStatus'];
+      const FOE_TARGETED = ['ail', 'tgt', 'seed', 'taunt', 'encore', 'disable', 'torment', 'yawn', 'attract', 'nightmare', 'trap', 'spite', 'soak', 'phaze', 'painSplit', 'transform', 'reqFoeStatus',
+        'foresight', 'mimic', 'sketch', 'mirrorMove', 'dust', 'octolock', 'telekinesis', 'electrify', 'copyStages', 'swapStages', 'invertStages', 'swapStat', 'splitStats', 'psychoShift', 'statusSwap',
+        'clearBoosts', 'embargo', 'healBlock', 'simple', 'insomnia', 'addType', 'setType', 'swapTypes', 'giveTypes', 'doodle', 'rolePlay'];
       function runStatusMove(si, move, user) {
         const fx = move.fx;
-        if (FOE_TARGETED.some(k => fx[k])) return statusOnFoe(si, move, user, active(1 - si));
+        if (FOE_TARGETED.some(k => fx[k]) || fx.nextOrder < 0) return statusOnFoe(si, move, user, active(1 - si));
         return statusOnSelf(si, move, user);
       }
+      // 대타가 있어도 통하는 변화기
+      const SUB_BYPASS = ['phaze', 'defog', 'copyStages', 'swapStages', 'swapStat', 'splitStats', 'doodle', 'dust', 'mimic', 'sketch', 'swapTypes', 'rolePlay'];
+      // 효과가 일어난 뒤 따로 처리하는 것(자신 쓰러짐·교체)
+      function afterEffect(si, move, user) {
+        const fx = move.fx;
+        if (fx.faintSelf === 'memento') hurt(si, user, user.hp, 'faint', `${J(nm(si, user), '은/는')} 쓰러졌다!`);
+        if (fx.pivot) queuePivot(si, user, fx.pivot);
+      }
+      /** 쓴 뒤 교체하기로 예약한다 (교체할 동료가 없거나 가두기 상태면 하지 않는다) */
+      function queuePivot(si, user, mode) {
+        if (!reservesOf(si).length || isTrapped(user) || user.fainted) return false;
+        B.pivot = { si, mode: mode === 'baton' ? 'baton' : mode === 'shed' ? 'shed' : 'out', sub: mode === 'shed' ? Math.floor(user.maxHp / 4) : 0 };
+        return true;
+      }
+      const setTypes = (si, mon, types, msg) => { mon.types = types; if (msg) text(msg); emit({ t: 'types', side: si, types: types.slice() }); };
 
-      function statusOnFoe(si, move, user, target) {
+      function statusOnFoe(si, move, user, target, reflected) {
         const foe = 1 - si, fx = move.fx;
         const noEffect = () => emit({ t: 'effective', side: foe, eff: 0, text: `${nm(foe, target)}에게는 효과가 없는 것 같다...` });
         if (target.fainted) return fail();
-        if (target.protect) return text(`${J(nm(foe, target), '은/는')} 몸을 지켰다!`);
+        if (target.coat && move.reflectable && !reflected) {                       // 매직코트
+          text(`${J(nm(foe, target), '은/는')} ${move.name}을(를) 되받아쳤다!`);
+          return statusOnFoe(foe, move, target, user, true);
+        }
+        if (target.protect && protectBlocksStatus(target.protect)) return text(`${J(nm(foe, target), '은/는')} 몸을 지켰다!`);
         if (move.pri > 0 && field.terrain === 'psychic' && grounded(target)) return text(`${J(nm(foe, target), '은/는')} 사이코필드로 보호받고 있다!`);
-        if (target.sub > 0 && !fx.phaze && !fx.defog) return fail();        // 대타가 막는다
+        if (target.sub > 0 && !SUB_BYPASS.some(k => fx[k])) return fail();        // 대타가 막는다
         // 명중 (독 타입이 쓴 맹독은 필중)
-        const sure = move.acc === null || (fx.ail && fx.ail.kind === 'tox' && user.types.includes(POISON));
+        const sure = reflected || move.acc === null || (fx.ail && fx.ail.kind === 'tox' && user.types.includes(POISON));
         if (!sure) {
-          const stage = clamp(user.stages.acc - target.stages.eva, -6, 6);
-          if (rng() * 100 >= move.acc * accStageMult(stage)) {
+          if (!hitCheck(user, target, move.acc, false)) {
             emit({ t: 'miss', side: si, text: `${nm(si, user)}의 공격은 빗나갔다!` });
             return;
           }
         }
-        if (fx.powder && target.types.includes(GRASS)) return noEffect();
+        if ((fx.powder || fx.dust) && target.types.includes(GRASS)) return noEffect();
         if (fx.typeImmune && typeMultiplier(move.type, target.types) === 0) return noEffect();
         if (fx.reqFoeStatus && !fx.reqFoeStatus.includes(target.status)) return fail();
+
+        // ───── 3단계: 상대를 대상으로 하는 기술 ─────
+        const tn = nm(foe, target), un = nm(si, user);
+        const stagesEv = (s2, m2) => emit({ t: 'stages', side: s2, stages: Object.assign({}, m2.stages) });
+        if (fx.foresight) {
+          const k = fx.foresight === 'ghost' ? 'fsG' : 'fsD';
+          if (target[k]) return fail();
+          target[k] = true; text(`${J(tn, '은/는')} 정체를 간파당했다!`); emitVol(foe, target); return;
+        }
+        if (fx.mimic || fx.sketch) {
+          const last = target.moves[target.lastMove], idx = user.moves.indexOf(move);
+          if (user.base || !last || idx < 0 || last.fx.mimic || last.fx.sketch || last.fx.transform || user.moves.some(m => m.id && m.id === last.id)) return fail();
+          const copy = Object.assign({}, last, { pp: last.maxPp, maxPp: last.maxPp });
+          if (fx.mimic && !user.mimicOrig) user.mimicOrig = { index: idx, move };
+          user.moves[idx] = copy;
+          return text(`${J(un, '은/는')} ${J(last.name, '을/를')} ${fx.mimic ? '흉내 냈다!' : '배웠다!'}`);
+        }
+        if (fx.mirrorMove) {
+          const last = target.moves[target.lastMove];
+          if (!last || noCopy(last.fx)) return fail();
+          emit({ t: 'move', side: si, name: last.name, type: last.type, cls: last.cls, text: `${J(un, '은/는')} ${J(last.name, '을/를')} 따라 했다!` });
+          return execMove(si, Object.assign({}, last), false, curActed);
+        }
+        if (fx.dust) {
+          if (target.powdered) return fail();
+          target.powdered = true; return text(`${J(tn, '은/는')} 분진을 뒤집어썼다!`);
+        }
+        if (fx.octolock) {
+          if (target.octolock) return fail();
+          if (target.types.includes(GHOST)) return noEffect();
+          target.octolock = true; target.trapped = true; text(`${J(tn, '은/는')} 문어굳히기에 붙잡혔다!`); emitVol(foe, target); return;
+        }
+        if (fx.telekinesis) {
+          if (field.gravity > 0 || target.float > 0 || target.ingrain || target.levitate > 0) return fail();
+          target.float = 3; text(`${J(tn, '은/는')} 텔레키네시스로 공중에 떠올랐다!`); emitVol(foe, target); return;
+        }
+        if (fx.electrify) {
+          if (curActed[foe] || target.electrified) return fail();
+          target.electrified = true; return text(`${J(tn, '은/는')} 전기를 띠었다!`);
+        }
+        if (fx.nextOrder < 0) {                                                // 순서미루기
+          if (curActed[foe] || target.nextOrder < 0) return fail();
+          target.nextOrder = -1; return text(`${J(tn, '은/는')} 다음 턴 가장 늦게 움직이게 되었다!`);
+        }
+        if (fx.copyStages || fx.doodle) {
+          STAT_KEYS.forEach(k => { user.stages[k] = target.stages[k]; });
+          text(`${J(un, '은/는')} ${tn}의 능력 변화를 복사했다!`); stagesEv(si, user);
+          if (fx.doodle && JSON.stringify(user.types) !== JSON.stringify(target.types)) setTypes(si, user, target.types.slice(), `${J(un, '은/는')} ${tn}와(과) 같은 타입이 되었다!`);
+          return;
+        }
+        if (fx.swapStages) {
+          const keys = fx.swapStages === 'all' ? STAT_KEYS : fx.swapStages;
+          keys.forEach(k => { const t0 = user.stages[k]; user.stages[k] = target.stages[k]; target.stages[k] = t0; });
+          text('서로의 능력 변화를 맞바꿨다!'); stagesEv(si, user); stagesEv(foe, target); return;
+        }
+        if (fx.invertStages) {
+          if (STAT_KEYS.every(k => target.stages[k] === 0)) return fail();
+          STAT_KEYS.forEach(k => { target.stages[k] = -target.stages[k]; });
+          text(`${tn}의 능력 변화가 뒤집혔다!`); stagesEv(foe, target); return;
+        }
+        if (fx.clearBoosts) {
+          if (!STAT_KEYS.some(k => target.stages[k] > 0)) return fail();
+          STAT_KEYS.forEach(k => { if (target.stages[k] > 0) target.stages[k] = 0; });
+          text(`${tn}의 올라간 능력이 녹아내렸다!`); stagesEv(foe, target); return;
+        }
+        if (fx.swapStat) {
+          const k = fx.swapStat, a = baseStat(user, k), b = baseStat(target, k);
+          user.ov = Object.assign({}, user.ov, { [k]: b }); target.ov = Object.assign({}, target.ov, { [k]: a });
+          return text(`서로의 ${STAT_KO[k]}을(를) 맞바꿨다!`);
+        }
+        if (fx.splitStats) {
+          fx.splitStats.forEach(k => {
+            const avg = Math.floor((baseStat(user, k) + baseStat(target, k)) / 2);
+            user.ov = Object.assign({}, user.ov, { [k]: avg }); target.ov = Object.assign({}, target.ov, { [k]: avg });
+          });
+          return text(`서로의 ${fx.splitStats.map(k => STAT_KO[k]).join('·')}을(를) 나눠 가졌다!`);
+        }
+        if (fx.psychoShift) {
+          if (!user.status || target.status || statusImmune(target, user.status)) return fail();
+          const kind = user.status;
+          if (!inflict(foe, target, kind, false)) return fail();
+          user.status = null; user.toxCount = 1; user.sleepTurns = 0;
+          emit({ t: 'cure', side: si, indexes: [sides[si].party.indexOf(user)], text: `${J(un, '은/는')} 상태이상이 나았다!` });
+          return;
+        }
+        if (fx.statusSwap) {
+          if (!user.status && !target.status) return fail();
+          if ((user.status && statusImmune(target, user.status)) || (target.status && statusImmune(user, target.status))) return fail();
+          const a = { st: user.status, sl: user.sleepTurns, tx: user.toxCount }, b = { st: target.status, sl: target.sleepTurns, tx: target.toxCount };
+          user.status = b.st; user.sleepTurns = b.sl; user.toxCount = b.tx;
+          target.status = a.st; target.sleepTurns = a.sl; target.toxCount = a.tx;
+          text('서로의 상태이상을 맞바꿨다!');
+          emit({ t: 'sync', side: si, status: user.status }); emit({ t: 'sync', side: foe, status: target.status });
+          return;
+        }
+        if (fx.embargo) {
+          if (target.embargo > 0) return fail();
+          target.embargo = 5; text(`${J(tn, '은/는')} 5턴 동안 능력을 올릴 수 없게 되었다!`); emitVol(foe, target); return;
+        }
+        if (fx.healBlock) {
+          if (target.healBlock > 0) return fail();
+          target.healBlock = 5; text(`${J(tn, '은/는')} 5턴 동안 회복할 수 없게 되었다!`); emitVol(foe, target); return;
+        }
+        if (fx.simple) {
+          if (target.simple) return fail();
+          target.simple = true; text(`${J(tn, '은/는')} 단순해졌다! 능력 변화가 2배가 된다!`); emitVol(foe, target); return;
+        }
+        if (fx.insomnia) {
+          if (target.insomnia) return fail();
+          target.insomnia = true; text(`${J(tn, '은/는')} 잠들 수 없게 되었다!`);
+          if (target.status === 'slp') { target.status = null; target.sleepTurns = 0; emit({ t: 'cure', side: foe, indexes: [sides[foe].party.indexOf(target)], text: `${J(tn, '은/는')} 눈을 떴다!` }); }
+          emitVol(foe, target); return;
+        }
+        if (fx.addType) {
+          if (target.types.includes(fx.addType)) return fail();
+          const base = target.types.filter(t => t !== target.added).slice(0, 2);       // 새로 더한 타입은 하나뿐 (먼저 더한 타입은 교체된다)
+          target.added = fx.addType;
+          return setTypes(foe, target, base.concat(fx.addType), `${J(tn, '은/는')} ${typeName(fx.addType)} 타입이 추가되었다!`);
+        }
+        if (fx.setType) {
+          if (target.types.length === 1 && target.types[0] === fx.setType) return fail();
+          return setTypes(foe, target, [fx.setType], `${J(tn, '은/는')} ${typeName(fx.setType)} 타입이 되었다!`);
+        }
+        if (fx.swapTypes) {
+          if (JSON.stringify(user.types) === JSON.stringify(target.types)) return fail();
+          const ut = user.types.slice();
+          setTypes(si, user, target.types.slice()); setTypes(foe, target, ut, '서로의 타입을 맞바꿨다!'); return;
+        }
+        if (fx.rolePlay) {
+          const add = target.types[0], nt = user.types.includes(add) ? user.types.slice() : [user.types[0], add];
+          if (JSON.stringify(nt) === JSON.stringify(user.types)) return fail();
+          return setTypes(si, user, nt, `${J(un, '은/는')} ${tn}의 ${typeName(add)} 타입을 따라 했다!`);
+        }
+        if (fx.giveTypes) {
+          if (JSON.stringify(user.types) === JSON.stringify(target.types)) return fail();
+          return setTypes(foe, target, user.types.slice(), `${J(tn, '은/는')} ${un}와(과) 같은 타입이 되었다!`);
+        }
+        if (fx.strengthSap) heal(si, user, effectiveStat(target, 'atk'), `${J(un, '은/는')} 상대의 힘을 빨아들였다!`);
 
         if (fx.phaze) {                                                       // 울부짖기 / 날려버리기
           if (target.ingrain) return fail();
@@ -757,36 +1107,231 @@
         }
         (fx.tgt || []).forEach(c => changeStage(foe, target, c.stat, c.change, true));
         if (fx.ail) inflict(foe, target, fx.ail.kind, false);
+        if (fx.tar) { target.tarred = true; text(`${J(tn, '은/는')} 타르를 뒤집어썼다! 불꽃에 약해졌다!`); emitVol(foe, target); }
+        afterEffect(si, move, user);
       }
 
-      const healAmount = (fx, user) => healAmountFor(fx, user.maxHp, field.weather);
+      const healAmount = (fx, user) => healAmountFor(fx, user.maxHp, field.weather, field.terrain);
+
+      /** 메트로놈·잠꼬대가 고를 수 없는 기술 */
+      const notCallable = fx => !!(fx.copycat || fx.assist || fx.mirrorMove || fx.mimic || fx.sketch || fx.meFirst || fx.repeat || fx.metronome || fx.sleepTalk || fx.charge2
+        || fx.dead || fx.pivot || fx.faintSelf || fx.revive);
+      const NATURE_POWER = { electric: 'thunderbolt', grassy: 'energy-ball', misty: 'moonblast', psychic: 'psychic' };
+      const TERRAIN_TYPE = { electric: ELECTRIC, grassy: GRASS, misty: FAIRY, psychic: PSYCHIC };
+      const SWAP_KEYS = ['rocks', 'spikes', 'tspikes', 'web', 'reflect', 'lightscreen', 'veil', 'tailwind', 'safeguard', 'mist', 'lucky'];
 
       function statusOnSelf(si, move, user) {
         const foe = 1 - si, fx = move.fx;
         const target = active(foe);
+        const un = nm(si, user);
+        if (fx.dead) return fail(fx.dead === 'ally' ? '하지만 싱글 배틀에서는 도와줄 아군이 없다!' : '하지만 건네줄 도구가 없다!');
+        if (user.healBlock > 0 && (fx.heal || fx.rest || fx.swallow || fx.wish)) return text(`${J(un, '은/는')} 회복봉인 때문에 ${move.name}을(를) 쓸 수 없다!`);
 
         if (fx.sleepTalk) {                                       // 잠꼬대: 잠든 동안 다른 기술을 무작위로 쓴다
           if (user.status !== 'slp') return fail();
-          const pool = user.moves.filter(m => m !== move && m.pp > 0 && !m.fx.sleepTalk && !m.fx.metronome);
+          const pool = user.moves.filter(m => m !== move && m.pp > 0 && !notCallable(m.fx));
           if (!pool.length) return fail();
           const pick = pool[Math.floor(rng() * pool.length)];
           emit({ t: 'move', side: si, name: pick.name, type: pick.type, cls: pick.cls, text: `${nm(si, user)}의 ${pick.name}!` });
           return execMove(si, pick, false, curActed);
         }
         if (fx.metronome) {                                       // 메트로놈: 아무 기술이나 무작위로
-          const ids = Object.keys(data.moves).filter(id => { const f = data.moves[id].fx; return !f.metronome && !f.sleepTalk; });
+          const ids = Object.keys(data.moves).filter(id => !notCallable(data.moves[id].fx));
           const pick = makeMove(ids[Math.floor(rng() * ids.length)]);
           emit({ t: 'move', side: si, name: pick.name, type: pick.type, cls: pick.cls, text: `${J(nm(si, user), '은/는')} 손가락을 흔들어 ${pick.name}을(를) 냈다!` });
           return execMove(si, pick, false, curActed);
         }
-        if (fx.protect) {                                          // 방어 / 판별 / 버티기
+        if (fx.repeat) {                                           // 지휘: 방금 쓴 자신의 기술을 한 번 더
+          const prev = user.moves[user.prevMove];
+          if (!prev || prev.pp <= 0 || noCopy(prev.fx)) return fail();
+          prev.pp--;
+          emit({ t: 'move', side: si, name: prev.name, type: prev.type, cls: prev.cls, text: `${J(un, '은/는')} ${prev.name}을(를) 다시 썼다!` });
+          return execMove(si, prev, false, curActed);
+        }
+        if (fx.copycat) {                                          // 흉내쟁이: 직전에 쓰인 기술
+          const last = B.lastUsed;
+          if (!last || noCopy(last.fx)) return fail();
+          emit({ t: 'move', side: si, name: last.name, type: last.type, cls: last.cls, text: `${J(un, '은/는')} ${J(last.name, '을/를')} 따라 했다!` });
+          return execMove(si, Object.assign({}, last), false, curActed);
+        }
+        if (fx.assist) {                                           // 조수: 동료의 기술을 무작위로
+          const pool = [];
+          sides[si].party.forEach((m, i) => { if (i !== sides[si].active) m.moves.forEach(mv => { if (!noCopy(mv.fx)) pool.push(mv); }); });
+          if (!pool.length) return fail();
+          const pick = pool[Math.floor(rng() * pool.length)];
+          emit({ t: 'move', side: si, name: pick.name, type: pick.type, cls: pick.cls, text: `${J(un, '은/는')} 동료의 ${J(pick.name, '을/를')} 빌려 썼다!` });
+          return execMove(si, Object.assign({}, pick), false, curActed);
+        }
+        if (fx.naturePower) {                                      // 자연의힘: 필드에 맞는 공격기
+          const ident = NATURE_POWER[field.terrain];
+          const id = ident && Object.keys(data.moves).find(i => data.moves[i].e === ident);
+          const pick = id ? makeMove(id) : { id: 0, name: '트라이어택', type: NORMAL, cls: 'spec', power: 80, acc: 100, pp: 10, maxPp: 10, pri: 0, fx: {} };
+          emit({ t: 'move', side: si, name: pick.name, type: pick.type, cls: pick.cls, text: `${J(un, '은/는')} 자연의 힘으로 ${J(pick.name, '을/를')} 냈다!` });
+          return execMove(si, pick, false, curActed);
+        }
+        if (fx.meFirst) {                                          // 선취: 상대가 고른 공격기를 먼저 빼앗아 쓴다
+          const q = T && T.queue.slice(T.qi).find(e => e.si === foe && e.move && !e.struggle && e.move.cls !== 'status' && !noCopy(e.move.fx));
+          if (!q || curActed[foe]) return fail();
+          const pick = Object.assign({}, q.move, { power: Math.floor(q.move.power * 1.5) });
+          emit({ t: 'move', side: si, name: pick.name, type: pick.type, cls: pick.cls, text: `${J(un, '은/는')} 상대보다 먼저 ${J(pick.name, '을/를')} 냈다!` });
+          return execMove(si, pick, false, curActed);
+        }
+        if (fx.protect) {                                          // 방어 / 판별 / 버티기 / 킹실드 …
+          if (fx.protect === 'mat' && user.turnsOut > 0) return fail();
           const chance = user.protectStreak > 0 ? Math.pow(1 / 3, user.protectStreak) : 1;
           if (rng() >= chance) { user.protectStreak = 0; return fail(); }
           user.protectStreak++;
-          if (fx.protect === 'endure') { user.endure = true; text(`${J(nm(si, user), '은/는')} 버틸 태세를 갖췄다!`); }
-          else { user.protect = true; text(`${J(nm(si, user), '은/는')} 몸을 지키는 태세를 갖췄다!`); }
+          if (fx.protect === 'endure') { user.endure = true; text(`${J(un, '은/는')} 버틸 태세를 갖췄다!`); }
+          else { user.protect = fx.protect; text(`${J(un, '은/는')} 몸을 지키는 태세를 갖췄다!`); }
           emitVol(si, user); return;
         }
+        if (fx.revive) {                                           // 회생의기도
+          const dead = sides[si].party.map((m, i) => (m.fainted ? i : -1)).filter(i => i >= 0).sort((a, b) => sides[si].party[b].maxHp - sides[si].party[a].maxHp);
+          if (!dead.length) return fail();
+          const m = sides[si].party[dead[0]];
+          m.fainted = false; m.hp = Math.max(1, Math.floor(m.maxHp / 2)); m.status = null; m.confusion = 0;
+          emit({ t: 'revive', side: si, index: dead[0], hp: m.hp, maxHp: m.maxHp, text: `${J(nm(si, m), '은/는')} 기도의 힘으로 되살아났다!` });
+          return;
+        }
+        if (fx.faintSelf === 'wish' || fx.faintSelf === 'dance') {   // 치유소원 · 초승달춤
+          if (!reservesOf(si).length) return fail();
+          sides[si].cond.hw = fx.faintSelf;
+          return hurt(si, user, user.hp, 'faint', `${J(un, '은/는')} 소원을 빌며 쓰러졌다...`);
+        }
+        if (fx.pivot && !fx.weather) {                             // 순간이동 · 배턴터치 · 꼬리자르기
+          if (!reservesOf(si).length || isTrapped(user)) return fail();
+          if (fx.pivot === 'shed') {
+            if (user.sub > 0 || user.hp <= Math.ceil(user.maxHp / 2)) return fail();
+            const cost = Math.ceil(user.maxHp / 2), dealt = applyDamage(si, user, cost);
+            emitDamage(si, user, dealt, { cause: 'cost', text: `${J(un, '은/는')} 꼬리를 잘라 대타를 만들었다!` });
+          }
+          queuePivot(si, user, fx.pivot);
+          if (fx.pivot !== 'shed') text(`${J(un, '은/는')} 교체하려고 한다!`);
+          return;
+        }
+        if (fx.gravity) {
+          if (field.gravity > 0) return fail();
+          field.gravity = 5;
+          [0, 1].forEach(s2 => { const m = active(s2); if (m.levitate || m.float) { m.levitate = 0; m.float = 0; emitVol(s2, m); } });
+          text('중력이 강해졌다!'); emitField(); return;
+        }
+        if (fx.wonder) {
+          if (field.wonder > 0) { field.wonder = 0; text('원더룸이 원래대로 돌아왔다!'); } else { field.wonder = 5; text('방어와 특수방어가 뒤바뀌는 이상한 방이 펼쳐졌다!'); }
+          emitField(); return;
+        }
+        if (fx.magicRoom) {
+          if (field.magicRoom > 0) { field.magicRoom = 0; text('매직룸이 원래대로 돌아왔다!'); } else { field.magicRoom = 5; text('턴 종료 회복이 멈추는 이상한 방이 펼쳐졌다!'); }
+          emitField(); return;
+        }
+        if (fx.sport) {
+          const key = fx.sport === 'mud' ? 'mud' : 'waterSport';
+          if (field[key] > 0) return fail();
+          field[key] = 5; text(fx.sport === 'mud' ? '전기 기술의 위력이 약해졌다!' : '불꽃 기술의 위력이 약해졌다!'); emitField(); return;
+        }
+        if (fx.ion) {
+          if (field.ion) return fail();
+          field.ion = true; return text('전자기의 샤워가 쏟아졌다! 노말 기술이 전기 타입이 된다!');
+        }
+        if (fx.fairyLock) {
+          if (field.fairyLock > 0) return fail();
+          field.fairyLock = 2; text('다음 턴에는 아무도 도망칠 수 없다!'); emitField(); return;
+        }
+        if (fx.courtChange) {
+          const a = sides[0].cond, b = sides[1].cond;
+          SWAP_KEYS.forEach(k => { const t0 = a[k]; a[k] = b[k]; b[k] = t0; });
+          text('양쪽 진영의 효과가 맞바뀌었다!'); emitField(); return;
+        }
+        if (fx.lockOn) {
+          if (user.lockOn > 0) return fail();
+          user.lockOn = 2; text(`${J(un, '은/는')} 상대를 록온했다!`); emitVol(si, user); return;
+        }
+        if (fx.laserFocus) {
+          if (user.laserFocus > 0) return fail();
+          user.laserFocus = 2; text(`${J(un, '은/는')} 정신을 집중했다! 다음 공격은 반드시 급소에 맞는다!`); emitVol(si, user); return;
+        }
+        if (fx.curse) {
+          if (user.types.includes(GHOST)) {                        // 고스트: 체력 절반을 내고 상대를 저주한다
+            if (target.cursed || target.fainted) return fail();
+            const cost = Math.floor(user.maxHp / 2), dealt = applyDamage(si, user, cost);
+            emitDamage(si, user, dealt, { cause: 'cost', text: `${J(un, '은/는')} 체력을 깎아 ${nm(foe, target)}에게 저주를 걸었다!` });
+            target.cursed = true; emitVol(foe, target); faintCheck(si, user); return;
+          }
+          changeStage(si, user, 'spe', -1); changeStage(si, user, 'atk', 1); changeStage(si, user, 'def', 1); return;
+        }
+        if (fx.destinyBond) { user.destinyBond = true; text(`${J(un, '은/는')} 상대를 길동무로 삼으려 한다!`); emitVol(si, user); return; }
+        if (fx.grudge) { user.grudge = true; text(`${J(un, '은/는')} 원념을 품었다!`); emitVol(si, user); return; }
+        if (fx.imprison) {
+          if (user.imprison) return fail();
+          user.imprison = true; text(`${J(un, '은/는')} 자신이 가진 기술을 상대가 쓰지 못하게 봉인했다!`); emitVol(si, user); return;
+        }
+        if (fx.snatch) { user.snatching = true; return text(`${J(un, '은/는')} 상대의 기술을 가로챌 태세를 갖췄다!`); }
+        if (fx.coat) { user.coat = true; return text(`${J(un, '은/는')} 마법의 막으로 몸을 감쌌다!`); }
+        if (fx.recycle) {
+          const last = user.moves[user.prevMove];
+          if (!last || last.pp >= last.maxPp) return fail();
+          last.pp = Math.min(last.maxPp, last.pp + 5); return text(`${J(un, '은/는')} ${nm(si, user)}의 ${last.name}의 PP를 되살렸다!`);
+        }
+        if (fx.levitate) {
+          if (field.gravity > 0 || user.levitate > 0 || user.ingrain) return fail();
+          user.levitate = 5; text(`${J(un, '은/는')} 전자기의 힘으로 떠올랐다!`); emitVol(si, user); return;
+        }
+        if (fx.nextOrder > 0) {
+          if (user.nextOrder > 0) return fail();
+          user.nextOrder = 1; return text(`${J(un, '은/는')} 다음 턴 먼저 움직일 준비를 했다!`);
+        }
+        if (fx.boostNext) {
+          if (user.boostNext > 0) return fail();
+          user.boostNext = 2; text(`${J(un, '은/는')} 힘을 북돋웠다! 다음 공격의 위력이 오른다!`); emitVol(si, user); return;
+        }
+        if (fx.ownSwap) {
+          const [a, b] = fx.ownSwap, va = baseStat(user, a), vb = baseStat(user, b);
+          user.ov = Object.assign({}, user.ov, { [a]: vb, [b]: va });
+          return text(`${J(un, '은/는')} 자신의 ${STAT_KO[a]}과(와) ${J(STAT_KO[b], '을/를')} 맞바꿨다!`);
+        }
+        if (fx.typeChange) {
+          const k = fx.typeChange;
+          let nt = null;
+          const pickOf = list => list[Math.floor(rng() * list.length)];
+          if (k === 'move') {
+            const cand = [...new Set(user.moves.filter(m => m !== move && m.type).map(m => m.type))].filter(t => !user.types.includes(t));
+            if (!cand.length) return fail();
+            nt = [pickOf(cand)];
+          } else if (k === 'resist') {
+            const last = target.moves[target.lastMove];
+            if (!last || !last.type) return fail();
+            const cand = []; for (let t = 1; t <= 18; t++) if (CHART[last.type - 1][t - 1] < 1 && !user.types.includes(t)) cand.push(t);
+            if (!cand.length) return fail();
+            nt = [pickOf(cand)];
+          } else if (k === 'terrain') {
+            nt = [TERRAIN_TYPE[field.terrain] || NORMAL];
+          } else if (k === 'mirror') {
+            nt = target.types.slice();
+          }
+          if (JSON.stringify(nt) === JSON.stringify(user.types)) return fail();
+          return setTypes(si, user, nt, `${J(un, '은/는')} ${nt.map(typeName).join('·')} 타입이 되었다!`);
+        }
+        if (fx.selfTrap) {                                         // 배수의진
+          if (user.noRetreat) return fail();
+          user.noRetreat = true; text(`${J(un, '은/는')} 배수의진을 쳤다! 이제 교체할 수 없다!`); emitVol(si, user);
+        }
+        if (fx.tidy) {                                             // 정리정돈
+          let any = false;
+          for (const s2 of sides) { const c = s2.cond; if (c.rocks || c.spikes || c.tspikes || c.web) any = true; c.rocks = false; c.spikes = 0; c.tspikes = 0; c.web = false; }
+          [0, 1].forEach(s2 => { const m = active(s2); if (m.sub > 0) { m.sub = 0; any = true; emitVol(s2, m); } });
+          if (any) { text('주변이 깨끗이 정리되었다!'); emitField(); }
+        }
+        if (fx.stockpile) {                                        // 비축하기
+          if (user.stock >= 3) return fail();
+          user.stock++; text(`${J(un, '은/는')} ${user.stock}개를 비축했다!`); emitVol(si, user);
+        }
+        if (fx.swallow) {                                          // 꿀꺽
+          const n = user.stock;
+          if (!n) return fail();
+          user.stock = 0;
+          heal(si, user, Math.max(1, Math.floor(user.maxHp * [0, 25, 50, 100][n] / 100)), `${J(un, '은/는')} 비축한 힘을 삼켜 체력을 회복했다!`);
+          changeStage(si, user, 'def', -n); changeStage(si, user, 'spd', -n); emitVol(si, user); return;
+        }
+
         if (fx.sub) {                                              // 대타출동
           const cost = Math.floor(user.maxHp / 4);
           if (user.sub > 0 || user.hp <= cost) return fail(user.sub > 0 ? `${nm(si, user)}의 대타는 이미 나와 있다!` : '체력이 부족해서 대타를 만들 수 없다!');
@@ -806,9 +1351,10 @@
           return text('멸망의노래가 울려 퍼졌다! 3턴 뒤 모두 쓰러진다...');
         }
         if (fx.weather) {
-          if (field.weather === fx.weather) return fail();
-          field.weather = fx.weather; field.weatherTurns = 5;
-          text(WEATHER_START[fx.weather]); emitField(); return;
+          if (field.weather === fx.weather) fail();
+          else { field.weather = fx.weather; field.weatherTurns = 5; text(WEATHER_START[fx.weather]); emitField(); }
+          if (fx.pivot) queuePivot(si, user, fx.pivot);                // 썰렁개그: 날씨를 바꾸고 교체
+          return;
         }
         if (fx.terrain) {
           if (field.terrain === fx.terrain) return fail();
@@ -840,7 +1386,7 @@
           const c = sides[si].cond, k = fx.side;
           if (c[k] > 0) return fail();
           c[k] = k === 'tailwind' ? 4 : 5;
-          text(k === 'tailwind' ? '우리 쪽에 순풍이 불기 시작했다!' : k === 'safeguard' ? '우리 쪽이 신비의 베일에 감싸였다!' : '우리 쪽이 안개에 감싸였다!');
+          text(k === 'tailwind' ? '우리 쪽에 순풍이 불기 시작했다!' : k === 'safeguard' ? '우리 쪽이 신비의 베일에 감싸였다!' : k === 'lucky' ? '우리 쪽이 행운의 주문으로 감싸였다! 급소에 맞지 않는다!' : '우리 쪽이 안개에 감싸였다!');
           emitField(); return;
         }
         if (fx.focus) {
@@ -893,7 +1439,7 @@
           heal(si, user, healAmount(fx, user), `${J(nm(si, user), '은/는')} 체력을 회복했다!`);
         }
         if (fx.cure === 'self') {
-          if (!cureStatus(si, user) && !fx.heal) return fail();
+          if (!cureStatus(si, user) && !fx.heal && !fx.self) return fail();
         }
         if (fx.randStat) {                                         // 날카로운침: 무작위 능력 1개를 크게 올린다
           const open = STAT_KEYS.filter(k => user.stages[k] < 6);
@@ -927,8 +1473,9 @@
             hurt(si, mon, Math.max(1, Math.floor(mon.maxHp / 16)), 'weather', `${J(nm(si, mon), '은/는')} 모래바람에 휩쓸렸다!`);
           });
         }
+        const noHeal = field.magicRoom > 0;      // 매직룸: 턴 종료 회복 정지
         // 2) 소원
-        for (const si of order) {
+        for (const si of noHeal ? [] : order) {
           const c = sides[si].cond;
           if (c.wish && --c.wish.turns <= 0) {
             const mon = active(si);
@@ -938,6 +1485,7 @@
         }
         // 3) 그래스필드 / 뿌리박기 / 아쿠아링 회복
         each((si, mon) => {
+          if (noHeal) return;
           if (field.terrain === 'grassy' && grounded(mon)) heal(si, mon, Math.max(1, Math.floor(mon.maxHp / 16)), `${J(nm(si, mon), '은/는')} 풀의 힘으로 체력을 회복했다!`);
           if (mon.ingrain) heal(si, mon, Math.max(1, Math.floor(mon.maxHp / 16)), `${J(nm(si, mon), '은/는')} 뿌리로 양분을 빨아들였다!`);
           if (mon.aquaRing) heal(si, mon, Math.max(1, Math.floor(mon.maxHp / 16)), `${J(nm(si, mon), '은/는')} 물의 베일로 체력을 회복했다!`);
@@ -949,7 +1497,7 @@
           const gain = Math.min(dmg, mon.hp);
           hurt(si, mon, dmg, 'seed', `${J(nm(si, mon), '은/는')} 씨앗에게 체력을 빼앗겼다!`);
           const other = active(1 - si);
-          if (!other.fainted) heal(1 - si, other, gain, `${J(nm(1 - si, other), '은/는')} 체력을 흡수했다!`);
+          if (!other.fainted && !noHeal) heal(1 - si, other, gain, `${J(nm(1 - si, other), '은/는')} 체력을 흡수했다!`);
         });
         // 5) 상태이상 피해
         each((si, mon) => {
@@ -959,6 +1507,13 @@
           else if (mon.status === 'tox') { dmg = Math.max(1, Math.floor(mon.maxHp * mon.toxCount / 16)); mon.toxCount = Math.min(15, mon.toxCount + 1); label = '독'; }
           if (!label) return;
           hurt(si, mon, dmg, mon.status, `${J(nm(si, mon), '은/는')} ${label} 데미지를 입고 있다!`);
+        });
+        // 5.5) 저주 / 문어굳히기
+        each((si, mon) => {
+          if (mon.cursed) hurt(si, mon, Math.max(1, Math.floor(mon.maxHp / 4)), 'curse', `${J(nm(si, mon), '은/는')} 저주를 받고 있다!`);
+        });
+        each((si, mon) => {
+          if (mon.octolock) { changeStage(si, mon, 'def', -1, true); changeStage(si, mon, 'spd', -1, true); }
         });
         // 6) 악몽 / 하품 / 멸망의노래
         each((si, mon) => {
@@ -983,16 +1538,29 @@
           const mon = active(si);
           mon.roost = false;
           if (mon.fainted) continue;
-          let vol = false;
+          mon.turnsOut++;
+          mon.electrified = false; mon.powdered = false; mon.snatching = false; mon.coat = false;
+          let vol = mon.lockOn > 0 || mon.laserFocus > 0 || mon.boostNext > 0;     // 이번 턴으로 끝나는 표시를 화면에 알린다
+          if (mon.lockOn > 0) mon.lockOn--;
+          if (mon.laserFocus > 0) mon.laserFocus--;
+          if (mon.boostNext > 0) mon.boostNext--;
+          if (mon.levitate > 0 && --mon.levitate === 0) { text(`${nm(si, mon)}의 부유가 풀렸다!`); vol = true; }
+          if (mon.float > 0 && --mon.float === 0) { text(`${nm(si, mon)}의 텔레키네시스가 풀렸다!`); vol = true; }
+          if (mon.embargo > 0 && --mon.embargo === 0) { text(`${nm(si, mon)}의 금제가 풀렸다!`); vol = true; }
+          if (mon.healBlock > 0 && --mon.healBlock === 0) { text(`${nm(si, mon)}의 회복봉인이 풀렸다!`); vol = true; }
           if (mon.taunt > 0 && --mon.taunt === 0) { text(`${nm(si, mon)}의 도발이 풀렸다!`); vol = true; }
           if (mon.encore > 0 && --mon.encore === 0) { text(`${nm(si, mon)}의 앙코르가 풀렸다!`); vol = true; }
           if (mon.disable > 0 && --mon.disable === 0) { text(`${nm(si, mon)}의 사슬묶기가 풀렸다!`); vol = true; }
           if (vol) emitVol(si, mon);
           const c = sides[si].cond;
-          const ends = { reflect: '리플렉터의 효과가 사라졌다.', lightscreen: '빛의장막의 효과가 사라졌다.', veil: '오로라베일의 효과가 사라졌다.', tailwind: '순풍이 그쳤다.', safeguard: '신비의부적의 효과가 사라졌다.', mist: '안개가 걷혔다.' };
+          const ends = { reflect: '리플렉터의 효과가 사라졌다.', lightscreen: '빛의장막의 효과가 사라졌다.', veil: '오로라베일의 효과가 사라졌다.', tailwind: '순풍이 그쳤다.', safeguard: '신비의부적의 효과가 사라졌다.', mist: '안개가 걷혔다.', lucky: '주술의 효과가 사라졌다.' };
           for (const k of Object.keys(ends)) if (c[k] > 0 && --c[k] === 0) { text(`${sideName(si)} ${ends[k]}`); changed = true; }
         }
         if (field.room > 0 && --field.room === 0) { text('뒤틀린 시공이 원래대로 돌아왔다!'); changed = true; }
+        field.ion = false;
+        if (field.fairyLock > 0) { field.fairyLock--; changed = true; }
+        const fieldEnds = { gravity: '중력이 원래대로 돌아왔다.', wonder: '원더룸이 원래대로 돌아왔다.', magicRoom: '매직룸이 원래대로 돌아왔다.', mud: '흙놀이의 효과가 사라졌다.', waterSport: '물놀이의 효과가 사라졌다.' };
+        for (const k of Object.keys(fieldEnds)) if (field[k] > 0 && --field[k] === 0) { text(fieldEnds[k]); changed = true; }
         if (field.weather && --field.weatherTurns <= 0) { text(WEATHER_END[field.weather]); field.weather = null; changed = true; }
         if (field.terrain && --field.terrainTurns <= 0) { text(TERRAIN_END[field.terrain]); field.terrain = null; changed = true; }
         if (changed) emitField();
@@ -1021,6 +1589,50 @@
         return drain();
       };
 
+      /** 턴 큐를 이어서 실행한다. 턴 도중 교체(pivot)가 예약되면 멈추고 false 를 돌려준다. */
+      function runQueue() {
+        const acted = T.acted;
+        curActed = acted;
+        while (T.qi < T.queue.length) {
+          if (B.phase === 'ended') return true;
+          const q = T.queue[T.qi++];
+          const mon = active(q.si);
+          if (mon !== q.mon || mon.fainted) continue; // 기절한 포켓몬은 행동하지 못한다
+          if (q.a.type === 'switch') sendOut(q.si, q.a.to, mon.name);
+          else runMove(q.si, q.move, q.struggle, acted);
+          acted[q.si] = true;
+          if (checkEnd(q.si)) return true;
+          if (B.pivot) {                                  // 쓰고 나서 바로 교체하는 기술
+            if (active(B.pivot.si).fainted || !reservesOf(B.pivot.si).length) B.pivot = null;
+            else {
+              B.phase = 'switch'; B.pending = [B.pivot.si];
+              emit({ t: 'needSwitch', sides: [B.pivot.si], pivot: true, text: '교체할 포켓몬을 골라야 한다!' });
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+
+      /** 턴 종료 처리 → 기절 교체 대기 / 무승부 판정 */
+      function finishTurn() {
+        T = null;
+        if (B.phase !== 'ended') {
+          endOfTurn();
+          checkEnd(null);
+        }
+        if (B.phase !== 'ended') {
+          B.pending = [0, 1].filter(si => active(si).fainted);
+          if (B.pending.length) {
+            B.phase = 'switch';
+            emit({ t: 'needSwitch', sides: B.pending.slice(), text: '다음 포켓몬을 골라야 한다!' });
+          } else if (B.turn >= maxTurns) {
+            B.phase = 'ended'; B.winner = 'draw';
+            emit({ t: 'end', winner: 'draw', text: '무승부!' });
+          } else B.phase = 'move';
+        }
+      }
+
       B.playTurn = function (action0, action1) {
         if (B.phase !== 'move') throw new Error(`지금은 턴을 진행할 수 없습니다. (phase=${B.phase})`);
         const acts = [validate(0, action0), validate(1, action1)];
@@ -1040,50 +1652,37 @@
           mon.flinch = false;
           const struggle = a.type === 'move' && a.index === -1;
           const move = a.type === 'move' ? (struggle ? STRUGGLE : mon.moves[a.index]) : null;
+          const ord = mon.nextOrder; mon.nextOrder = 0;       // 당신먼저 / 순서미루기
           return {
-            si, a, struggle, move, mon,
+            si, a, struggle, move, mon, ord,
             pri: a.type === 'switch' ? 100 : move.pri || 0,
             speed: speedOf(si),
             tie: rng(),
           };
-        }).sort((x, y) => y.pri - x.pri || (field.room > 0 ? x.speed - y.speed : y.speed - x.speed) || y.tie - x.tie);
+        }).sort((x, y) => y.pri - x.pri || y.ord - x.ord || (field.room > 0 ? x.speed - y.speed : y.speed - x.speed) || y.tie - x.tie);
 
-        const acted = [false, false];
-        curActed = acted;
-        for (const q of queue) {
-          if (B.phase === 'ended') break;
-          const mon = active(q.si);
-          if (mon !== q.mon || mon.fainted) continue; // 기절한 포켓몬은 행동하지 못한다
-          if (q.a.type === 'switch') sendOut(q.si, q.a.to, mon.name);
-          else runMove(q.si, q.move, q.struggle, acted);
-          acted[q.si] = true;
-          if (checkEnd(q.si)) break;
-        }
-
-        // 턴 종료 처리
-        if (B.phase !== 'ended') {
-          endOfTurn();
-          checkEnd(null);
-        }
-
-        if (B.phase !== 'ended') {
-          B.pending = [0, 1].filter(si => active(si).fainted);
-          if (B.pending.length) {
-            B.phase = 'switch';
-            emit({ t: 'needSwitch', sides: B.pending.slice(), text: '다음 포켓몬을 골라야 한다!' });
-          } else if (B.turn >= maxTurns) {
-            B.phase = 'ended'; B.winner = 'draw';
-            emit({ t: 'end', winner: 'draw', text: '무승부!' });
-          }
-        }
+        T = { queue, qi: 0, acted: [false, false] };
+        if (runQueue()) finishTurn();
         return drain();
       };
 
-      /** 기절 후 교체 선택 */
+      /** 쓰러진 뒤(또는 턴 도중 교체 기술 뒤) 교체 선택 */
       B.replace = function (si, to) {
         if (B.phase !== 'switch' || !B.pending.includes(si)) throw new Error('교체할 차례가 아닙니다.');
         if (!sides[si].party[to] || sides[si].party[to].fainted) throw new Error('교체할 수 없는 대상입니다.');
+        if (to === sides[si].active && !sides[si].party[to].fainted) throw new Error('이미 나와 있는 포켓몬입니다.');
         events = [];
+        if (B.pivot && B.pivot.si === si) {                // 턴 도중 교체: 끝나면 남은 행동을 이어서 진행한다
+          const pv = B.pivot; B.pivot = null;
+          const old = active(si);
+          const passed = pv.mode === 'baton' ? { baton: collectBaton(old) } : pv.mode === 'shed' ? { sub: pv.sub } : null;
+          sendOut(si, to, old.name, false, passed);
+          B.pending = B.pending.filter(x => x !== si);
+          if (checkEnd(null)) return drain();
+          B.phase = 'move';
+          if (T && runQueue()) finishTurn();
+          return drain();
+        }
         sendOut(si, to, null);
         B.pending = B.pending.filter(x => x !== si);
         if (!checkEnd(null)) {
@@ -1096,10 +1695,13 @@
         return drain();
       };
 
+      /** 지금 교체로 내보낼 수 있는 파티 인덱스 (쓰러지지 않았고 현재 나와 있지 않은 포켓몬) */
+      B.replaceOptions = reservesOf;
+
       B.snapshot = function () {
         return {
           turn: B.turn, phase: B.phase, winner: B.winner, pending: B.pending.slice(),
-          field: { weather: field.weather, terrain: field.terrain, room: field.room },
+          field: fieldView(),
           sides: sides.map(s => ({
             name: s.name, active: s.active, cond: condView(s.cond),
             party: s.party.map(m => ({

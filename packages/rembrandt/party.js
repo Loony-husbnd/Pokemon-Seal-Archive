@@ -99,7 +99,14 @@
 
     /** 효과 종류별 기본 비중 (2단계 변화기). 시뮬레이션 결과로 기술마다의 w 가 따로 곱해진다 */
     const SPECIAL_FIT = {
-      splash: 0.02, metronome: 0.3, sleepTalk: 0.25, perish: 0.1, transform: 6,
+      dead: 0, splash: 0.02,
+      // 3단계
+      faintSelf: 0.3, revive: 0.3, pivot: 0.5, gravity: 0.3, wonder: 0.2, magicRoom: 0.15, sport: 0.15, ion: 0.1, electrify: 0.1, fairyLock: 0.1, courtChange: 0.3,
+      mimic: 0.1, sketch: 0.1, mirrorMove: 0.15, copycat: 0.1, meFirst: 0.1, assist: 0.1, naturePower: 0.2, repeat: 0.1, copyStages: 0.2, typeChange: 0.15, addType: 0.2, setType: 0.2,
+      swapTypes: 0.05, rolePlay: 0.05, giveTypes: 0.05, doodle: 0.05, swapStages: 0.1, invertStages: 0.2, swapStat: 0.05, ownSwap: 0.1, splitStats: 0.1, psychoShift: 0.2, statusSwap: 0.1,
+      clearBoosts: 0.2, embargo: 0.1, healBlock: 0.25, simple: 0.05, insomnia: 0.02, recycle: 0.05, levitate: 0.2, telekinesis: 0.05, foresight: 0.15, lockOn: 0.1, laserFocus: 0.15,
+      curse: 0.35, destinyBond: 0.25, grudge: 0.05, imprison: 0.15, snatch: 0.1, coat: 0.3, dust: 0.15, octolock: 0.3, nextOrder: 0.1, boostNext: 0.05, tidy: 0.4, selfTrap: 0.5,
+      stockpile: 0.5, swallow: 0.4, charge2: 0.5, strengthSap: 0.6, tar: 0.4, metronome: 0.3, sleepTalk: 0.25, perish: 0.1, transform: 6,
       weather: 0.6, terrain: 0.45, room: 0.4, defog: 0.4, seed: 0.8, taunt: 0.7, encore: 0.4, disable: 0.3, torment: 0.2, yawn: 0.5, attract: 0.5,
       nightmare: 0.2, trap: 0.3, spite: 0.15, soak: 0.2, aquaRing: 0.5, ingrain: 0.35, wish: 0.7, focus: 0.2, sub: 0.7, painSplit: 0.3, phaze: 0.5,
       haze: 0.35, cureFoe: 0.5, randStat: 0.5,
@@ -115,7 +122,7 @@
       if (fx.hazard) return HAZARD_FIT[fx.hazard];
       if (fx.screen) return SCREEN_FIT[fx.screen];
       if (fx.side) return SIDE_FIT[fx.side];
-      if (fx.protect) return fx.protect === 'endure' ? 0.2 : 0.9;
+      if (fx.protect) return { endure: 0.2, maxguard: 0.6, quick: 0.2, crafty: 0.15, wide: 0.1, mat: 0.2 }[fx.protect] || 0.9;
       if (fx.cure) return fx.heal ? 0.6 : fx.cure === 'party' ? 0.4 : 0.3;
       let w;
       if (fx.heal) w = fx.roost || fx.weatherHeal || fx.sandHeal ? 1 : 1;
@@ -146,7 +153,9 @@
       if (fx.side) t.push('side:' + fx.side);
       if (fx.protect) t.push('protect');
       if (fx.cure) t.push('cure');
-      for (const k of ['seed', 'taunt', 'encore', 'disable', 'torment', 'yawn', 'attract', 'nightmare', 'trap', 'sub', 'phaze', 'haze', 'painSplit', 'defog', 'randStat']) if (fx[k]) t.push(k);
+      for (const k of ['seed', 'taunt', 'encore', 'disable', 'torment', 'yawn', 'attract', 'nightmare', 'trap', 'sub', 'phaze', 'haze', 'painSplit', 'defog', 'randStat',
+        'pivot', 'faintSelf', 'revive', 'gravity', 'wonder', 'magicRoom', 'sport', 'courtChange', 'typeChange', 'addType', 'setType', 'curse', 'destinyBond', 'imprison', 'coat', 'tidy',
+        'stockpile', 'swallow', 'foresight', 'lockOn', 'levitate', 'healBlock', 'octolock', 'embargo', 'clearBoosts', 'invertStages', 'copyStages', 'mimic', 'sketch', 'mirrorMove', 'copycat']) if (fx[k]) t.push(k);
       return t;
     }
 
