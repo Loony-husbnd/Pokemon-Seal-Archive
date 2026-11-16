@@ -237,9 +237,10 @@ export function mount(root, { go, params }) {
     return new Promise(res => {
       const ov = $('#overlay'), team = me.team(), opts = new Map(match.choices(0).filter(c => c.type === 'switch').map(c => [c.to, c]));
       ov.innerHTML = `<div class="pick-ov"><div class="pick-box glass"><h3 class="display">${esc(title)}</h3><div class="pick-list">${team.map((m, i) => {
-        const id = R.toID(m.species), u = U.side[0].party.find(x => x.baseId === id || x.id === id) || { origTypes: monTypes(id) };
-        const off = !opts.has(i), r = m.hp / m.maxHp;
-        return `<button class="pcard${off ? ' off' : ''}" data-i="${i}" ${off ? 'disabled' : ''} style="--c1:${TYPE_HEX[(u.origTypes || monTypes(id))[0]]}"><span class="pa">${monImg(id)}</span><b>${esc(formLabel(id))}</b>
+        // 요청의 종 이름은 지금 모습(메가 등)이고, 화면 상태의 id 는 교체로 나갈 때 원래 종으로 되돌아가 있을 수 있다 → 지금 모습·이름(ident)·원래 종 어느 것으로든 찾는다
+        const id = R.toID(m.species), nm = R.toID(m.ident), u = U.side[0].party.find(x => x.baseId === id || x.id === id || x.baseId === nm || x.id === nm);
+        const types = u ? u.origTypes : monTypes(id), off = !opts.has(i), r = m.hp / m.maxHp;
+        return `<button class="pcard${off ? ' off' : ''}" data-i="${i}" ${off ? 'disabled' : ''} style="--c1:${TYPE_HEX[types[0]]}"><span class="pa">${monImg(id)}</span><b>${esc(formLabel(id))}</b>
           <div class="hp mini"><i class="fill ${hpClass(r)}" style="width:${(r * 100).toFixed(0)}%"></i></div><small>${m.fainted ? '기절' : m.active ? '출전 중' : `${m.hp}/${m.maxHp}`}${m.status && STATUS_KO[m.status] ? ' · ' + STATUS_KO[m.status] : ''}</small></button>`;
       }).join('')}</div>${allowCancel ? '<button class="btn" data-pk="cancel">취소</button>' : ''}</div></div>`;
       ov.onclick = e => {

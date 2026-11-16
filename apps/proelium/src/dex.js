@@ -22,7 +22,8 @@ export const typeChip = t => `<span class="chip${isLite(t) ? ' lite' : ''}" styl
 
 // ───────── 포켓몬 ─────────
 export const row = id => DX.get(id);
-export const monTypes = id => row(id).types.map(typeId);
+/** 타입 번호들. 메가·젠 모드처럼 로스터에 없는 폼도 엔진에서 읽는다 (모르면 노말) */
+export const monTypes = id => { const r = row(id); const t = r ? r.types : R.speciesTypes(id); return (t.length ? t : ['Normal']).map(typeId); };
 export const formLabel = id => (row(id) ? row(id).ko : R.koName('species', id));
 export const stat6 = id => { const b = row(id).baseStats; return [b.hp, b.atk, b.def, b.spa, b.spd, b.spe]; };
 export const STAT_LABEL = ['HP', '공격', '방어', '특공', '특방', '스피드'];

@@ -5,7 +5,7 @@
 | 프로그램 | 버전 | 한 줄 소개 | 주소 |
 |---|---|---|---|
 | **Holo** | 4.0 | 포켓몬 띠부씰 아카이브. 도감·바인더·사육장·3:3 배틀 탭 (**Rembrandt 1.3 탑재**) | `/` |
-| **Proelium** | 1.1.1 | 포켓몬 3마리와 기술 4개·특성·도구를 직접 고르는 배틀 아레나 (**Rembrandt 2.0 탑재**) | `/proelium/` |
+| **Proelium** | 1.1.2 | 포켓몬 3마리와 기술 4개·특성·도구를 직접 고르는 배틀 아레나 (**Rembrandt 2.0 탑재**) | `/proelium/` |
 | **Rembrandt** | **2.0.1** | **새로 쓴 배틀 엔진** — Pokémon Showdown 시뮬레이터 기반. 특성·도구·메가진화, 전국도감 1,254종, 상대 정보 가리기, 팀 빌더, AI 4단계 | (라이브러리) |
 | Rembrandt | 1.3 | 옛 엔진(직접 구현): 변화기 270개·공격기 525개. **Holo 의 배틀 탭이 아직 이것을 씁니다** | (라이브러리) |
 
@@ -193,6 +193,10 @@
 - **도구 드롭다운**: 그룹 제목(메가스톤)이 흰 팝업 배경에서 거의 안 보여 메가스톤을 찾기 어렵던 문제를 고쳤습니다. 팝업을 어두운 배경·밝은 글자로 통일하고, 메가스톤은 `🌀 번치코나이트 (메가진화)` 로 표시하며 안내 문구를 넣었습니다.
 - **선택지가 하나로 고정된 턴**(반동·충전·난동·발버둥): "이어서 사용" 등으로 표시하고, 요청에 없는 PP 는 숨깁니다(`PP undefined/undefined` 수정). 파괴광선 다음 턴에 '오류가 발생했어요'로 멈추던 문제는 Rembrandt 2.0.1 에서 고쳤고, 오류 화면에는 이제 이유와 `홈으로` 버튼이 보입니다.
 
+### 1.1.2 (오류 수정)
+
+- **교체창 오류**: 메가진화한 포켓몬이 벤치에 있을 때 교체창을 열면(교체하거나 쓰러진 뒤) '오류가 발생했어요 (Cannot read properties of null (reading 'types'))' 로 멈추던 문제를 고쳤습니다. 메가진화한 포켓몬은 벤치에서도 메가 모습으로 남는데, 화면 상태는 원래 종으로 되돌아가 있어 서로 못 찾았고 로스터에 없는 메가 폼의 타입을 읽다가 실패했습니다. 이제 이름(ident)으로도 찾고, 로스터 밖 폼의 타입은 엔진(`speciesTypes`)에서 읽습니다. 회귀 시험: `npm run e2e:proelium:megapicker`.
+
 ## 화면 흐름
 
 홈 → 팀 편성 → 매칭(VS) → 배틀 → 결과
@@ -325,7 +329,7 @@ const events = T.pull();
 
 ## 검증
 
-`npm run test:rembrandt2`(45개): 규칙(테라스탈 금지·메가진화 한 번), 합법 무작위 팀 120판이 끝까지 가는지와 한국어 문구·체력 추적·미변환 비율, 습득 기술·팀 검증·이름표, AI 의 합법성·강도 순서·정보 누출 방지, 팀 빌더(전 로스터 세트 합법·난이도별 강도 순서). 브라우저 전체 흐름은 `npm run e2e:proelium`.
+`npm run test:rembrandt2`(46개): 규칙(테라스탈 금지·메가진화 한 번), 합법 무작위 팀 120판이 끝까지 가는지와 한국어 문구·체력 추적·미변환 비율, 습득 기술·팀 검증·이름표, AI 의 합법성·강도 순서·정보 누출 방지, 팀 빌더(전 로스터 세트 합법·난이도별 강도 순서). 브라우저 전체 흐름은 `npm run e2e:proelium`.
 
 ## 한계와 후속 과제
 
@@ -479,7 +483,7 @@ packages/rembrandt2/  새 배틀 엔진 2.0 (Showdown 기반, 화면 없음, 테
 packages/rembrandt/   옛 배틀 엔진 1.3·AI·파티·데이터 (화면 없음, 테스트 포함)  → Holo 가 사용
 packages/battle-ui/   Holo 전투 화면
 apps/holo/            띠부씰 아카이브 (Holo 4.0)        → 배포 /
-apps/proelium/        배틀 아레나 (Proelium 1.1.1)      → 배포 /proelium/
+apps/proelium/        배틀 아레나 (Proelium 1.1.2)      → 배포 /proelium/
 spike/showdown/       Showdown 도입 가능성 시험(번들 크기·복제 난수·속도 등)과 결과
 tools/                데이터 생성·검증·시뮬레이터·경계 검사·브라우저 시험
 ```
@@ -493,9 +497,10 @@ tools/                데이터 생성·검증·시뮬레이터·경계 검사·
 | `npm run battle:data` | PokeAPI/Showdown 데이터로 `battle-data.js`·`battle-learnsets.js` 재생성 (`--sample`, `--show 6,25`, `--explain=25`) |
 | `npm run battle:validate` | 데이터 무결성 검증 |
 | `npm run test:battle` | 옛 엔진(1.3)·AI·파티·변화기·특수 공격기 테스트 (244개) |
-| `npm run test:rembrandt2` | 새 엔진(2.0) 테스트 (45개) |
+| `npm run test:rembrandt2` | 새 엔진(2.0) 테스트 (46개) |
 | `node tools/build-ko-names.mjs` | 한국어 이름표·폼 그림 번호 재생성 (PokeAPI CSV) |
 | `npm run build:proelium` / `preview:proelium` / `e2e:proelium` | Proelium 만 빌드 / 미리보기 / 브라우저 전체 흐름 시험(Playwright) |
+| `npm run e2e:proelium:megapicker` | 회귀 시험: 메가진화한 포켓몬이 벤치에 있을 때 교체창이 열리는지 |
 | `npm run check:boundaries` | Rembrandt(1.3·2.0)가 화면·저장소에 의존하지 않는지 검사 |
 | `npm run sim:battle` / `sim:ai` | 대량 시뮬레이션(대칭성·밸런스 / 난이도 매트릭스) |
 | `npm run sim:status` / `sim:status-moves` | 변화기 포함 밸런스 / 변화기 270개를 하나씩 따로 측정 (`-- --stage3`: 변화기 3단계 120개만, `-- --attacks`: 특수 공격기 168개, `-- --only a,b`: 지정한 기술만) |

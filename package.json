@@ -20,7 +20,8 @@
     "test:rembrandt2": "node --test packages/rembrandt2/test/match.test.mjs packages/rembrandt2/test/dex.test.mjs packages/rembrandt2/test/events.test.mjs packages/rembrandt2/test/ai.test.mjs packages/rembrandt2/test/builder.test.mjs packages/rembrandt2/test/requests.test.mjs",
     "build:proelium": "vite build --mode proelium",
     "preview:proelium": "vite preview --mode proelium",
-    "e2e:proelium": "node tools/e2e-proelium.cjs"
+    "e2e:proelium": "node tools/e2e-proelium.cjs",
+    "e2e:proelium:megapicker": "node tools/e2e-proelium-megapicker.cjs"
   },
   "devDependencies": {
     "vite": "^6.2.3"

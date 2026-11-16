@@ -22,6 +22,9 @@ const PSEUDO_MOVES = {
   recharge: { id: 'recharge', name: 'Recharge', ko: '반동으로 쉬는 중', type: 'Normal', typeKo: '노말', category: 'Status', power: 0, accuracy: null, pp: 0, priority: 0, pseudo: true },
 };
 
+/** 로스터에 없는 폼(메가·전투 중 폼 포함)도 포함해 종의 타입(영문)을 돌려준다. 모르는 종이면 빈 배열 */
+export function speciesTypes(id) { const sp = dex.species.get(id); return sp && sp.exists ? sp.types.slice() : []; }
+
 export function createDex(opts = {}) {
   const rosterMode = opts.roster || 'all';
   const sv = sp => !sp.isNonstandard;                                // 9세대 정규 데이터에 있는 종
