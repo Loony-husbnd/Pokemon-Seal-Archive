@@ -10,3 +10,4 @@ export { generateOpponent, buildHell, randomTeam, pickSpecies, familyOf, fakeMon
 export { describeMove } from './ko-moves.js';
 export { ART } from '../data/art-ids.js';
 export { typeMultiplier } from './ai/calc.js';
+export { speciesTypes } from './dex.js';

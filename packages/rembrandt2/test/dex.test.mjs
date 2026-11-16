@@ -1,7 +1,7 @@
 // 도감·팀 데이터: 9세대 기준 로스터, 습득 기술, 메가스톤, 팀 검증, 한국어 이름표
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDex, koName, lookupName } from '../src/index.js';
+import { createDex, koName, lookupName, speciesTypes } from '../src/index.js';
 
 const D = createDex();
 const R = D.roster();
@@ -64,4 +64,12 @@ test('한국어 이름표: 로스터·습득 기술·특성은 거의 다 한국
 test('기술 정보: 한국어 이름·타입·분류·위력', () => {
   const m = D.moveInfo('flamethrower');
   assert.equal(m.ko, '화염방사'); assert.equal(m.typeKo, '불꽃'); assert.equal(m.category, 'Special'); assert.equal(m.power ?? m.power, 90);
+});
+
+test('종 타입: 로스터에 없는 폼(메가·전투 중 폼)도 읽을 수 있다 — 화면이 메가 포켓몬 때문에 죽지 않게', () => {
+  assert.equal(D.get('blazikenmega'), null, '메가는 로스터에 없다');
+  assert.deepEqual(speciesTypes('blazikenmega'), ['Fire', 'Fighting']);
+  assert.deepEqual(speciesTypes('charizardmegax'), ['Fire', 'Dragon']);
+  assert.deepEqual(speciesTypes('darmanitanzen'), ['Fire', 'Psychic']);
+  assert.deepEqual(speciesTypes('없는종'), []);
 });

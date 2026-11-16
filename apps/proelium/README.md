@@ -1,4 +1,4 @@
-# Proelium 1.1.1 (배틀 중심 앱)
+# Proelium 1.1.2 (배틀 중심 앱)
 
 배포 주소 `/proelium/`. 포켓몬 3마리와 각자의 **기술 4개 · 특성 · 도구**를 직접 고르는 배틀 아레나입니다. 엔진은 **Rembrandt 2.0**(`packages/rembrandt2`, Pokémon Showdown 시뮬레이터 기반)입니다. Holo 의 배틀 탭은 아직 옛 Rembrandt 1.3 을 씁니다.
 
