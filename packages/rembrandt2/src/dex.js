@@ -17,6 +17,11 @@ const dex = Dex.forGen(9);
 const REGIONAL = /^(Alola|Galar|Hisui|Paldea)(-|$)/;
 const STATS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 
+/** 요청에만 나오고 기술 목록에는 없는 가짜 기술. 반동 기술(파괴광선 등)을 쓴 다음 턴의 선택지가 이것 하나뿐이다 */
+const PSEUDO_MOVES = {
+  recharge: { id: 'recharge', name: 'Recharge', ko: '반동으로 쉬는 중', type: 'Normal', typeKo: '노말', category: 'Status', power: 0, accuracy: null, pp: 0, priority: 0, pseudo: true },
+};
+
 export function createDex(opts = {}) {
   const rosterMode = opts.roster || 'all';
   const sv = sp => !sp.isNonstandard;                                // 9세대 정규 데이터에 있는 종
@@ -127,7 +132,7 @@ export function createDex(opts = {}) {
 
   return {
     roster: () => roster, get: id => byId.get(toID(id)) || null, learnable, itemsFor, megaStonesOf, makeSet, validateTeam,
-    moveInfo(id) { const m = dex.moves.get(id); return m.exists ? { id: m.id, name: m.name, ko: koName('move', m.id), type: m.type, typeKo: koName('type', m.type), category: m.category, power: m.basePower, accuracy: m.accuracy === true ? null : m.accuracy, pp: m.pp, priority: m.priority } : null; },
+    moveInfo(id) { const m = dex.moves.get(id); if (!m.exists) return PSEUDO_MOVES[toID(id)] || null; return m.exists ? { id: m.id, name: m.name, ko: koName('move', m.id), type: m.type, typeKo: koName('type', m.type), category: m.category, power: m.basePower, accuracy: m.accuracy === true ? null : m.accuracy, pp: m.pp, priority: m.priority } : null; },
     rosterMode,
   };
 }

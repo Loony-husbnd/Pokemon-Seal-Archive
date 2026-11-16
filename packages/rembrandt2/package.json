@@ -1,9 +1,11 @@
 {
   "name": "rembrandt2",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "Rembrandt 2: Showdown(@pkmn/sim) 위에 만든 배틀 층. 9세대 규칙 · 메가진화만 · 상대 정보 가리기.",
   "main": "src/index.js",
-  "exports": { ".": "./src/index.js" }
+  "exports": {
+    ".": "./src/index.js"
+  }
 }

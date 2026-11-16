@@ -61,10 +61,12 @@ export function searchMons({ q = '', type = 0, kind = 'all', sort = 'dex' }) {
 // ───────── 기술 ─────────
 const CLS = { Physical: 'phys', Special: 'spec', Status: 'status' };
 const _mv = new Map();
-export function moveInfo(id) {
+export function moveInfo(id, fallbackName) {
   if (_mv.has(id)) return _mv.get(id);
-  const m = DX.moveInfo(id), cls = CLS[m.category];
-  const info = { id: m.id, name: m.ko, type: typeId(m.type), cls, power: m.power, varPower: cls !== 'status' && !m.power, acc: m.accuracy, pp: m.pp, pri: m.priority, desc: R.describeMove(m.id) };
+  const m = DX.moveInfo(id);
+  if (!m) return { id, name: fallbackName || id, type: 1, cls: 'status', power: 0, varPower: false, acc: null, pp: null, pri: 0, desc: '' };      // 모르는 기술도 화면이 죽지 않게
+  const cls = CLS[m.category];
+  const info = { id: m.id, name: m.ko, type: typeId(m.type), cls, power: m.power, varPower: cls !== 'status' && !m.power, acc: m.accuracy, pp: m.pp, pri: m.priority, desc: m.pseudo ? '이번 턴은 움직일 수 없어요' : R.describeMove(m.id), pseudo: !!m.pseudo };
   _mv.set(id, info); return info;
 }
 const _pool = new Map();
