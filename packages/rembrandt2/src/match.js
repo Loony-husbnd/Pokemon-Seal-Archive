@@ -51,6 +51,19 @@ function wrap(battle, logs) {
       battle.sendUpdates();         // Battle 은 스트림 없이 쓰면 직접 내보내야 새 로그가 view 에 쌓인다
     },
 
+    /**
+     * 선택을 고르는 함수(pickFn(match) → [선택0, 선택1])로 제출한다. 거부되면 선택지를 다시 읽고 고쳐서 다시 시도한다(기본 3번).
+     * 상대의 특성(그림자밟기 등)으로 교체가 막혀도 요청에는 '막혔을 수도 있음'(maybeTrapped)으로만 나오고, 시도해 봐야 막힌 것이 드러난다.
+     * 그래서 교체가 거부될 수 있고, 그때는 선택지가 갱신되므로 다시 고르면 된다. 이것은 오류가 아니라 정상 흐름이다.
+     */
+    submitWith(pickFn, tries = 3) {
+      let last;
+      for (let i = 0; i < tries; i++) {
+        try { return match.submit(pickFn(match, i)); } catch (e) { last = e; if (!/올바르지 않다/.test(e.message)) throw e; }
+      }
+      throw last;
+    },
+
     /** 플레이어별 프로토콜 줄. since 를 주면 그 이후 줄만 */
     view(side, since = 0) { return logs.chan[side + 1].slice(since); },
     omniscient(since = 0) { return logs.chan[0].slice(since); },
