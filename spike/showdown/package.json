@@ -1,0 +1,21 @@
+{
+  "name": "showdown-spike",
+  "private": true,
+  "type": "module",
+  "description": "Showdown(@pkmn/sim) 도입 가능성 시험: 번들 크기·탐색 속도·메가진화·한국어 로그",
+  "dependencies": {
+    "@pkmn/sim": "0.11.0",
+    "esbuild": "0.25.0"
+  },
+  "scripts": {
+    "bundle": "esbuild bundle-entry.js --bundle --platform=browser --format=iife --minify --outfile=out/sim.min.js && node browser-check.cjs",
+    "test:mega": "node mega.mjs",
+    "test:rng-leak": "node rng-leak.mjs",
+    "test:clone": "node clone-safety.mjs",
+    "bench": "node speed.mjs && node clonecost.mjs",
+    "protocol-lines": "node lines.mjs",
+    "names": "node names.mjs",
+    "bridge": "node bridge.mjs",
+    "hidden": "node hidden.mjs"
+  }
+}
