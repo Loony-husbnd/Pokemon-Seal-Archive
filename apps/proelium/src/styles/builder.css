@@ -51,7 +51,11 @@
 .search { flex: 1; min-width: 0; height: 46px; border-radius: 999px; border: 1.5px solid var(--line); background: rgba(255, 255, 255, .08); color: var(--ink); padding: 0 18px; font: inherit; font-size: 16px; outline: none; }
 .search:focus { border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(155, 184, 255, .2); }
 .sel { height: 46px; border-radius: 999px; border: 1.5px solid var(--line); background: rgba(255, 255, 255, .08); color: var(--ink); padding: 0 12px; font: inherit; }
-.sel option { color: #111; }
+/* 드롭다운 팝업: 그룹 제목(optgroup)이 흰 배경에 밝은 글자색으로 안 보이던 문제 — 팝업을 어두운 배경 + 밝은 글자로 통일 */
+.sel { color-scheme: dark; }
+.sel option, .sel optgroup { background: #151a30; color: #f2f4ff; }
+.sel optgroup { color: #ffb21f; font-weight: 700; font-style: normal; }
+.sel option:checked, .sel option:hover { background: #2a62ff; color: #fff; }
 .filters { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 10px; }
 .seg { display: inline-flex; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .08); align-self: flex-start; }
 .seg button { height: 34px; padding: 0 16px; border-radius: 999px; font-weight: 800; font-size: 14px; color: var(--mute); transition: .2s; }
@@ -111,3 +115,6 @@
 .set-row .sel { width: 100%; }
 @media (max-width: 520px) { .set-row { grid-template-columns: 1fr; } }
 .vs-set { display: block; margin-top: 4px; font-size: 11px; opacity: .8; }
+
+.set-hint { margin: 4px 14px 0; font-size: 12px; color: var(--ink-2, #9aa3c7); }
+.set-hint b { color: #ffb21f; }
