@@ -17,7 +17,7 @@
     "sim:ai": "node tools/simulate-ai.mjs",
     "sim:status": "node tools/simulate-status.mjs",
     "sim:status-moves": "node tools/simulate-status-moves.mjs",
-    "test:rembrandt2": "node --test packages/rembrandt2/test/match.test.mjs packages/rembrandt2/test/dex.test.mjs packages/rembrandt2/test/events.test.mjs packages/rembrandt2/test/ai.test.mjs"
+    "test:rembrandt2": "node --test packages/rembrandt2/test/match.test.mjs packages/rembrandt2/test/dex.test.mjs packages/rembrandt2/test/events.test.mjs packages/rembrandt2/test/ai.test.mjs packages/rembrandt2/test/builder.test.mjs"
   },
   "devDependencies": {
     "vite": "^6.2.3"
