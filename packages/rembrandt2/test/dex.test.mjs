@@ -6,15 +6,22 @@ import { createDex, koName, lookupName } from '../src/index.js';
 const D = createDex();
 const R = D.roster();
 
-test('로스터: 9세대(SV)에 나오는 종만, 메가·전투 전용 폼·CAP 은 따로 없다', () => {
-  assert.ok(R.length > 800 && R.length < 950, `로스터 ${R.length}종`);
-  assert.ok(D.get('garchomp') && D.get('charizard'));
-  assert.equal(D.get('caterpie'), null, '9세대에 없는 종은 제외');
-  assert.ok(!R.some(r => /Mega|Gmax|Primal/.test(r.forme)), '메가는 메가스톤 도구로 표현');
+test('로스터: 기본은 전국도감 1~1025 전부 + 지방·특수 폼, 메가·전투 전용 폼·CAP 은 따로 없다', () => {
+  for (let n = 1; n <= 1025; n++) assert.ok(R.some(r => r.num === n && !r.forme), `도감번호 ${n} 없음`);
+  assert.ok(R.length > 1200 && R.length < 1350, `로스터 ${R.length}종`);
+  assert.ok(D.get('caterpie') && D.get('butterfree'), '9세대에 안 나오는 종도 포함');
+  assert.ok(!R.some(r => /Mega|Gmax|Primal|Eternamax/.test(r.forme)), '메가는 메가스톤 도구로 표현');
   assert.ok(R.some(r => r.id === 'raichualola'), '지방 폼은 포함');
-  assert.ok(createDex({ roster: 'all' }).roster().length > R.length, "'all' 은 더 넓다");
+  const arc = D.get('arceusfire'); assert.equal(arc.fixedItem, 'flameplate', '플레이트가 정해진 폼');
+  assert.equal(D.makeSet({ species: 'Arceus-Fire', moves: ['judgment'], item: 'Leftovers' }).item, 'Flame Plate', '고정 도구는 덮어쓴다');
 });
-test('습득 기술: 9세대 기준 — 옛 세대 전용 기술은 못 배운다, 진화 전 알 기술은 배운다', () => {
+test("로스터: { roster: 'sv' } 는 9세대(SV)에 나오는 종만", () => {
+  const sv = createDex({ roster: 'sv' });
+  assert.ok(sv.roster().length > 800 && sv.roster().length < 950, `sv ${sv.roster().length}종`);
+  assert.equal(sv.get('caterpie'), null); assert.ok(sv.get('garchomp'));
+});
+test('습득 기술: 9세대 기준 — 옛 세대 전용 기술은 못 배운다, 진화 전 알 기술은 배운다, 9세대에 없는 종은 최근 세대 기술', () => {
+  assert.ok(D.learnable('butterfree').has('quiverdance') && D.learnable('butterfree').size > 20, '9세대에 없는 종은 가장 최근 세대의 기술을 쓴다');
   assert.ok(D.learnable('garchomp').has('earthquake'));
   assert.ok(!D.learnable('garchomp').has('megapunch'));
   assert.ok(D.learnable('pikachu').has('fakeout'), '알 기술(진화 전 단계 기록)');
@@ -22,7 +29,7 @@ test('습득 기술: 9세대 기준 — 옛 세대 전용 기술은 못 배운�
 });
 test('습득 기술: 고를 수 있는 종은 모두 기술이 있고(변칙 종 제외), 폼은 원래 종의 기술을 이어받는다', () => {
   const tiny = R.filter(r => D.learnable(r.id).size < 4).map(r => r.id);
-  assert.deepEqual(tiny.sort(), ['cosmog', 'cosmoem', 'ditto', 'magikarp', 'smeargle'].sort(), `기술이 4개 미만인 종: ${tiny}`);
+  assert.deepEqual(tiny.sort(), ['cosmog', 'cosmoem', 'ditto', 'magikarp', 'smeargle', 'unown'].sort(), `기술이 4개 미만인 종: ${tiny}`);
   assert.ok(D.learnable('rotomwash').has('hydropump') && D.learnable('rotomwash').has('thunderbolt'), '로토무 폼');
   assert.ok(D.learnable('ogerponwellspring').size > 20 || !D.get('ogerponwellspring'), '오거폰');
   assert.ok(!D.learnable('raichualola').has('thunderpunch') || D.learnable('pikachu').has('thunderpunch'), '지방 폼은 자기 목록');
