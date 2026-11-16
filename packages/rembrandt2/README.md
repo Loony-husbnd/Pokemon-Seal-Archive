@@ -1,4 +1,4 @@
-# Rembrandt 2 (배틀 엔진, Showdown 기반)
+# Rembrandt 2.0 (배틀 엔진, Showdown 기반)
 
 Pokémon Showdown 의 시뮬레이터(`@pkmn/sim`, MIT) 위에 만든 새 배틀 층. 옛 `packages/rembrandt` 는 앱이 새 패키지로 넘어갈 때까지 그대로 둔다.
 화면이 없는 순수 로직이라 `npm run check:boundaries` 가 DOM·저장소 사용을 검사한다.

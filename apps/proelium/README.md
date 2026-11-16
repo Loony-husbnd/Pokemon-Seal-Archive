@@ -1,6 +1,6 @@
-# Proelium (배틀 중심 앱)
+# Proelium 1.1 (배틀 중심 앱)
 
-배포 주소 `/proelium/`. 포켓몬 3마리와 각자의 **기술 4개 · 특성 · 도구**를 직접 고르는 배틀 아레나입니다. 엔진은 **Rembrandt 2**(`packages/rembrandt2`, Pokémon Showdown 시뮬레이터 기반)입니다. Holo 의 배틀 탭은 아직 옛 Rembrandt 1.3 을 씁니다.
+배포 주소 `/proelium/`. 포켓몬 3마리와 각자의 **기술 4개 · 특성 · 도구**를 직접 고르는 배틀 아레나입니다. 엔진은 **Rembrandt 2.0**(`packages/rembrandt2`, Pokémon Showdown 시뮬레이터 기반)입니다. Holo 의 배틀 탭은 아직 옛 Rembrandt 1.3 을 씁니다.
 
 ## 디자인 방향
 - **바탕은 순수한 검정**, 테마색은 **파랑(`#2a62ff`/`#9bb8ff`)과 금색(`#ffb21f`/`#ffe3a6`)** 두 가지입니다. 금색은 주요 버튼·강조·고리, 파랑은 조명·바닥 격자·보조 강조에 씁니다. 포켓몬 타입 색은 테마와 무관하게 유지합니다.
@@ -20,7 +20,7 @@
 | `src/screens/*.js` | home · builder · matchup · battle · result |
 | `src/sfx.js` · `src/fx.js` | 효과음 합성 · 색종이/토스트 |
 
-## 엔진 연결 (Rembrandt 2)
+## 엔진 연결 (Rembrandt 2.0)
 - 엔진은 `import('rembrandt2')` 로 **나중에 불러옵니다**(번들 청크 약 6.7MB, gzip 약 1.1MB). 화면 코드는 약 50KB 입니다. `vite.config.ts` 의 alias 가 `rembrandt2` 를 `packages/rembrandt2/src/index.js` 로 연결합니다.
 - **클래스 이름 보존이 필요합니다.** 시뮬레이터의 복제(직렬화)는 `[Pokemon:p1a]` 처럼 클래스 이름으로 참조를 되살리는데, 최소화가 이름을 줄이면 깨집니다. 그래서 `esbuild.keepNames` · `optimizeDeps.esbuildOptions.keepNames` 를 켰습니다(`vite.config.ts`). 이 설정을 빼면 AI 가 첫 판단에서 오류가 납니다.
 - 배틀 화면은 엔진의 **이벤트**(`createTranslator`)를 받아 연출합니다. 상대 포켓몬의 체력은 퍼센트로만 오고, 상대의 기술·특성·도구는 대전에서 드러나기 전까지 보이지 않습니다(매칭 화면에도 `기술 ???`).
