@@ -134,6 +134,7 @@ export function mount(root, { go }) {
           <label>✦ 특성<select class="sel" data-s="ability"></select></label>
           <label>🎒 도구<select class="sel" data-s="item"></select></label>
         </div>
+        <p class="set-hint"></p>
         <div class="mv-slots"></div>
         <div class="filters">
           <div class="seg" data-f="tab"><button data-v="all" class="on">전체 ${pool.length}</button><button data-v="atk">공격</button><button data-v="sta">변화</button></div>
@@ -153,7 +154,9 @@ export function mount(root, { go }) {
       if (rowT.fixedItem) { itSel.innerHTML = `<option selected>${esc(itemKo(item))} (고정)</option>`; itSel.disabled = true; return; }
       const mega = items.filter(i => stones.has(i.id)), gen = items.filter(i => !stones.has(i.id)).sort((a, b) => a.ko.localeCompare(b.ko, 'ko'));
       const opt = i => `<option value="${esc(i.name)}"${i.name === item ? ' selected' : ''}>${esc(i.ko)}</option>`;
-      itSel.innerHTML = `<option value=""${item === '' ? ' selected' : ''}>없음</option>${mega.length ? `<optgroup label="메가스톤 (메가진화)">${mega.map(opt).join('')}</optgroup>` : ''}<optgroup label="도구">${gen.map(opt).join('')}</optgroup>`;
+      const optMega = i => `<option value="${esc(i.name)}"${i.name === item ? ' selected' : ''}>🌀 ${esc(i.ko)} (메가진화)</option>`;
+      itSel.innerHTML = `<option value=""${item === '' ? ' selected' : ''}>없음</option>${mega.length ? `<optgroup label="🌀 메가스톤 — 쥐면 배틀 중 메가진화">${mega.map(optMega).join('')}</optgroup>` : ''}<optgroup label="일반 도구">${gen.map(opt).join('')}</optgroup>`;
+      sheet.querySelector('.set-hint').innerHTML = mega.length ? `이 포켓몬은 <b>메가스톤</b>을 쥐면 배틀에서 <b>🌀 메가진화</b>를 쓸 수 있어요 (도구 목록 맨 위).` : '';
     }
     fillSet();
     abSel.addEventListener('change', () => { ability = abSel.value; });
