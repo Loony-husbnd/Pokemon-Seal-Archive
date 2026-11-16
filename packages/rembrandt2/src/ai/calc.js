@@ -123,3 +123,6 @@ export function movesFirst(att, def, move, foeMove, field, attSide, defSide) {
   if (pa !== pb) return pa > pb;
   return outspeeds(att, def, field, attSide, defSide);
 }
+
+/** 타입 상성 배율 (기술 타입, 방어 쪽 타입 이름들) → 0, 0.25, 0.5, 1, 2, 4 */
+export const typeMultiplier = (moveType, types) => effectiveness(moveType, { types });

@@ -17,7 +17,10 @@
     "sim:ai": "node tools/simulate-ai.mjs",
     "sim:status": "node tools/simulate-status.mjs",
     "sim:status-moves": "node tools/simulate-status-moves.mjs",
-    "test:rembrandt2": "node --test packages/rembrandt2/test/match.test.mjs packages/rembrandt2/test/dex.test.mjs packages/rembrandt2/test/events.test.mjs packages/rembrandt2/test/ai.test.mjs packages/rembrandt2/test/builder.test.mjs"
+    "test:rembrandt2": "node --test packages/rembrandt2/test/match.test.mjs packages/rembrandt2/test/dex.test.mjs packages/rembrandt2/test/events.test.mjs packages/rembrandt2/test/ai.test.mjs packages/rembrandt2/test/builder.test.mjs",
+    "build:proelium": "vite build --mode proelium",
+    "preview:proelium": "vite preview --mode proelium",
+    "e2e:proelium": "node tools/e2e-proelium.cjs"
   },
   "devDependencies": {
     "vite": "^6.2.3"

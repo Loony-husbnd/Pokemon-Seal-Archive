@@ -33,7 +33,7 @@ export function createDex(opts = {}) {
   const all = [...dex.species.all()].filter(pickable);
   const roster = all.map(sp => ({
     id: sp.id, name: sp.name, ko: koName('species', sp.id), num: sp.num, forme: sp.forme || '', types: sp.types.slice(),
-    baseStats: Object.assign({}, sp.baseStats), bst: Object.values(sp.baseStats).reduce((a, b) => a + b, 0), abilities: Object.values(sp.abilities), fixedItem: fixedItemOf(sp), fixedMove: sp.requiredMove || null, legendary: !!(sp.tags && (sp.tags.includes('Restricted Legendary') || sp.tags.includes('Sub-Legendary') || sp.tags.includes('Mythical'))),
+    baseStats: Object.assign({}, sp.baseStats), bst: Object.values(sp.baseStats).reduce((a, b) => a + b, 0), abilities: Object.values(sp.abilities), abilitySlots: Object.entries(sp.abilities).map(([slot, name]) => ({ slot, name })), base: toID(sp.baseSpecies || sp.name), fixedItem: fixedItemOf(sp), fixedMove: sp.requiredMove || null, legendary: !!(sp.tags && (sp.tags.includes('Restricted Legendary') || sp.tags.includes('Sub-Legendary') || sp.tags.includes('Mythical'))),
   })).sort((a, b) => a.num - b.num || a.id.localeCompare(b.id));
   const byId = new Map(roster.map(r => [r.id, r]));
 

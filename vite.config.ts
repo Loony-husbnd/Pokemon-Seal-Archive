@@ -51,7 +51,7 @@ function sharedPackages(copyOnBuild: boolean) {
       if (!copyOnBuild) return;
       fs.cpSync(PACKAGES, path.resolve(ROOT, 'dist', 'packages'), {
         recursive: true,
-        filter: (f: string) => !/\.test\.mjs$/.test(f) && !/package\.json$/.test(f),
+        filter: (f: string) => !/\.test\.mjs$/.test(f) && !/package\.json$/.test(f) && !/[\\/]rembrandt2([\\/]|$)/.test(f),       // Rembrandt 2 는 Proelium 번들에 들어가므로 복사하지 않는다
       });
     },
   };
@@ -67,8 +67,13 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: path.resolve(ROOT, 'dist', isProelium ? 'proelium' : ''),
       emptyOutDir: true,
+      chunkSizeWarningLimit: 8000,       // @pkmn/sim 이 크다 (gzip 약 1MB)
     },
-    server: { port: isProelium ? 3001 : 3000, host: '0.0.0.0' },
+    // @pkmn/sim 의 복제(직렬화)는 클래스 이름('[Pokemon:p1a]')으로 참조를 되살린다. 최소화가 이름을 줄이면 깨지므로 이름을 보존한다.
+    esbuild: isProelium ? { keepNames: true } : undefined,
+    optimizeDeps: isProelium ? { esbuildOptions: { keepNames: true } } : undefined,       // 개발 서버의 의존성 묶음에도 같은 이유
+    resolve: isProelium ? { alias: { rembrandt2: path.resolve(ROOT, 'packages', 'rembrandt2', 'src', 'index.js') } } : undefined,       // Proelium 은 Rembrandt 2(ESM)를 번들에 넣는다
+    server: { port: isProelium ? 3001 : 3000, host: '0.0.0.0', fs: { allow: [ROOT] } },
     preview: { port: isProelium ? 3001 : 3000, host: '0.0.0.0' },
   };
 });

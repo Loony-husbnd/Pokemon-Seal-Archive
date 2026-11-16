@@ -7,3 +7,6 @@ export { createTranslator } from './events.js';
 export { createAI } from './ai/index.js';
 export { bestSet, abilityValue, teamBst } from './builder/sets.js';
 export { generateOpponent, buildHell, randomTeam, pickSpecies, familyOf, fakeMon, OFFSET, mulberry } from './builder/opponent.js';
+export { describeMove } from './ko-moves.js';
+export { ART } from '../data/art-ids.js';
+export { typeMultiplier } from './ai/calc.js';

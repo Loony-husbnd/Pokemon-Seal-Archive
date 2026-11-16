@@ -136,3 +136,6 @@
 .rc-art { width: 104px; height: 104px; } .res-card b { font-size: 15px; } .res-card small { color: var(--mute); font-weight: 700; }
 .res-stats { display: flex; gap: clamp(14px, 4vw, 40px); padding: 14px clamp(18px, 4vw, 36px); border-radius: 999px; } .res-stats div { display: flex; flex-direction: column; align-items: center; } .res-stats b { font-family: var(--display); font-style: italic; font-size: 24px; } .res-stats small { color: var(--mute); font-size: 11px; font-weight: 700; }
 .res-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+.btn.mega { border-color: #ff5fa2; }
+.btn.mega.primary { background: linear-gradient(90deg, #ff5fa2, #ffb21f); color: #1a1030; }

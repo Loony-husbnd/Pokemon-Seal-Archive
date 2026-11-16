@@ -5,7 +5,7 @@ import './styles/builder.css';
 import './styles/battle.css';
 import { store } from './store.js';
 import { sfx } from './sfx.js';
-import { D, monImg } from './dex.js';
+import { loadEngine, row } from './dex.js';
 import * as home from './screens/home.js';
 import * as builder from './screens/builder.js';
 import * as matchup from './screens/matchup.js';
@@ -31,10 +31,10 @@ document.addEventListener('error', e => {
   const img = e.target;
   if (!(img instanceof HTMLImageElement) || !img.classList.contains('mon-img') || img.dataset.fb) return;
   img.dataset.fb = '1';
-  const id = Number(img.dataset.id), p = D().pokemon[id];
+  const p = row(img.dataset.id);
   const d = document.createElement('div');
   d.className = 'mon-fallback ' + img.className.replace('mon-img', '').trim();
-  d.textContent = p ? `#${String(p.sp).padStart(3, '0')}` : '?';
+  d.textContent = p ? `#${String(p.num).padStart(3, '0')}` : '?';
   img.replaceWith(d);
 }, true);
 
@@ -43,11 +43,10 @@ document.addEventListener('click', e => { if (e.target.closest('.btn, .iconbtn, 
 
 export function setSound(on) { store.sound = on; store.save(); }
 
-function boot() {
-  if (!window.BATTLE_DATA || !window.BattleEngine || !window.BATTLE_LEARN) {
-    app.innerHTML = '<div style="padding:40px;text-align:center">배틀 엔진(Rembrandt)을 불러오지 못했어요. 새로고침해 주세요.</div>';
-    return;
-  }
+async function boot() {
+  app.innerHTML = '<div class="boot" style="padding:48px 16px;text-align:center"><b class="display" style="font-size:20px">배틀 엔진을 불러오는 중…</b><p style="opacity:.7">처음 한 번만 조금 걸려요</p></div>';
+  try { await loadEngine(); store.sanitize(); }
+  catch (e) { console.error(e); app.innerHTML = '<div style="padding:40px;text-align:center">배틀 엔진(Rembrandt 2)을 불러오지 못했어요. 새로고침해 주세요.</div>'; return; }
   go('home');
 }
 boot();

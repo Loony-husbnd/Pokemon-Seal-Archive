@@ -13,8 +13,9 @@ import { Dex } from '@pkmn/sim';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = path.join(ROOT, 'tools', '.cache', 'csv');
 const OUT = path.join(ROOT, 'packages', 'rembrandt2', 'data', 'ko-names.js');
+const OUT_ART = path.join(ROOT, 'packages', 'rembrandt2', 'data', 'art-ids.js');
 const BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv';
-const FILES = ['pokemon_species', 'pokemon_species_names', 'moves', 'move_names', 'abilities', 'ability_names', 'items', 'item_names', 'types', 'type_names', 'natures', 'nature_names'];
+const FILES = ['pokemon', 'pokemon_species', 'pokemon_species_names', 'moves', 'move_names', 'abilities', 'ability_names', 'items', 'item_names', 'types', 'type_names', 'natures', 'nature_names'];
 
 async function download(name) {
   const dest = path.join(CACHE, name + '.csv');
@@ -84,6 +85,17 @@ fill('abilities', [...dex.abilities.all()], koAbility);
 fill('items', [...dex.items.all()], koItem);
 fill('types', [...dex.types.all()], koType);
 for (const n of dex.natures.all()) { const k = koNature.get(id(n.name)); if (k) out.natures[id(n.name)] = k; else miss.natures.push(n.name); }
+
+// 그림 번호: Showdown 종 id → PokeAPI 포켓몬 번호. 기본형은 도감번호와 같아서 생략하고, 폼(메가·지방·특수)만 적는다.
+const artByIdent = new Map(csv('pokemon').map(r => [id(r.identifier), Number(r.id)]));
+const art = {}; let artMiss = 0;
+for (const sp of dex.species.all()) {
+  if (!sp.exists || sp.num <= 0 || sp.num > 1025 || !sp.forme) continue;
+  const a = artByIdent.get(sp.id);
+  if (a && a !== sp.num) art[sp.id] = a; else if (!a) artMiss++;
+}
+fs.writeFileSync(OUT_ART, '// 자동 생성 파일 — node tools/build-ko-names.mjs. 폼의 그림 번호(PokeAPI 포켓몬 번호). 여기 없으면 도감번호를 쓴다.\nexport const ART = ' + JSON.stringify(art) + ';\n');
+console.log(`그림 번호: 폼 ${Object.keys(art).length}개 (찾지 못해 도감번호로 대체 ${artMiss}개)`);
 
 const banner = '// 자동 생성 파일 — node tools/build-ko-names.mjs (PokeAPI CSV 의 한국어 이름). 직접 고치지 말고 도구를 고친다.\n';
 fs.writeFileSync(OUT, banner + 'export const KO = ' + JSON.stringify(out) + ';\n');

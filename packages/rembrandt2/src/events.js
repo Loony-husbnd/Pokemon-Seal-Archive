@@ -10,14 +10,15 @@
  * 상대 포켓몬의 체력은 퍼센트(maxHp 100)로만 온다. 내 포켓몬은 정확한 값이다.
  *
  *   { t:'turn', turn }
- *   { t:'switch', side, to, species, name, hp, maxHp, initial?, text }       to = 처음 파티 기준 번호
+ *   { t:'switch', side, to, species, types, name, hp, maxHp, initial?, text }   to = 처음 파티 기준 번호, types = 영문 타입 이름들
  *   { t:'move', side, move, name, type, typeKo, cls, text }                  cls = 'phys' | 'spec' | 'status'
  *   { t:'damage', side, amount, hp, maxHp, cause?, crit?, text? }
  *   { t:'heal', side, amount, hp, maxHp, text }
  *   { t:'status', side, kind, text }  kind: slp par brn psn tox frz | thaw wake cure
  *   { t:'stage', side, stat, change, text }
  *   { t:'miss' | 'effective' | 'crit' | 'hits' | 'faint' | 'text' | 'end', … }
- *   { t:'field', weather, terrain, pseudo:[{id,ko}], sides:[[{id,ko,layers}],[…]] }
+ *   { t:'field', weather, terrain, pseudo:[{id,ko}], sides:[[{id,ko,layers}],[…]] }   weather: raindance|sunnyday|… (프로토콜 이름)
+ *   { t:'types', side, types, typesKo, text } · { t:'forme', side, species, name, types, typesKo }
  *   { t:'vol', side, flags:[…] }  { t:'forme', side, species, name, types } { t:'mega', side, text }
  *
  * 변환하지 못한 줄 종류는 translator.unmapped (종류 → 횟수)에 기록된다. 화면에는 나가지 않는다.
@@ -95,7 +96,7 @@ export function createTranslator(match, side, o = {}) {
         const ref = parseRef(p[1]); const sp = p[2].split(',')[0]; const hp = hpUpdate(ref, p[3], true);
         T.form[ref.side][ref.name] = sp; T.vol[ref.side].clear();
         const text = k === 'drag' ? `${J(label(ref), '은/는')} 끌려 나왔다!` : ref.side === me ? `가랏, ${koName('species', ref.name)}!` : `상대는 ${J(koName('species', ref.name), '을/를')} 내보냈다!`;
-        push({ t: 'switch', side: ref.side, to: partyIndex(ref.side, ref.name), species: toID(sp), name: koName('species', ref.name), hp: hp.next.hp, maxHp: hp.next.max, initial: T.turn === 0, text });
+        push({ t: 'switch', side: ref.side, to: partyIndex(ref.side, ref.name), species: toID(sp), types: dex.species.get(sp).types.slice(), name: koName('species', ref.name), hp: hp.next.hp, maxHp: hp.next.max, initial: T.turn === 0, text });
         return;
       }
       case 'move': {
@@ -208,7 +209,7 @@ export function createTranslator(match, side, o = {}) {
         const ref = parseRef(p[1]); const eff = bare(p[2]); const start = k === '-start'; const who = label(ref);
         if (eff === 'typechange') {
           const ts = plain(p.slice(3)).join('').split('/').filter(Boolean).map(x => koName('type', x));
-          push({ t: 'types', side: ref.side, types: ts, text: ts.length ? `${J(who, '의')} 타입이 ${J(ts.join('/'), '으로/로')} 바뀌었다!` : `${J(who, '의')} 타입이 바뀌었다!` }); return;
+          push({ t: 'types', side: ref.side, types: String(plain(p.slice(3)).join('')).split('/').filter(Boolean), typesKo: ts, text: ts.length ? `${J(who, '의')} 타입이 ${J(ts.join('/'), '으로/로')} 바뀌었다!` : `${J(who, '의')} 타입이 바뀌었다!` }); return;
         }
         const v = K.VOLATILE[eff] || K.VOLATILE[eff === 'confusion' ? 'confusion' : eff];
         if (start) T.vol[ref.side].add(toID(eff)); else T.vol[ref.side].delete(toID(eff));
@@ -243,7 +244,7 @@ export function createTranslator(match, side, o = {}) {
       }
       case 'detailschange': case '-formechange': {
         const ref = parseRef(p[1]); const sp = dex.species.get(p[2].split(',')[0]); T.form[ref.side][ref.name] = sp.name;
-        push({ t: 'forme', side: ref.side, species: sp.id, name: koName('species', sp.id), types: sp.types.map(x => koName('type', x)) }); return;
+        push({ t: 'forme', side: ref.side, species: sp.id, name: koName('species', sp.id), types: sp.types.slice(), typesKo: sp.types.map(x => koName('type', x)) }); return;
       }
       case '-transform': push({ t: 'text', text: `${J(label(parseRef(p[1])), '은/는')} ${J(label(parseRef(p[2])), '으로/로')} 변신했다!` }); return;
       case 'replace': { const ref = parseRef(p[1]); push({ t: 'text', text: `${J(label(ref), '의')} 정체가 드러났다!` }); return; }

@@ -5,10 +5,10 @@
 | 프로그램 | 버전 | 한 줄 소개 | 주소 |
 |---|---|---|---|
 | **Holo** | 4.0 | 포켓몬 띠부씰 아카이브. 도감·바인더·사육장·3:3 배틀 탭 (**Rembrandt 1.3 탑재**) | `/` |
-| **Proelium** | 1.0 | 포켓몬 3마리와 기술 4개를 직접 고르는 배틀 아레나 (**Rembrandt 1.3 탑재**) | `/proelium/` |
+| **Proelium** | 2.0 | 포켓몬 3마리와 기술 4개·특성·도구를 직접 고르는 배틀 아레나 (**Rembrandt 2 탑재**) | `/proelium/` |
 | **Rembrandt** | 1.3 | 화면 없는 배틀 엔진: 규칙·데미지·변화기 270개·공격기 525개·AI·상대 파티 생성 | (라이브러리) |
 
-> **진행 중**: 배틀 엔진을 Pokémon Showdown 시뮬레이터 기반의 **Rembrandt 2**(`packages/rembrandt2`)로 새로 짓고 있습니다. 9세대 규칙·메가진화만·상대 정보 가리기. 앱은 아직 Rembrandt 1.3을 씁니다. 시험 결과는 `spike/showdown/README.md` 참고.
+> **Proelium 은 Rembrandt 2**(`packages/rembrandt2`, Pokémon Showdown 시뮬레이터 기반 · 전국도감 1,254종 · 9세대 규칙 · 메가진화 · 특성·도구 · 상대 정보 가리기 · 팀 빌더 · AI 4단계)를 씁니다. **Holo 의 배틀 탭은 아직 Rembrandt 1.3** 입니다. 시험 결과는 `spike/showdown/README.md` 참고.
 
 별도 서버나 외부 API 키 없이 정적 웹앱으로 동작하며, 모든 데이터는 브라우저 저장소(localStorage)에 보관됩니다.
 
