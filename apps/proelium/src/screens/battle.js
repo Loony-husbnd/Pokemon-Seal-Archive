@@ -214,12 +214,16 @@ export function mount(root, { go, params }) {
   const hintOf = (mvType, foeTypes) => { const e = R.typeMultiplier(TYPE_EN[mvType - 1], foeTypes.map(t => TYPE_EN[t - 1])); return e === 0 ? ['im', '무효'] : e >= 4 ? ['se', '×4'] : e > 1 ? ['se', '×2'] : e < 1 ? ['nve', e <= .25 ? '×¼' : '×½'] : null; };
   function renderControls() {
     const info = me.moves(), foe = cur(1), team = me.team(), canSwitch = match.choices(0).some(c => c.type === 'switch');
+    // 반동·충전·난동처럼 선택지가 하나로 고정된 턴: 기술 칸이 하나뿐이고(교체 불가), PP 정보는 요청에 없다
+    const forced = !!(info && info.locked);
     const cards = !info ? '' : info.moves.map((sl, i) => {
-      const m = moveInfo(sl.id), col = TYPE_HEX[m.type], st = m.cls === 'status', h = !st && hintOf(m.type, foe.types);
+      const m = moveInfo(sl.id, sl.name), col = TYPE_HEX[m.type], st = m.cls === 'status', h = !st && !forced && hintOf(m.type, foe.types);
       const meta = st ? esc(m.desc || '변화 기술') : `${m.cls === 'phys' ? '물리' : '특수'} · 위력 ${m.varPower ? '가변' : m.power} · ${m.acc === null ? '필중' : '명중 ' + m.acc}${m.desc ? ' · ' + esc(m.desc) : ''}`;
-      return `<button class="mvc${st ? ' st' : ''}${isLite(m.type) ? ' lite' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${sl.disabled ? 'disabled' : ''} title="${i + 1}번 키">
-        <span class="g">${TYPE_GLYPH[m.type]}</span><b>${esc(m.name)}</b><small>${meta}</small><em>PP ${sl.pp}/${sl.maxpp}</em>
-        ${sl.disabled ? '<u class="why">사용 불가</u>' : h ? `<u class="hint ${h[0]}">${h[1]}</u>` : ''}</button>`;
+      const pp = sl.pp == null || sl.maxpp == null ? '' : `<em>PP ${sl.pp}/${sl.maxpp}</em>`;
+      const why = sl.disabled ? '사용 불가' : m.pseudo ? '' : sl.id === 'struggle' ? '쓸 수 있는 기술이 없어요' : forced ? '이어서 사용' : '';
+      return `<button class="mvc${st ? ' st' : ''}${isLite(m.type) ? ' lite' : ''}${forced ? ' forced' : ''}" style="--c:${col}${forced ? ';grid-column:1/-1' : ''}" data-act="move" data-i="${i}" ${sl.disabled ? 'disabled' : ''} title="${i + 1}번 키">
+        <span class="g">${TYPE_GLYPH[m.type]}</span><b>${esc(m.name)}</b><small>${meta}</small>${pp}
+        ${why ? `<u class="why">${why}</u>` : h ? `<u class="hint ${h[0]}">${h[1]}</u>` : ''}</button>`;
     }).join('');
     const active = team.find(m => m.active), mega = info && info.canMega ? megaOf({ id: R.toID(active.species), item: active.item }) : null;
     $('#controls').innerHTML = `<div class="mvgrid">${cards}</div>
@@ -249,6 +253,7 @@ export function mount(root, { go, params }) {
     const t = e.target.closest('[data-act]'); if (!t) return;
     switch (t.dataset.act) {
       case 'move': if (resolveChoice) { const r = resolveChoice; resolveChoice = null; lock(); const info = me.moves(); r(Object.assign({ type: 'move', index: Number(t.dataset.i) }, info && info.canMega && megaOn ? { mega: true } : {})); } break;
+      case 'home': go('home'); break;
       case 'mega': megaOn = !megaOn; renderControls(); sfx.click(); break;
       case 'switch-open': { if (!resolveChoice) break; const c = await partyPicker('교체할 포켓몬', true); if (c && resolveChoice) { const r = resolveChoice; resolveChoice = null; lock(); r(c); } break; }
       case 'surrender': if (resolveChoice && confirm('항복하면 패배로 기록돼요. 항복할까요?')) { const r = resolveChoice; resolveChoice = null; r({ type: 'surrender' }); } break;
@@ -305,6 +310,10 @@ export function mount(root, { go, params }) {
     await dly(900);
     go('result', { winner, turns: match.turn, mine, opp, level, dmg: dmgBy, kos });
   }
-  run().catch(err => { console.error(err); say('오류가 발생했어요. 홈으로 돌아가 주세요.'); });
+  run().catch(err => {
+    console.error(err);
+    say(`오류가 발생했어요. (${String(err && err.message || err).slice(0, 80)}) 홈으로 돌아가 주세요.`);
+    const c = $('#controls'); if (c) { c.classList.remove('lock'); c.innerHTML = '<div class="subbar"><button class="btn primary big" data-act="home">🏠 홈으로</button></div>'; }
+  });
   return () => { alive = false; root.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };
 }

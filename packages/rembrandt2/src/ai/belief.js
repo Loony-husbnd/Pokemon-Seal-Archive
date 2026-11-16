@@ -63,6 +63,7 @@ function fillMoves(D, sp, known, rng, variant) {
   for (const x of takeFrom(attacks, atkSlots)) out.push(x.m.id);
   while (out.length < 4 && utility.length) { const u = utility.splice(Math.floor(rng() * utility.length * (variant === 0 ? 0.3 : 1)), 1)[0]; if (!out.includes(u.id)) out.push(u.id); }
   for (const x of attacks) { if (out.length >= 4) break; if (!out.includes(x.m.id)) out.push(x.m.id); }
+  for (const m of learn) { if (out.length >= 1) break; out.push(m.id); }          // 공격기도 정해진 변화기도 없는 종(딧토 등)은 배우는 기술 아무거나
   return out.slice(0, 4);
 }
 

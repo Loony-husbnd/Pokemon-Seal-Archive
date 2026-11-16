@@ -319,7 +319,7 @@ const events = T.pull();
 
 ## 검증
 
-`npm run test:rembrandt2`(40개): 규칙(테라스탈 금지·메가진화 한 번), 합법 무작위 팀 120판이 끝까지 가는지와 한국어 문구·체력 추적·미변환 비율, 습득 기술·팀 검증·이름표, AI 의 합법성·강도 순서·정보 누출 방지, 팀 빌더(전 로스터 세트 합법·난이도별 강도 순서). 브라우저 전체 흐름은 `npm run e2e:proelium`.
+`npm run test:rembrandt2`(45개): 규칙(테라스탈 금지·메가진화 한 번), 합법 무작위 팀 120판이 끝까지 가는지와 한국어 문구·체력 추적·미변환 비율, 습득 기술·팀 검증·이름표, AI 의 합법성·강도 순서·정보 누출 방지, 팀 빌더(전 로스터 세트 합법·난이도별 강도 순서). 브라우저 전체 흐름은 `npm run e2e:proelium`.
 
 ## 한계와 후속 과제
 
@@ -487,7 +487,7 @@ tools/                데이터 생성·검증·시뮬레이터·경계 검사·
 | `npm run battle:data` | PokeAPI/Showdown 데이터로 `battle-data.js`·`battle-learnsets.js` 재생성 (`--sample`, `--show 6,25`, `--explain=25`) |
 | `npm run battle:validate` | 데이터 무결성 검증 |
 | `npm run test:battle` | 옛 엔진(1.3)·AI·파티·변화기·특수 공격기 테스트 (244개) |
-| `npm run test:rembrandt2` | 새 엔진(2.0) 테스트 (40개) |
+| `npm run test:rembrandt2` | 새 엔진(2.0) 테스트 (45개) |
 | `node tools/build-ko-names.mjs` | 한국어 이름표·폼 그림 번호 재생성 (PokeAPI CSV) |
 | `npm run build:proelium` / `preview:proelium` / `e2e:proelium` | Proelium 만 빌드 / 미리보기 / 브라우저 전체 흐름 시험(Playwright) |
 | `npm run check:boundaries` | Rembrandt(1.3·2.0)가 화면·저장소에 의존하지 않는지 검사 |

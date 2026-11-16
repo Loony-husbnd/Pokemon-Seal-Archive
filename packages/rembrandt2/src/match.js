@@ -117,7 +117,7 @@ function wrap(battle, logs) {
         /** 내 쪽 요청에서 읽는 내 파티 정보 (정확한 체력·기술·특성·도구) — 상대 정보는 없다 */
         team: () => { const q = match.request(side); return q ? q.side.pokemon.map((p, i) => { const m = /^(\d+)(?:\/(\d+))?(?: (\w+))?/.exec(p.condition); return { index: i, ident: p.ident.split(': ')[1], species: p.details.split(',')[0], hp: Number(m[1]), maxHp: Number(m[2] || m[1]), status: m[3] && m[3] !== 'fnt' ? m[3] : null, fainted: / fnt$/.test(p.condition) || p.condition === '0 fnt', active: p.active, moves: p.moves, ability: p.baseAbility, item: p.item }; }) : []; },
         /** 이번 턴 내 기술 칸 정보 (PP·막힘) 와 메가진화 가능 여부 */
-        moves: () => { const q = match.request(side); if (!q || !q.active) return null; const a = q.active[0]; return { moves: a.moves.map((mv, i) => ({ index: i, id: mv.id, name: mv.move, pp: mv.pp, maxpp: mv.maxpp, disabled: !!mv.disabled })), canMega: !!a.canMegaEvo, trapped: !!a.trapped, locked: a.moves.length === 1 && !!a.moves[0].id && a.moves.length < 4 }; },
+        moves: () => { const q = match.request(side); if (!q || !q.active) return null; const a = q.active[0]; return { moves: a.moves.map((mv, i) => ({ index: i, id: mv.id, name: mv.move, pp: mv.pp, maxpp: mv.maxpp, disabled: !!mv.disabled })), canMega: !!a.canMegaEvo, trapped: !!a.trapped, locked: a.moves.length === 1 && a.moves[0].pp == null }; },      // locked: 반동·충전·난동·발버둥처럼 선택지가 하나로 고정된 턴(요청에 PP 정보가 없다)
       };
     },
 
