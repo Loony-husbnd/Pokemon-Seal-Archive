@@ -17,13 +17,7 @@
   <div id="app"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <!-- 배틀 엔진(Rembrandt): 일반 스크립트. 개발 서버는 /packages, 배포는 ../packages 로 연결된다 -->
-  <script src="../packages/rembrandt/data/battle-data.js"></script>
-  <script src="../packages/rembrandt/data/battle-learnsets.js"></script>
-  <script src="../packages/rembrandt/engine.js"></script>
-  <script src="../packages/rembrandt/ai.js"></script>
-  <script src="../packages/rembrandt/party.js"></script>
-  <script src="../packages/rembrandt/boss.js"></script>
+  <!-- 배틀 엔진(Rembrandt 2)은 src/dex.js 가 화면을 연 뒤 불러온다(번들에 포함, 별도 스크립트 태그 없음) -->
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

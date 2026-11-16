@@ -1,21 +1,13 @@
 import { store } from '../store.js';
-import { D, esc, formLabel, monImg, TYPE_HEX, allMons, recommendMoves, typeChip } from '../dex.js';
+import { R2, DEX, row, esc, formLabel, monImg, TYPE_HEX, monTypes, fromSet } from '../dex.js';
 import { sfx } from '../sfx.js';
 import { setSound } from '../main.js';
 
-const cardStyle = id => { const t = D().pokemon[id].t; return `--c1:${TYPE_HEX[t[0]]};--c2:${TYPE_HEX[t[1] || t[0]]}`; };
+const cardStyle = id => { const t = monTypes(id); return `--c1:${TYPE_HEX[t[0]]};--c2:${TYPE_HEX[t[1] || t[0]]}`; };
 
-/** 무작위 팀: 서로 다른 종 3마리 + 추천 기술 */
+/** 무작위 팀: 서로 다른 계열 3마리(전설 제외) + 각자에게 어울리는 세트 */
 export function randomTeam() {
-  const pool = allMons().filter(m => !m.isForm && !m.leg);
-  const used = new Set(), team = [];
-  while (team.length < 3) {
-    const m = pool[Math.floor(Math.random() * pool.length)];
-    if (used.has(m.dex)) continue;
-    used.add(m.dex);
-    team.push({ id: m.id, moves: recommendMoves(m.id, Math.floor(Math.random() * 2 ** 31)) });
-  }
-  return team;
+  return R2().randomTeam(DEX(), Math.random, { allowLegend: false }).map(fromSet);
 }
 
 export function mount(root, { go }) {
@@ -23,7 +15,7 @@ export function mount(root, { go }) {
   const r = store.record, total = r.w + r.l + r.d;
   const fan = store.team.map((t, i) => t
     ? `<button class="fan-card" data-act="builder" style="${cardStyle(t.id)};--rot:${(i - 1) * 9}deg;--dy:${Math.abs(i - 1) * 14}px;--i:${i}">
-         <span class="fan-no">${String(D().pokemon[t.id].sp).padStart(3, '0')}</span>
+         <span class="fan-no">${String(row(t.id).num).padStart(3, '0')}</span>
          <span class="fan-art">${monImg(t.id)}</span><b>${esc(formLabel(t.id))}</b><i class="foil"></i></button>`
     : `<button class="fan-card empty" data-act="builder" style="--rot:${(i - 1) * 9}deg;--dy:${Math.abs(i - 1) * 14}px;--i:${i}"><span class="q display">?</span><b>비어 있음</b></button>`).join('');
 
@@ -32,7 +24,7 @@ export function mount(root, { go }) {
       <div class="ring-stage" aria-hidden="true">
         <i class="dash"></i><i class="halo"></i><i class="arc"></i><i class="arc blue"></i>
         <span class="orbit o1"><i></i></span><span class="orbit o2"><i></i></span>
-        <svg class="ringtxt" viewBox="0 0 200 200"><defs><path id="rtxt" d="M100 100m-96 0a96 96 0 1 1 192 0a96 96 0 1 1 -192 0"/></defs><text><textPath href="#rtxt">PROELIUM · BATTLE ARENA · 3 ON 3 · 1,351 POKÉMON · PROELIUM · BATTLE ARENA · 3 ON 3 · 1,351 POKÉMON ·</textPath></text></svg>
+        <svg class="ringtxt" viewBox="0 0 200 200"><defs><path id="rtxt" d="M100 100m-96 0a96 96 0 1 1 192 0a96 96 0 1 1 -192 0"/></defs><text><textPath href="#rtxt">PROELIUM · BATTLE ARENA · 3 ON 3 · 1,254 POKÉMON · PROELIUM · BATTLE ARENA · 3 ON 3 · 1,254 POKÉMON ·</textPath></text></svg>
       </div>
       <header class="home-top">
         <a class="iconbtn" href="../" title="띠부씰 아카이브(Holo)로" data-sfx>🗂</a>

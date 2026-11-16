@@ -1,38 +1,41 @@
 import { store } from '../store.js';
-import { D, E, esc, formLabel, monImg, TYPE_HEX, TYPE_GLYPH, isLite, typeName, moveInfo } from '../dex.js';
+import { R2, DEX, esc, formLabel, monImg, TYPE_HEX, TYPE_GLYPH, isLite, typeName, typeId, monTypes, moveInfo, toSets, megaOf, abilityKo, itemKo } from '../dex.js';
 import { sfx } from '../sfx.js';
-import { wait } from '../fx.js';
+import { wait, toast } from '../fx.js';
 
-const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중', eva: '회피' };
+const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', accuracy: '명중', evasion: '회피' };
 const STATUS_KO = { par: '마비', brn: '화상', psn: '독', tox: '맹독', slp: '수면', frz: '얼음' };
-const VOL_KO = { seeded: '씨뿌리기', taunt: '도발', encore: '앙코르', disable: '봉인', torment: '트집', yawn: '졸림', aquaRing: '아쿠아링', ingrain: '뿌리', sub: '대타', trapped: '가두기',
-  attract: '헤롱헤롱', nightmare: '악몽', perish: '멸망', focus: '기합', protect: '방어',
-  cursed: '저주', octolock: '문어굳히기', lockOn: '록온', laserFocus: '집중', foresight: '간파', levitate: '부유', embargo: '금제', healBlock: '회복봉인', simple: '단순', insomnia: '불면',
-  tarred: '타르', noRetreat: '배수의진', imprison: '봉인술', destinyBond: '길동무', boostNext: '도우미', charging: '충전 중', stock: '비축' };
+// 임시 상태 (Showdown 식별자 → 표시). 여기 없는 것은 화면에 배지로 내지 않는다.
+const VOL_KO = { confusion: '혼란', substitute: '대타', leechseed: '씨뿌리기', taunt: '도발', encore: '앙코르', disable: '봉인', torment: '트집', yawn: '졸림', aquaring: '아쿠아링', ingrain: '뿌리',
+  attract: '헤롱헤롱', nightmare: '악몽', curse: '저주', perish3: '멸망 3', perish2: '멸망 2', perish1: '멸망 1', focusenergy: '기합', protect: '방어', partiallytrapped: '조이기', octolock: '문어굳히기',
+  lockedmove: '난동', healblock: '회복봉인', embargo: '금제', magnetrise: '전자부유', telekinesis: '텔레키네시스', smackdown: '떨어뜨림', destinybond: '길동무', saltcure: '소금절임', syrupbomb: '시럽폭탄' };
 const WEATHER_UI = { sun: '☀ 쾌청', rain: '☔ 비', sand: '🌪 모래바람', snow: '❄ 눈' };
+const WEATHER_MAP = { raindance: 'rain', primordialsea: 'rain', sunnyday: 'sun', desolateland: 'sun', sandstorm: 'sand', snow: 'snow', snowscape: 'snow', hail: 'snow' };
 const TERRAIN_UI = { electric: '⚡ 일렉트릭필드', grassy: '🌿 그래스필드', misty: '🌫 미스트필드', psychic: '🔮 사이코필드' };
-const condList = c => [c.rocks && '스텔스록', c.spikes && `압정×${c.spikes}`, c.tspikes && `독압정×${c.tspikes}`, c.web && '끈적네트', c.reflect && '리플렉터', c.lightscreen && '빛의장막',
-  c.veil && '오로라베일', c.tailwind && '순풍', c.safeguard && '신비의부적', c.mist && '미스트', c.lucky && '주술'].filter(Boolean);
+const TERRAIN_MAP = { electricterrain: 'electric', grassyterrain: 'grassy', mistyterrain: 'misty', psychicterrain: 'psychic' };
+const condList = list => (list || []).map(c => (c.layers > 1 ? `${c.ko}×${c.layers}` : c.ko));
+const rnd32 = () => Math.floor(Math.random() * 2 ** 31);
 
 export function mount(root, { go, params }) {
   const { mine, opp, level } = params;
-  const Eng = E(), AI = window.BattleAI;
-  const seed = Math.floor(Math.random() * 2 ** 31);
-  const mkMon = t => Eng.makeMon(t.id, { name: formLabel(t.id), moves: t.moves });
-  const B = Eng.createBattle({ parties: [mine.map(mkMon), opp.map(mkMon)], names: ['나', '상대'], seed });
-  const brain = AI.create(Eng, { seed: seed ^ 0x9e3779b9 });
-  let alive = true, speed = Number(sessionStorage.getItem('proelium:speed')) || 1, skip = false, resolveChoice = null;
+  const R = R2(), D = DEX();
+  const match = R.createMatch({ teams: [toSets(mine), toSets(opp)], seed: [rnd32(), rnd32(), rnd32(), rnd32()] });
+  const me = match.player(0), foeP = match.player(1);
+  const ai = R.createAI({ dex: D, seed: rnd32(), budgetMs: 900 });
+  const T = R.createTranslator(match, 0);
+  let alive = true, speed = Number(sessionStorage.getItem('proelium:speed')) || 1, skip = false, resolveChoice = null, megaOn = false;
   const dmgBy = [0, 0, 0]; let kos = 0;
 
-  // 화면용 상태(이벤트를 따라 갱신): 엔진은 한 턴을 한꺼번에 계산하므로, 연출 중간 상태를 따로 들고 있어야 한다
+  // 화면용 상태(이벤트를 따라 갱신): 엔진은 한 턴을 한꺼번에 계산하므로, 연출 중간 상태를 따로 들고 있어야 한다.
+  // 상대 포켓몬의 체력은 퍼센트(최대 100)로만 알 수 있다.
+  const mk = (id, name, maxHp, hp) => { const types = monTypes(id); return { id, name, types, origTypes: types.slice(), maxHp, hp, fainted: false, status: null, confusion: false, stages: {}, vol: {} }; };
   const U = {
-    field: { weather: null, terrain: null, room: 0, sides: [{}, {}] },
-    side: [mine, opp].map(team => ({ active: 0, party: team.map(t => {
-      const p = D().pokemon[t.id], types = p.t.slice();
-      return { id: t.id, name: formLabel(t.id), types, origTypes: types.slice(), maxHp: 0, hp: 0, fainted: false, status: null, confusion: false, stages: {}, vol: {} };
-    }) })),
+    field: { weather: null, terrain: null, pseudo: [], sides: [[], []] },
+    side: [
+      { active: 0, party: me.team().map(m => mk(R.toID(m.species), formLabel(R.toID(m.species)), m.maxHp, m.hp)) },
+      { active: 0, party: opp.map(t => mk(t.id, formLabel(t.id), 100, 100)) },
+    ],
   };
-  B.sides.forEach((s, si) => s.party.forEach((m, i) => { U.side[si].party[i].maxHp = m.maxHp; U.side[si].party[i].hp = m.maxHp; }));
   const cur = si => U.side[si].party[U.side[si].active];
   const ms = n => (skip ? 0 : n / speed);
   const dly = n => wait(ms(n));
@@ -62,8 +65,8 @@ export function mount(root, { go, params }) {
     if (m.status) badges.push(`<i class="bd ${m.status}">${STATUS_KO[m.status]}</i>`);
     if (m.confusion) badges.push('<i class="bd cnf">혼란</i>');
     for (const k of Object.keys(m.stages)) if (m.stages[k]) badges.push(`<i class="bd ${m.stages[k] > 0 ? 'up' : 'down'}">${STAT_KO[k]} ${m.stages[k] > 0 ? '▲' : '▼'}${Math.abs(m.stages[k])}</i>`);
-    for (const k of Object.keys(VOL_KO)) if (m.vol[k]) badges.push(`<i class="bd vol">${VOL_KO[k]}</i>`);
-    condList(U.field.sides[si] || {}).forEach(t => badges.push(`<i class="bd cond">${esc(t)}</i>`));
+    for (const k of Object.keys(m.vol)) if (VOL_KO[k]) badges.push(`<i class="bd vol">${VOL_KO[k]}</i>`);
+    condList(U.field.sides[si]).forEach(t => badges.push(`<i class="bd cond">${esc(t)}</i>`));
     $('#plate-' + si).innerHTML = `
       <div class="p-top"><b>${esc(m.name)}</b><span class="ptypes">${m.types.map(t => `<i style="background:${TYPE_HEX[t]}">${TYPE_GLYPH[t]}</i>`).join('')}</span><small>Lv.100</small></div>
       <div class="hp"><i class="ghost" style="width:${(r * 100).toFixed(1)}%"></i><i class="fill ${hpClass(r)}" style="width:${(r * 100).toFixed(1)}%"></i>${si === 0 ? `<span class="hpnum">${m.hp} / ${m.maxHp}</span>` : ''}</div>
@@ -87,13 +90,7 @@ export function mount(root, { go, params }) {
     const f = U.field, tags = [];
     if (f.weather) tags.push(WEATHER_UI[f.weather]);
     if (f.terrain) tags.push(TERRAIN_UI[f.terrain]);
-    if (f.room) tags.push('🌀 트릭룸');
-    if (f.gravity) tags.push('⬇ 중력');
-    if (f.wonder) tags.push('🌀 원더룸');
-    if (f.magicRoom) tags.push('🌀 매직룸');
-    if (f.mud) tags.push('흙놀이');
-    if (f.waterSport) tags.push('물놀이');
-    if (f.fairyLock) tags.push('🔒 페어리록');
+    for (const p of f.pseudo) tags.push(`🌀 ${p.ko}`);
     $('#fieldbar').innerHTML = tags.map(t => `<span>${esc(t)}</span>`).join('');
     $('#wx').className = 'wx' + (f.weather ? ' ' + f.weather : '') + (f.terrain ? ' t-' + f.terrain : '');
   }
@@ -123,37 +120,39 @@ export function mount(root, { go, params }) {
   const flash = color => { const f = $('#flash'); f.style.setProperty('--c', color || '#fff'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); };
   async function pulse(el, cls, t) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); await dly(t); el.classList.remove(cls); }
   async function banner(text, cls, t = 900) { const b = $('#banner'); b.className = 'banner ' + (cls || ''); b.textContent = text; void b.offsetWidth; b.classList.add('on'); await dly(t); b.classList.remove('on'); }
-  let curMove = null;
+  let curMove = null, pendingCrit = false;
 
   // ───────── 이벤트 연출 ─────────
   async function handle(ev) {
     switch (ev.t) {
-      case 'turn': say(ev.text); break;
+      case 'turn': say(`${ev.turn}턴`); break;
       case 'switch': {
         const s = U.side[ev.side];
-        if (!ev.initial) { const o = s.party[s.active]; Object.assign(o, { stages: {}, confusion: false, vol: {}, types: o.origTypes.slice() }); }
-        s.active = ev.to; cur(ev.side).hp = ev.hp;
+        if (!ev.initial) { const o = s.party[s.active]; Object.assign(o, { stages: {}, confusion: false, vol: {}, types: o.origTypes.slice(), id: o.baseId || o.id }); }
+        s.active = ev.to; const m = cur(ev.side); m.hp = ev.hp; m.maxHp = ev.maxHp; m.baseId = m.baseId || m.id; m.id = ev.species; m.types = ev.types.map(typeId); m.vol = {};
         renderPlate(ev.side); renderMon(ev.side, true); sfx.whoosh(); say(ev.text); await dly(ev.initial ? 650 : 800);
         break;
       }
       case 'move': {
-        curMove = ev; say(ev.text);
-        const col = TYPE_HEX[ev.type] || '#fff', el = $('#mon-' + ev.side);
+        curMove = Object.assign({}, ev, { typeId: typeId(ev.type) }); say(ev.text);
+        const tid = curMove.typeId, col = TYPE_HEX[tid] || '#fff', el = $('#mon-' + ev.side);
         const c = centerOf(ev.side);
-        spawn('mvtag' + (isLite(ev.type) ? ' lite' : ''), `${TYPE_GLYPH[ev.type] || '✦'} ${esc(ev.name)}`, { x: c.x, y: c.y - 110 }, `--c:${col}`, 1000);
+        spawn('mvtag' + (isLite(tid) ? ' lite' : ''), `${TYPE_GLYPH[tid] || '✦'} ${esc(ev.name)}`, { x: c.x, y: c.y - 110 }, `--c:${col}`, 1000);
         if (ev.cls === 'status') { sfx.buff(); spawn('ringfx big', '', c, `--c:${col}`, 800); await pulse(el, 'cast', 520); }
         else { sfx.whoosh(); await pulse(el, ev.side === 0 ? 'lunge-me' : 'lunge-foe', 420); }
         break;
       }
       case 'miss': say(ev.text); float(1 - ev.side, 'MISS', 'miss'); await dly(750); break;
       case 'damage': {
-        const m = cur(ev.side); const was = m.hp; m.hp = ev.hp;
-        if (!ev.cause && ev.move) { const att = 1 - ev.side; if (att === 0) dmgBy[U.side[0].active] += ev.amount; }
+        const m = cur(ev.side); m.hp = ev.hp; m.maxHp = ev.maxHp;
+        const crit = pendingCrit; pendingCrit = false;
+        const byMove = !ev.cause && curMove && curMove.side !== ev.side;
+        if (byMove && curMove.side === 0 && ev.side === 1) dmgBy[U.side[0].active] += ev.amount;      // 상대 체력은 퍼센트라 퍼센트포인트로 센다
         updateHp(ev.side);
-        const col = ev.cause ? '#ff6b81' : TYPE_HEX[(curMove || {}).type] || '#fff';
-        if (!ev.cause) { burst(ev.side, col, ev.crit ? 20 : 12); shake(ev.crit || ev.amount > m.maxHp * .35 ? 'shake-big' : 'shake'); ev.crit ? sfx.crit() : sfx.hit(); }
+        const col = ev.cause ? '#ff6b81' : TYPE_HEX[(curMove || {}).typeId] || '#fff';
+        if (!ev.cause) { burst(ev.side, col, crit ? 20 : 12); shake(crit || ev.amount > m.maxHp * .35 ? 'shake-big' : 'shake'); crit ? sfx.crit() : sfx.hit(); }
         else sfx.weak();
-        float(ev.side, `-${ev.amount}`, ev.crit ? 'crit' : ev.cause ? 'dot' : '');
+        float(ev.side, ev.side === 1 ? `-${ev.amount}%` : `-${ev.amount}`, crit ? 'crit' : ev.cause ? 'dot' : '');
         if (ev.text) say(ev.text);
         await pulse($('#mon-' + ev.side), 'hit', 520);
         await dly(ev.text ? 550 : 250);
@@ -166,35 +165,36 @@ export function mount(root, { go, params }) {
         await banner(label, ev.eff === 0 ? 'none' : ev.eff > 1 ? 'super' : 'weak', 800);
         break;
       }
-      case 'crit': flash('#ffd23f'); say(ev.text); await banner('CRITICAL!', 'crit', 650); break;
+      case 'crit': pendingCrit = true; flash('#ffd23f'); say(ev.text); await banner('CRITICAL!', 'crit', 650); break;
       case 'hits': say(ev.text); await dly(500); break;
       case 'heal': {
-        const m = cur(ev.side); m.hp = ev.hp; updateHp(ev.side); sfx.heal();
+        const m = cur(ev.side); m.hp = ev.hp; m.maxHp = ev.maxHp; updateHp(ev.side); sfx.heal();
         const c = centerOf(ev.side);
         for (let i = 0; i < 8; i++) spawn('sparkle', '✦', { x: c.x + (Math.random() - .5) * 120, y: c.y + 20 }, `animation-delay:${i * 60}ms`, 1200);
-        if (ev.amount > 0) float(ev.side, `+${ev.amount}`, 'heal'); say(ev.text); await pulse($('#mon-' + ev.side), 'healfx', 700); break;
+        if (ev.amount > 0) float(ev.side, ev.side === 1 ? `+${ev.amount}%` : `+${ev.amount}`, 'heal');
+        if (ev.text) say(ev.text); await pulse($('#mon-' + ev.side), 'healfx', 700); break;
       }
       case 'status': {
         const m = cur(ev.side);
-        if (STATUS_KO[ev.kind]) { m.status = ev.kind; float(ev.side, STATUS_KO[ev.kind], 'stat'); sfx.debuff(); }
-        else if (ev.kind === 'thaw' || ev.kind === 'wake') m.status = null;
-        else if (ev.kind === 'cnf') { m.confusion = true; float(ev.side, '혼란', 'stat'); sfx.debuff(); }
-        else if (ev.kind === 'cnfEnd') m.confusion = false;
-        renderPlate(ev.side); say(ev.text); await dly(750); break;
+        if (STATUS_KO[ev.kind]) { m.status = ev.kind; if (ev.text) { float(ev.side, STATUS_KO[ev.kind], 'stat'); sfx.debuff(); } }
+        else if (ev.kind === 'thaw' || ev.kind === 'wake' || ev.kind === 'cure') m.status = null;
+        renderPlate(ev.side); if (ev.text) { say(ev.text); await dly(750); } break;
       }
       case 'stage': {
         const m = cur(ev.side); m.stages[ev.stat] = (m.stages[ev.stat] || 0) + ev.change; if (!m.stages[ev.stat]) delete m.stages[ev.stat];
-        renderPlate(ev.side); ev.change > 0 ? sfx.buff() : sfx.debuff();
-        float(ev.side, `${STAT_KO[ev.stat]} ${ev.change > 0 ? '▲' : '▼'}`.repeat(1), ev.change > 0 ? 'up' : 'down');
-        say(ev.text); await dly(700); break;
+        renderPlate(ev.side);
+        if (ev.text) { ev.change > 0 ? sfx.buff() : sfx.debuff(); float(ev.side, `${STAT_KO[ev.stat] || ev.stat} ${ev.change > 0 ? '▲' : '▼'}`, ev.change > 0 ? 'up' : 'down'); say(ev.text); await dly(700); }
+        break;
       }
-      case 'stages': cur(ev.side).stages = Object.assign({}, ev.stages); renderPlate(ev.side); if (ev.text) { say(ev.text); await dly(600); } break;
-      case 'cure': { const s = U.side[ev.side]; for (const i of ev.indexes) { s.party[i].status = null; if (i === s.active) s.party[i].confusion = false; } renderPlate(ev.side); sfx.heal(); if (ev.text) { say(ev.text); await dly(700); } break; }
-      case 'sync': cur(ev.side).status = ev.status; renderPlate(ev.side); break;
-      case 'revive': { const m = U.side[ev.side].party[ev.index]; m.fainted = false; m.hp = ev.hp; m.maxHp = ev.maxHp; m.status = null; renderPlate(ev.side); sfx.heal(); say(ev.text); await dly(900); break; }
-      case 'vol': cur(ev.side).vol = ev.flags; renderPlate(ev.side); break;
-      case 'types': cur(ev.side).types = ev.types; renderPlate(ev.side); renderMon(ev.side, false); break;
-      case 'field': U.field = { weather: ev.weather, terrain: ev.terrain, room: ev.room, gravity: ev.gravity, wonder: ev.wonder, magicRoom: ev.magicRoom, mud: ev.mud, waterSport: ev.waterSport, fairyLock: ev.fairyLock, sides: ev.sides }; renderField(); renderPlate(0); renderPlate(1); await dly(450); break;
+      case 'vol': cur(ev.side).vol = Object.fromEntries(ev.flags.map(f => [f, 1])); renderPlate(ev.side); break;
+      case 'types': cur(ev.side).types = ev.types.map(typeId); renderPlate(ev.side); renderMon(ev.side, false); if (ev.text) { say(ev.text); await dly(600); } break;
+      case 'forme': { const m = cur(ev.side); m.id = ev.species; m.types = ev.types.map(typeId); renderPlate(ev.side); renderMon(ev.side, true); break; }
+      case 'mega': { sfx.crit(); flash('#ff5fa2'); say(ev.text); await banner('MEGA EVOLUTION', 'ready', 1000); break; }
+      case 'field': {
+        const w = String(ev.weather || '').toLowerCase().replace(/[^a-z]/g, ''), tr = String(ev.terrain || '').toLowerCase().replace(/[^a-z]/g, '');
+        U.field = { weather: WEATHER_MAP[w] || null, terrain: TERRAIN_MAP[tr] || null, pseudo: ev.pseudo || [], sides: ev.sides || [[], []] };
+        renderField(); renderPlate(0); renderPlate(1); await dly(450); break;
+      }
       case 'faint': {
         const m = cur(ev.side); m.fainted = true; m.hp = 0; m.status = null; m.confusion = false; m.stages = {}; m.vol = {}; m.types = m.origTypes.slice();
         if (ev.side === 1) kos++;
@@ -203,42 +203,44 @@ export function mount(root, { go, params }) {
         await banner('K.O.', 'ko', 1000);
         break;
       }
-      case 'text': say(ev.text); await dly(Math.min(1200, 420 + ev.text.length * 22)); break;
+      case 'text': if (ev.text) { say(ev.text); await dly(Math.min(1200, 420 + ev.text.length * 22)); } break;
       case 'end': say(ev.text); await dly(600); break;
     }
   }
   async function play(events) { for (const ev of events) { if (!alive) return; await handle(ev); } }
 
   // ───────── 조작 ─────────
-  const effHint = (mvType, foeTypes) => { const e = Eng.typeMultiplier(mvType, foeTypes); return e === 0 ? ['im', '무효'] : e >= 4 ? ['se', '×4'] : e > 1 ? ['se', '×2'] : e < 1 ? ['nve', e <= .25 ? '×¼' : '×½'] : null; };
+  const TYPE_EN = ['Normal', 'Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost', 'Steel', 'Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark', 'Fairy'];
+  const hintOf = (mvType, foeTypes) => { const e = R.typeMultiplier(TYPE_EN[mvType - 1], foeTypes.map(t => TYPE_EN[t - 1])); return e === 0 ? ['im', '무효'] : e >= 4 ? ['se', '×4'] : e > 1 ? ['se', '×2'] : e < 1 ? ['nve', e <= .25 ? '×¼' : '×½'] : null; };
   function renderControls() {
-    const la = B.legalActions(0), me = B.active(0), foe = B.active(1);
-    const cards = la.mustStruggle
-      ? `<button class="mvc" style="--c:#8a8fa8;grid-column:1/-1" data-act="move" data-i="0"><b>발버둥</b><small>쓸 수 있는 기술이 없어요 · 반동 피해</small></button>`
-      : me.moves.map((m, i) => {
-        const lm = la.moves[i], col = TYPE_HEX[m.type], st = m.cls === 'status', h = !st && effHint(m.type, foe.types);
-        const meta = st ? esc(Eng.describeEffect(m)) : `${m.cls === 'phys' ? '물리' : '특수'} · 위력 ${Eng.variablePower(m) ? '가변' : m.power} · ${m.acc === null || (m.fx && m.fx.neverMiss) ? '필중' : '명중 ' + m.acc}${Eng.describeAttack(m) ? ' · ' + esc(Eng.describeAttack(m)) : ''}`;
-        return `<button class="mvc${st ? ' st' : ''}${isLite(m.type) ? ' lite' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${lm.usable ? '' : 'disabled'} title="${i + 1}번 키">
-          <span class="g">${TYPE_GLYPH[m.type]}</span><b>${esc(m.name)}</b><small>${meta}</small><em>PP ${m.pp}/${m.maxPp}</em>
-          ${lm.why ? `<u class="why">${esc(lm.why)}</u>` : h ? `<u class="hint ${h[0]}">${h[1]}</u>` : ''}</button>`;
-      }).join('');
+    const info = me.moves(), foe = cur(1), team = me.team(), canSwitch = match.choices(0).some(c => c.type === 'switch');
+    const cards = !info ? '' : info.moves.map((sl, i) => {
+      const m = moveInfo(sl.id), col = TYPE_HEX[m.type], st = m.cls === 'status', h = !st && hintOf(m.type, foe.types);
+      const meta = st ? esc(m.desc || '변화 기술') : `${m.cls === 'phys' ? '물리' : '특수'} · 위력 ${m.varPower ? '가변' : m.power} · ${m.acc === null ? '필중' : '명중 ' + m.acc}${m.desc ? ' · ' + esc(m.desc) : ''}`;
+      return `<button class="mvc${st ? ' st' : ''}${isLite(m.type) ? ' lite' : ''}" style="--c:${col}" data-act="move" data-i="${i}" ${sl.disabled ? 'disabled' : ''} title="${i + 1}번 키">
+        <span class="g">${TYPE_GLYPH[m.type]}</span><b>${esc(m.name)}</b><small>${meta}</small><em>PP ${sl.pp}/${sl.maxpp}</em>
+        ${sl.disabled ? '<u class="why">사용 불가</u>' : h ? `<u class="hint ${h[0]}">${h[1]}</u>` : ''}</button>`;
+    }).join('');
+    const active = team.find(m => m.active), mega = info && info.canMega ? megaOf({ id: R.toID(active.species), item: active.item }) : null;
     $('#controls').innerHTML = `<div class="mvgrid">${cards}</div>
-      <div class="subbar"><button class="btn" data-act="switch-open" ${la.switches.length ? '' : 'disabled'}>${la.trapped ? '🔒 교체 불가' : '🔄 교체'}</button><button class="btn danger" data-act="surrender">🏳 항복</button></div>`;
+      <div class="subbar">${info && info.canMega ? `<button class="btn mega${megaOn ? ' primary' : ''}" data-act="mega" title="이번 턴에 메가진화">🌀 메가진화 ${megaOn ? 'ON' : 'OFF'}</button>` : ''}<button class="btn" data-act="switch-open" ${canSwitch ? '' : 'disabled'}>${info && info.trapped ? '🔒 교체 불가' : '🔄 교체'}</button><button class="btn danger" data-act="surrender">🏳 항복</button></div>`;
   }
   const lock = () => { $('#controls').classList.add('lock'); };
   const unlock = () => { $('#controls').classList.remove('lock'); };
   const choose = () => new Promise(res => { resolveChoice = res; renderControls(); unlock(); });
+  /** 교체할 포켓몬 고르기. 합법인 교체 선택지만 누를 수 있다. 돌려주는 값은 선택지 객체(취소는 null) */
   function partyPicker(title, allowCancel) {
     return new Promise(res => {
-      const ov = $('#overlay'), me = B.sides[0];
-      ov.innerHTML = `<div class="pick-ov"><div class="pick-box glass"><h3 class="display">${esc(title)}</h3><div class="pick-list">${me.party.map((m, i) => {
-        const u = U.side[0].party[i], off = m.fainted || i === me.active, r = m.hp / m.maxHp;
-        return `<button class="pcard${off ? ' off' : ''}" data-i="${i}" ${off ? 'disabled' : ''} style="--c1:${TYPE_HEX[u.origTypes[0]]}"><span class="pa">${monImg(u.id)}</span><b>${esc(u.name)}</b>
-          <div class="hp mini"><i class="fill ${hpClass(r)}" style="width:${(r * 100).toFixed(0)}%"></i></div><small>${m.fainted ? '기절' : i === me.active ? '출전 중' : `${m.hp}/${m.maxHp}`}${m.status ? ' · ' + STATUS_KO[m.status] : ''}</small></button>`;
+      const ov = $('#overlay'), team = me.team(), opts = new Map(match.choices(0).filter(c => c.type === 'switch').map(c => [c.to, c]));
+      ov.innerHTML = `<div class="pick-ov"><div class="pick-box glass"><h3 class="display">${esc(title)}</h3><div class="pick-list">${team.map((m, i) => {
+        const id = R.toID(m.species), u = U.side[0].party.find(x => x.baseId === id || x.id === id) || { origTypes: monTypes(id) };
+        const off = !opts.has(i), r = m.hp / m.maxHp;
+        return `<button class="pcard${off ? ' off' : ''}" data-i="${i}" ${off ? 'disabled' : ''} style="--c1:${TYPE_HEX[(u.origTypes || monTypes(id))[0]]}"><span class="pa">${monImg(id)}</span><b>${esc(formLabel(id))}</b>
+          <div class="hp mini"><i class="fill ${hpClass(r)}" style="width:${(r * 100).toFixed(0)}%"></i></div><small>${m.fainted ? '기절' : m.active ? '출전 중' : `${m.hp}/${m.maxHp}`}${m.status && STATUS_KO[m.status] ? ' · ' + STATUS_KO[m.status] : ''}</small></button>`;
       }).join('')}</div>${allowCancel ? '<button class="btn" data-pk="cancel">취소</button>' : ''}</div></div>`;
       ov.onclick = e => {
         const c = e.target.closest('.pcard'), x = e.target.closest('[data-pk]');
-        if (c && !c.disabled) { ov.innerHTML = ''; ov.onclick = null; sfx.pick(); res(Number(c.dataset.i)); }
+        if (c && !c.disabled) { ov.innerHTML = ''; ov.onclick = null; sfx.pick(); res(opts.get(Number(c.dataset.i))); }
         else if (x || e.target.classList.contains('pick-ov')) { if (allowCancel) { ov.innerHTML = ''; ov.onclick = null; res(null); } }
       };
     });
@@ -246,8 +248,9 @@ export function mount(root, { go, params }) {
   const onClick = async e => {
     const t = e.target.closest('[data-act]'); if (!t) return;
     switch (t.dataset.act) {
-      case 'move': if (resolveChoice) { const r = resolveChoice; resolveChoice = null; lock(); r({ type: 'move', index: Number(t.dataset.i) }); } break;
-      case 'switch-open': { if (!resolveChoice) break; const to = await partyPicker('교체할 포켓몬', true); if (to !== null && resolveChoice) { const r = resolveChoice; resolveChoice = null; lock(); r({ type: 'switch', to }); } break; }
+      case 'move': if (resolveChoice) { const r = resolveChoice; resolveChoice = null; lock(); const info = me.moves(); r(Object.assign({ type: 'move', index: Number(t.dataset.i) }, info && info.canMega && megaOn ? { mega: true } : {})); } break;
+      case 'mega': megaOn = !megaOn; renderControls(); sfx.click(); break;
+      case 'switch-open': { if (!resolveChoice) break; const c = await partyPicker('교체할 포켓몬', true); if (c && resolveChoice) { const r = resolveChoice; resolveChoice = null; lock(); r(c); } break; }
       case 'surrender': if (resolveChoice && confirm('항복하면 패배로 기록돼요. 항복할까요?')) { const r = resolveChoice; resolveChoice = null; r({ type: 'surrender' }); } break;
       case 'speed': speed = speed >= 3 ? 1 : speed + 1; sessionStorage.setItem('proelium:speed', speed); $('#speedBtn').textContent = speed + 'x'; break;
       case 'skip': skip = !skip; t.classList.toggle('on', skip); break;
@@ -259,31 +262,48 @@ export function mount(root, { go, params }) {
   document.addEventListener('keydown', onKey);
 
   // ───────── 진행 ─────────
+  /** 상대 AI 의 선택. 지옥은 몇백 ms 걸릴 수 있어 화면이 먼저 그려지도록 한 박자 쉰다 */
+  async function foeChoice() {
+    if (level === 'hell') { say('상대가 수를 읽고 있어요…'); await wait(30); }
+    return ai.choose(foeP, level).choice;
+  }
+  /** 양쪽 선택을 넣고 생긴 이벤트를 연출한다. 내 선택이 거부되면(상대의 숨은 특성으로 교체가 막힌 경우) 다시 고르게 한다 */
+  async function takeTurn(c0, kind0, kind1) {
+    for (let attempt = 0; attempt < 4 && alive; attempt++) {
+      const c1 = kind1 === 'wait' ? null : await foeChoice();
+      try { match.submit([c0, c1]); break; }
+      catch (err) {
+        if (/p1/.test(err.message)) { toast('지금은 그 선택을 할 수 없어요 (상대 특성 때문에 교체가 막혔어요)'); c0 = kind0 === 'switch' ? await partyPicker('다른 포켓몬을 골라 주세요', false) : await choose(); if (c0.type === 'surrender') return c0; }
+        else if (attempt === 3) throw err;
+      }
+    }
+    if (alive) await play(T.pull());
+    return null;
+  }
   async function run() {
     renderPlate(0); renderPlate(1); renderField();
     await dly(400);
     await banner('READY?', 'ready', 800); await banner('FIGHT!', 'fight', 700);
-    await play(B.start());
+    await play(T.pull());
     let result = null;
-    while (alive && B.phase !== 'ended') {
-      if (B.phase === 'switch') {
-        for (const si of B.pending.slice()) {
-          if (!alive) return;
-          const idx = si === 0 ? await partyPicker('다음 포켓몬을 골라 주세요', false) : brain.chooseReplacement(B, 1, level);
-          await play(B.replace(si, idx));
-        }
+    while (alive && !match.ended) {
+      const k0 = match.kind(0), k1 = match.kind(1);
+      if (k0 === 'switch' || k1 === 'switch') {                          // 쓰러진 뒤 교체
+        const c0 = k0 === 'switch' ? await partyPicker('다음 포켓몬을 골라 주세요', false) : null;
+        if (!alive) return;
+        const cancel = await takeTurn(c0, k0, k1 === 'switch' ? 'move' : 'wait'); if (cancel) { result = 1; break; }
         continue;
       }
-      const a0 = await choose();
-      if (a0.type === 'surrender') { result = 1; break; }
-      const a1 = brain.chooseAction(B, 1, level, a0);              // 지옥 난이도는 내가 고른 행동을 미리 본다
+      const c0 = await choose();
+      if (c0.type === 'surrender') { result = 1; break; }
       lock();
-      await play(B.playTurn(a0, a1));
+      const cancel = await takeTurn(c0, 'move', 'move'); if (cancel) { result = 1; break; }
+      megaOn = false;
     }
     if (!alive) return;
-    const winner = result !== null ? result : B.winner;
+    const winner = result !== null ? result : match.winner;
     await dly(900);
-    go('result', { winner, turns: B.turn, mine, opp, level, dmg: dmgBy, kos });
+    go('result', { winner, turns: match.turn, mine, opp, level, dmg: dmgBy, kos });
   }
   run().catch(err => { console.error(err); say('오류가 발생했어요. 홈으로 돌아가 주세요.'); });
   return () => { alive = false; root.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };

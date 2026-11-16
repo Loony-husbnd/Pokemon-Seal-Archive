@@ -1,41 +1,44 @@
 import { store } from '../store.js';
-import { D, esc, formLabel, monImg, TYPE_HEX, TYPE_GLYPH, isLite, typeName, typeChip, searchMons, movePool, moveInfo, recommendMoves, stat6, STAT_LABEL, isValidTeam } from '../dex.js';
+import { R2, DEX, row as monRow, esc, formLabel, monImg, TYPE_HEX, TYPE_GLYPH, isLite, typeName, typeChip, monTypes, searchMons, movePool, moveInfo, recommendMoves, defaultSet, abilityList, abilityKo, itemKo, megaOf, stat6, STAT_LABEL, validateTeam } from '../dex.js';
 import { sfx } from '../sfx.js';
 import { toast } from '../fx.js';
 import { randomTeam } from './home.js';
 
-const cardVars = id => { const t = D().pokemon[id].t; return `--c1:${TYPE_HEX[t[0]]};--c2:${TYPE_HEX[t[1] || t[0]]}`; };
+const cardVars = id => { const t = monTypes(id); return `--c1:${TYPE_HEX[t[0]]};--c2:${TYPE_HEX[t[1] || t[0]]}`; };
+const copyTeam = team => team.map(t => (t ? { id: t.id, moves: t.moves.slice(), ability: t.ability, item: t.item } : null));
 const clsKo = { phys: '물리', spec: '특수', status: '변화' };
 const moveChipHtml = id => { const m = moveInfo(id); return `<span class="mv${isLite(m.type) ? ' lite' : ''}${m.cls === 'status' ? ' st' : ''}" style="--c:${TYPE_HEX[m.type]}">${TYPE_GLYPH[m.type]} ${esc(m.name)}</span>`; };
 
 export function mount(root, { go }) {
-  let team = store.team.map(t => (t ? { id: t.id, moves: t.moves.slice() } : null));
-  const commit = () => { store.team = team.map(t => (t ? { id: t.id, moves: t.moves.slice() } : null)); store.save(); };
+  let team = copyTeam(store.team);
+  const commit = () => { store.team = copyTeam(team); store.save(); };
 
   // ───────── 슬롯 화면 ─────────
   const slotHtml = (t, i) => {
-    if (!t) return `<button class="slot empty" data-act="pick" data-i="${i}"><span class="plus display">+</span><b>포켓몬 고르기</b><small>1,351마리 중에서 자유롭게</small></button>`;
-    const p = D().pokemon[t.id], st = stat6(t.id);
+    if (!t) return `<button class="slot empty" data-act="pick" data-i="${i}"><span class="plus display">+</span><b>포켓몬 고르기</b><small>1,254마리 중에서 자유롭게</small></button>`;
+    const p = monRow(t.id), st = stat6(t.id), types = monTypes(t.id), mega = megaOf(t);
     const bars = st.map((v, k) => `<div class="bar" title="${STAT_LABEL[k]} ${v}"><b>${v}</b><span class="tr"><i style="--h:${Math.min(1, v / 160).toFixed(2)}"></i></span><small>${STAT_LABEL[k]}</small></div>`).join('');
     return `<article class="slot" style="${cardVars(t.id)}" data-i="${i}">
-      <i class="foil"></i><span class="slot-no">${String(p.sp).padStart(3, '0')}</span>
+      <i class="foil"></i><span class="slot-no">${String(p.num).padStart(3, '0')}</span>
       <span class="slot-num">${i + 1}</span>
       <div class="slot-art">${monImg(t.id)}</div>
       <div class="slot-body">
         <h3>${esc(formLabel(t.id))}</h3>
-        <div class="slot-types">${p.t.map(typeChip).join('')}<span class="bst">종족값 ${p.bst}</span></div>
+        <div class="slot-types">${types.map(typeChip).join('')}<span class="bst">종족값 ${p.bst}</span></div>
         <div class="bars">${bars}</div>
         <div class="slot-moves">${t.moves.map(moveChipHtml).join('')}</div>
+        <div class="slot-set"><span title="특성">✦ ${esc(abilityKo(t.ability))}</span><span title="도구">🎒 ${esc(itemKo(t.item))}</span>${mega ? '<span class="mega">메가진화 가능</span>' : ''}</div>
         <div class="slot-actions">
           <button class="btn" data-act="pick" data-i="${i}">포켓몬 변경</button>
-          <button class="btn primary" data-act="moves" data-i="${i}">기술 편집</button>
+          <button class="btn primary" data-act="moves" data-i="${i}">세트 편집</button>
           <button class="iconbtn" data-act="clear" data-i="${i}" title="비우기">✕</button>
         </div>
       </div></article>`;
   };
   function validity() {
     if (!team.every(Boolean)) return { ok: false, msg: `${team.filter(Boolean).length}/3마리 — 포켓몬을 모두 골라 주세요` };
-    if (!isValidTeam(team)) return { ok: false, msg: '같은 종류의 포켓몬은 한 팀에 한 마리만 넣을 수 있어요' };
+    const v = validateTeam(team);
+    if (!v.ok) return { ok: false, msg: v.errors[0] };
     return { ok: true, msg: '준비 완료! 이제 상대를 만나러 가요' };
   }
   function render() {
@@ -44,7 +47,7 @@ export function mount(root, { go }) {
       <main class="builder screen">
         <header class="topbar glass-top"><button class="iconbtn" data-act="back" title="홈으로">←</button><h2 class="title display">TEAM BUILDER</h2><span class="sp"></span>
           <button class="btn" data-act="random">🎲 랜덤 팀</button></header>
-        <p class="lead">내 팀 <b>3마리</b>를 직접 고르고, 각자의 <b>기술 4개</b>까지 정해 보세요.</p>
+        <p class="lead">내 팀 <b>3마리</b>를 직접 고르고, 각자의 <b>기술 4개 · 특성 · 도구</b>까지 정해 보세요.</p>
         <section class="slots">${team.map(slotHtml).join('')}</section>
         <footer class="dock"><span class="dock-msg ${v.ok ? 'ok' : ''}">${esc(v.msg)}</span>
           <button class="btn primary big" data-act="go" ${v.ok ? '' : 'disabled'}>⚔ 상대 찾기</button></footer>
@@ -66,7 +69,7 @@ export function mount(root, { go }) {
           <select class="sel" data-f="sort" aria-label="정렬"><option value="dex">도감순</option><option value="bst">종족값순</option><option value="name">이름순</option></select>
         </header>
         <div class="filters">
-          <div class="seg" data-f="kind">${[['all', '전체'], ['base', '기본'], ['form', '폼·메가'], ['legend', '전설']].map(([k, n]) => `<button data-v="${k}" class="${k === 'all' ? 'on' : ''}">${n}</button>`).join('')}</div>
+          <div class="seg" data-f="kind">${[['all', '전체'], ['base', '기본'], ['form', '지방·특수 폼'], ['legend', '전설']].map(([k, n]) => `<button data-v="${k}" class="${k === 'all' ? 'on' : ''}">${n}</button>`).join('')}</div>
           <div class="types"><button class="tchip on" data-v="0">전체 타입</button>${Array.from({ length: 18 }, (_, i) => `<button class="tchip${isLite(i + 1) ? ' lite' : ''}" data-v="${i + 1}" style="--c:${TYPE_HEX[i + 1]}">${TYPE_GLYPH[i + 1]} ${esc(typeName(i + 1))}</button>`).join('')}</div>
         </div>
         <div class="count"></div>
@@ -74,10 +77,10 @@ export function mount(root, { go }) {
       </div>`;
     root.appendChild(sheet);
     const grid = sheet.querySelector('.pk-grid'), count = sheet.querySelector('.count');
-    const taken = new Set(team.map((t, i) => (t && i !== slot ? D().pokemon[t.id].sp : -1)));
-    const card = m => `<button class="pk${taken.has(m.dex) ? ' taken' : ''}${team[slot] && team[slot].id === m.id ? ' cur' : ''}" data-id="${m.id}" style="${cardVars(m.id)}">
+    const taken = new Set(team.map((t, i) => (t && i !== slot ? monRow(t.id).base : '')));
+    const card = m => `<button class="pk${taken.has(m.row.base) ? ' taken' : ''}${team[slot] && team[slot].id === m.id ? ' cur' : ''}" data-id="${esc(m.id)}" style="${cardVars(m.id)}">
       <span class="pk-art">${monImg(m.id)}</span><b>${esc(m.label)}</b><small>#${String(m.dex).padStart(3, '0')} · ${m.bst}</small>
-      <span class="dots">${m.types.map(t => `<i style="background:${TYPE_HEX[t]}"></i>`).join('')}</span>${taken.has(m.dex) ? '<em>팀에 있음</em>' : ''}</button>`;
+      <span class="dots">${m.types.map(t => `<i style="background:${TYPE_HEX[t]}"></i>`).join('')}</span>${taken.has(m.row.base) ? '<em>팀에 있음</em>' : ''}</button>`;
     function refresh() {
       list = searchMons(f); shown = 0; grid.innerHTML = '';
       count.textContent = `${list.length.toLocaleString('ko-KR')}마리`;
@@ -99,8 +102,8 @@ export function mount(root, { go }) {
       const pk = e.target.closest('.pk');
       if (pk) {
         if (pk.classList.contains('taken')) { toast('같은 종류의 포켓몬은 한 팀에 한 마리만 넣을 수 있어요'); return; }
-        const id = Number(pk.dataset.id);
-        if (!team[slot] || team[slot].id !== id) team[slot] = { id, moves: recommendMoves(id) };
+        const id = pk.dataset.id;
+        if (!team[slot] || team[slot].id !== id) team[slot] = defaultSet(id, 1);
         commit(); sfx.pick(); close(); render(); openMoves(slot);
       }
     });
@@ -112,25 +115,29 @@ export function mount(root, { go }) {
   // ───────── 기술 고르기 ─────────
   function openMoves(slot) {
     const t = team[slot]; if (!t) return;
-    const p = D().pokemon[t.id], pool = movePool(t.id);
+    const p = monRow(t.id), pool = movePool(t.id), types = monTypes(t.id);
     const f = { tab: 'all', type: 0, q: '' };
-    let sel = t.moves.slice();
+    let sel = t.moves.slice(), ability = t.ability, item = t.item;
     const sheet = document.createElement('div');
     sheet.className = 'sheet moves';
-    const types = [...new Set(pool.map(m => m.type))].sort((a, b) => a - b);
+    const moveTypes = [...new Set(pool.map(m => m.type))].sort((a, b) => a - b);
     sheet.innerHTML = `
       <div class="sheet-box" style="${cardVars(t.id)}">
         <header class="mv-head">
           <button class="iconbtn" data-x="close">✕</button>
           <div class="mv-mon">${monImg(t.id)}</div>
-          <div class="mv-title"><h3>${esc(formLabel(t.id))}</h3><div>${p.t.map(typeChip).join('')}</div></div>
-          <div class="mv-tools"><button class="btn" data-x="rec" title="추천 기술">✨ 추천</button><button class="btn" data-x="rnd" title="무작위 기술">🎲 무작위</button></div>
+          <div class="mv-title"><h3>${esc(formLabel(t.id))}</h3><div>${types.map(typeChip).join('')}</div></div>
+          <div class="mv-tools"><button class="btn" data-x="rec" title="추천 세트(기술·특성·도구)">✨ 추천</button><button class="btn" data-x="rnd" title="무작위 세트">🎲 무작위</button></div>
         </header>
         <div class="sheet-scroll">
+        <div class="set-row">
+          <label>✦ 특성<select class="sel" data-s="ability"></select></label>
+          <label>🎒 도구<select class="sel" data-s="item"></select></label>
+        </div>
         <div class="mv-slots"></div>
         <div class="filters">
           <div class="seg" data-f="tab"><button data-v="all" class="on">전체 ${pool.length}</button><button data-v="atk">공격</button><button data-v="sta">변화</button></div>
-          <div class="types"><button class="tchip on" data-v="0">전체</button>${types.map(ty => `<button class="tchip${isLite(ty) ? ' lite' : ''}" data-v="${ty}" style="--c:${TYPE_HEX[ty]}">${TYPE_GLYPH[ty]} ${esc(typeName(ty))}</button>`).join('')}</div>
+          <div class="types"><button class="tchip on" data-v="0">전체</button>${moveTypes.map(ty => `<button class="tchip${isLite(ty) ? ' lite' : ''}" data-v="${ty}" style="--c:${TYPE_HEX[ty]}">${TYPE_GLYPH[ty]} ${esc(typeName(ty))}</button>`).join('')}</div>
           <input class="search" type="search" placeholder="기술 이름 · 효과 검색" autocomplete="off">
         </div>
         <div class="mv-list"></div>
@@ -139,6 +146,18 @@ export function mount(root, { go }) {
       </div>`;
     root.appendChild(sheet);
     const slotsEl = sheet.querySelector('.mv-slots'), listEl = sheet.querySelector('.mv-list'), msg = sheet.querySelector('.dock-msg');
+    const abSel = sheet.querySelector('[data-s="ability"]'), itSel = sheet.querySelector('[data-s="item"]');
+    const rowT = monRow(t.id), items = DEX().itemsFor(t.id), stones = new Set(DEX().megaStonesOf(t.id).map(x => x.item));
+    function fillSet() {
+      abSel.innerHTML = abilityList(t.id).map(a => `<option value="${esc(a.name)}"${a.name === ability ? ' selected' : ''}>${esc(a.ko)}${a.hidden ? ' (숨겨진 특성)' : ''}</option>`).join('');
+      if (rowT.fixedItem) { itSel.innerHTML = `<option selected>${esc(itemKo(item))} (고정)</option>`; itSel.disabled = true; return; }
+      const mega = items.filter(i => stones.has(i.id)), gen = items.filter(i => !stones.has(i.id)).sort((a, b) => a.ko.localeCompare(b.ko, 'ko'));
+      const opt = i => `<option value="${esc(i.name)}"${i.name === item ? ' selected' : ''}>${esc(i.ko)}</option>`;
+      itSel.innerHTML = `<option value=""${item === '' ? ' selected' : ''}>없음</option>${mega.length ? `<optgroup label="메가스톤 (메가진화)">${mega.map(opt).join('')}</optgroup>` : ''}<optgroup label="도구">${gen.map(opt).join('')}</optgroup>`;
+    }
+    fillSet();
+    abSel.addEventListener('change', () => { ability = abSel.value; });
+    itSel.addEventListener('change', () => { item = itSel.value; });
     const row = m => {
       const on = sel.includes(m.id);
       return `<button class="mrow${on ? ' on' : ''}" data-id="${m.id}" style="--c:${TYPE_HEX[m.type]}">
@@ -162,7 +181,7 @@ export function mount(root, { go }) {
     renderSlots(); renderList();
     const setMoves = ids => { sel = ids.slice(0, 4); renderSlots(); renderList(); };
     function close(save) {
-      if (save) { if (!sel.length) { toast('기술을 1개 이상 골라 주세요'); return; } t.moves = sel.slice(); commit(); render(); }
+      if (save) { if (!sel.length) { toast('기술을 1개 이상 골라 주세요'); return; } t.moves = sel.slice(); t.ability = ability; t.item = item; commit(); render(); }
       sheet.classList.add('out'); setTimeout(() => sheet.remove(), 220);
     }
     let timer = 0;
@@ -172,8 +191,10 @@ export function mount(root, { go }) {
       if (x) {
         if (x.dataset.x === 'close') return close(false);
         if (x.dataset.x === 'done') return close(true);
-        if (x.dataset.x === 'rec') { sfx.pick(); return setMoves(recommendMoves(t.id)); }
-        if (x.dataset.x === 'rnd') { sfx.pick(); return setMoves(recommendMoves(t.id, Math.floor(Math.random() * 2 ** 31))); }
+        if (x.dataset.x === 'rec' || x.dataset.x === 'rnd') {
+          sfx.pick(); const d = x.dataset.x === 'rec' ? defaultSet(t.id, 1) : defaultSet(t.id, Math.floor(Math.random() * 2 ** 31), 1);
+          ability = d.ability; item = d.item; fillSet(); return setMoves(d.moves);
+        }
       }
       if (e.target === sheet) return close(true);
       const seg = e.target.closest('.seg button');
@@ -182,7 +203,7 @@ export function mount(root, { go }) {
       if (tc) { f.type = Number(tc.dataset.v); sheet.querySelectorAll('.tchip').forEach(b => b.classList.toggle('on', b === tc)); return renderList(); }
       const el = e.target.closest('.mrow, .mslot.on');
       if (el) {
-        const id = Number(el.dataset.id), at = sel.indexOf(id);
+        const id = el.dataset.id, at = sel.indexOf(id);
         if (at >= 0) { sel.splice(at, 1); sfx.click(); }
         else if (sel.length >= 4) { toast('기술은 4개까지! 먼저 하나를 빼 주세요'); slotsEl.classList.remove('shake'); void slotsEl.offsetWidth; slotsEl.classList.add('shake'); return; }
         else { sel.push(id); sfx.pick(); }
