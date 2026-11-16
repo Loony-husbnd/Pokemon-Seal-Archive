@@ -51,6 +51,7 @@ export function effectKo(raw) {
   if (STATUS_KO[s]) return STATUS_KO[s];
   if (s === 'confusion') return '혼란';
   if (INTERNAL[s] || INTERNAL[toID(s)]) return INTERNAL[s] || INTERNAL[toID(s)];
+  { const q = /^(quarkdrive|protosynthesis)/.exec(toID(s)); if (q) return koName('ability', q[1]); }      // quarkdriveatk 처럼 능력 이름이 붙은 내부 이름
   // 이름만 온 경우: 기술 → 특성 → 도구 순으로 찾는다 (없으면 영문 그대로)
   for (const kind of ['move', 'ability', 'item']) { const v = lookupName(kind, s); if (v) return v; }
   return s;

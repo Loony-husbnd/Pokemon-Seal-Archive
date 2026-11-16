@@ -13,7 +13,7 @@
  *   1) JSON 문자열로 깊은 복사한다. fromJSON(toJSON()) 만 쓰면 원본과 내부 객체를 공유해 원본이 오염된다.
  *   2) 복제본은 난수 시드를 새로 받는다. 시드를 그대로 두면 AI 가 급소·빗나감을 미리 보는 반칙이 된다.
  */
-import { Battle, PRNG, extractChannelMessages } from '@pkmn/sim';
+import { Battle, PRNG, Pokemon, extractChannelMessages } from '@pkmn/sim';
 import { FORMAT_ID } from './format.js';
 import { legalChoices, requestKind, toChoiceString } from './choices.js';
 
@@ -71,11 +71,62 @@ function wrap(battle, logs) {
     /** 시점별 현재 줄 수 (since 로 쓴다) */
     mark(side) { return logs.chan[side === 'omni' ? 0 : side + 1].length; },
 
+    /**
+     * '가려진 세계': 내 쪽은 그대로(정확), 상대 쪽의 숨은 정보(기술·특성·도구·능력치)는 추정값(guess)으로 바꾼 복제 배틀.
+     * AI 는 진짜 배틀 대신 이것만 들여다본다. 공개된 정보(체력 퍼센트·상태이상·능력 변화·누가 나와 있는지)만 진짜에서 옮겨 온다.
+     *   guess: { 이름(셋의 name): PokemonSet }  상대 파티 전원의 추정 셋. 이름은 프로토콜에 나오는 이름(공개 정보)이다.
+     * 돌려주는 world 는 match 와 같은 모양(choices/submit/clone/ended/winner)에 sideState() 가 더해진다.
+     */
+    world(side, guess, seed) {
+      const copy = Battle.fromJSON(JSON.parse(JSON.stringify(battle.toJSON())));
+      copy.prng = new PRNG(seed);
+      const foe = copy.sides[1 - side];
+      foe.pokemon.forEach((real, i) => {
+        const set = guess[real.name];
+        if (!set) throw new Error(`추정 셋이 없다: ${real.name}`);
+        const fresh = new Pokemon(Object.assign({}, set, { name: real.name }), foe);
+        const pct = real.fainted ? 0 : Math.max(1, Math.ceil(real.hp * 100 / real.maxhp));      // 상대 체력은 퍼센트만 공개된다
+        fresh.hp = real.fainted ? 0 : Math.max(1, Math.round(pct / 100 * fresh.maxhp));
+        fresh.fainted = real.fainted; fresh.faintQueued = real.faintQueued;
+        fresh.status = real.status; fresh.statusState = real.status ? { id: real.status, target: fresh, time: real.status === 'slp' ? 2 : undefined, stage: real.status === 'tox' ? (real.statusState.stage || 1) : undefined } : { id: '', effectOrder: 0 };
+        fresh.boosts = Object.assign({}, real.boosts);
+        fresh.position = real.position; fresh.isActive = real.isActive; fresh.isStarted = real.isStarted; fresh.activeTurns = real.activeTurns;
+        fresh.newlySwitched = real.newlySwitched; fresh.previouslySwitchedIn = real.previouslySwitchedIn;
+        fresh.itemKnockedOff = real.itemKnockedOff; if (real.item === '' && set.item) { fresh.item = ''; }
+        // side.team 은 복제(직렬화) 때 다시 읽히는 진짜 셋 목록이다. 숨은 정보가 되살아나지 않도록 추정 셋으로 바꾼다.
+        const ti = foe.team.indexOf(real.set); if (ti >= 0) foe.team[ti] = fresh.set;
+        foe.pokemon[i] = fresh;
+        if (foe.active[0] === real) foe.active[0] = fresh;
+      });
+      for (const k of ['log', 'inputLog', 'messageLog']) if (Array.isArray(copy[k])) copy[k] = [];
+      copy.makeRequest(copy.requestState);
+      return wrap(copy, { chan: [[], [], [], []] });
+    },
+
+    /**
+     * 플레이어 시점의 창구. AI 와 화면은 진짜 배틀(battle)이 아니라 이것만 받는다.
+     * 보이는 것: 내 선택지, 이 시점의 공개 로그, 그리고 world()(상대 숨은 정보를 추정으로 바꾼 복제).
+     */
+    player(side) {
+      return {
+        side,
+        kind: () => match.kind(side),
+        choices: () => match.choices(side),
+        lines: since => match.view(side, since),
+        world: (guess, seed) => match.world(side, guess, seed),
+      };
+    },
+
     /** 탐색용 복제. seed 는 [a, b, c, d] 숫자 4개 */
     clone(seed) {
       const copy = Battle.fromJSON(JSON.parse(JSON.stringify(battle.toJSON())));
       copy.prng = new PRNG(seed);
       return wrap(copy, { chan: [[], [], [], []] });
+    },
+    /** 한 번 직렬화해 두고 여러 번 복원한다 (같은 상태에서 후보 여러 개를 굴릴 때 복제 비용이 약 1/3). 복원할 때마다 시드를 새로 준다 */
+    snapshot() {
+      const json = JSON.stringify(battle.toJSON());
+      return { restore(seed) { const copy = Battle.fromJSON(JSON.parse(json)); copy.prng = new PRNG(seed); return wrap(copy, { chan: [[], [], [], []] }); } };
     },
   };
   return match;
