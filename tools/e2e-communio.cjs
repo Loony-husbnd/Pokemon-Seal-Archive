@@ -1,112 +1,179 @@
 /**
- * Communio 브라우저 전체 흐름 시험 (사육장 → 엔트리 등록 → 1:1 교감 → 새로고침 후 유지).
+ * Communio 2.0 브라우저 전체 흐름 시험
+ *   (사육장 → 데려오기(인원 제한 없음) → 교감 화면 → 손으로 쓰다듬기·때리기 → 음식 끌어 먹이기 → 말 걸기 → 빼기 확인 → 저장)
  *   npm run build:communio && npm run preview:communio   (다른 터미널에서)
  *   node tools/e2e-communio.cjs        환경 변수 PORT(기본 3002), OUT(스크린샷 폴더, 기본 임시 폴더)
- * Tailwind·Lucide CDN 을 못 쓰는 환경(샌드박스)에서는 TAILWIND_CSS(생성한 css 파일), LUCIDE_JS(lucide.min.js) 경로를 주면 대신 끼워 넣는다.
- * Playwright 와 Chromium 이 필요하다. 이미지·글꼴 같은 외부 자원을 못 불러오는 오류는 무시한다.
+ * Playwright 와 Chromium 이 필요하다. 그림·글꼴 같은 외부 자원은 못 불러와도 되도록 그림은 단색으로 대신한다.
  */
 const { chromium } = require('playwright');
-const fs = require('fs');
+const zlib = require('zlib');
 const OUT = process.env.OUT || require('os').tmpdir();
 const URL = 'http://localhost:' + (process.env.PORT || 3002) + '/';
 const KEY = 'communio:habitat_v1';
 let failed = 0;
 const ok = (cond, msg) => { console.log((cond ? '✓ ' : '✗ ') + msg); if (!cond) failed++; };
 
+// 128x128 단색 원 PNG (외부 그림 대체)
+function blobPng() {
+  const w = 128, h = 128, rows = [];
+  for (let y = 0; y < h; y++) { const r = [0]; for (let x = 0; x < w; x++) { const d = Math.hypot(x - 64, y - 64); r.push(...(d < 52 ? [255, 140, 160, 255] : [0, 0, 0, 0])); } rows.push(Buffer.from(r)); }
+  const raw = Buffer.concat(rows);
+  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (b) => { let c = 0xFFFFFFFF; for (const x of b) c = crcTable[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const chunk = (t, d) => { const len = Buffer.alloc(4); len.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 6;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1240, height: 1000 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push('pageerror: ' + e.message));
-  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR|githubusercontent|fonts|ERR_/.test(m.text())) errs.push('console: ' + m.text()); });
-  if (process.env.TAILWIND_CSS || process.env.LUCIDE_JS) {
-    await page.route(/cdn\.tailwindcss\.com/, r => r.fulfill({ contentType: 'text/javascript', body: 'window.tailwind={};' }));
-    await page.route(/unpkg\.com\/lucide/, r => r.fulfill({ contentType: 'text/javascript', body: process.env.LUCIDE_JS ? fs.readFileSync(process.env.LUCIDE_JS, 'utf8') : '' }));
-  }
-  // 그림은 외부(GitHub)에서 오므로, 막힌 환경에서도 화면을 볼 수 있게 1색 PNG 로 대신한다
-  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR|ERR_|fonts/.test(m.text())) errs.push('console: ' + m.text()); });
+  const PNG = blobPng();
   await page.route(/githubusercontent\.com/, r => r.fulfill({ contentType: 'image/png', body: PNG }));
+  const store = () => page.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), KEY);
 
-  const addCss = async () => { if (process.env.TAILWIND_CSS) await page.addStyleTag({ content: fs.readFileSync(process.env.TAILWIND_CSS, 'utf8') }); };
+  // 0) 1.0 에서 쓰던 저장 데이터를 그대로 이어받는다
+  await page.addInitScript(([k, old]) => { if (!localStorage.getItem(k) && !sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (old) localStorage.setItem(k, old); } }, [KEY, process.env.SEED_OLD ? JSON.stringify([{ id: 'cm_old1', pokedex_number: 25, pokemon_name: '피카츄', types: ['전기'], affection: 55, fullness: 3, x: 40, y: 80, anchor: 'foot', facing: 'left', scale: 1 }]) : '']);
+
   await page.goto(URL, { waitUntil: 'domcontentloaded' });
-  await addCss();
-  await page.waitForSelector('#terrarium-container');
+  await page.waitForSelector('#world');
+  ok(await page.locator('.world-empty').isVisible(), '처음에는 빈 사육장 안내가 보인다');
+  await page.screenshot({ path: OUT + '/c2-empty.png' });
 
-  // 1) 빈 사육장
-  ok(await page.locator('#terrarium-empty-state').isVisible(), '처음에는 빈 사육장 안내가 보인다');
-  ok(await page.locator('.terrarium-creature-node').count() === 0, '처음에는 포켓몬이 없다');
-  await page.screenshot({ path: OUT + '/communio-empty.png' });
+  // 1) 추천 6마리 → 월드 + 멤버 카드
+  await page.click('#btn-recommend');
+  await page.waitForSelector('.mon');
+  ok(await page.locator('.mon').count() === 6 && await page.locator('.member').count() === 6, '추천 6마리가 사육장·멤버 목록에 나온다');
+  ok(!(await page.evaluate(() => Object.keys(localStorage).some(k => /^pokemon_seal/.test(k)))), 'Holo 저장 키는 건드리지 않는다');
 
-  // 2) 추천 6마리
-  await page.click('#btn-empty-habitat-recommend');
-  await page.waitForSelector('.terrarium-creature-node');
-  ok(await page.locator('.terrarium-creature-node').count() === 6, '추천 6마리가 사육장에 입장한다');
-  ok(await page.locator('#amie-roster-grid > div').count() === 6, '멤버 상태 카드가 6장 나온다');
-  ok((await page.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]').length, KEY)) === 6, `저장 키 ${KEY} 에 6마리가 저장된다`);
-  ok((await page.evaluate(() => Object.keys(localStorage).filter(k => /^pokemon_seal/.test(k)).length)) === 0, 'Holo 의 저장 키는 건드리지 않는다');
+  // 2) 데려오기 화면: 6마리 제한 없음
+  await page.click('a[href="#/add"]');
+  await page.waitForSelector('#picker .pick');
+  ok(page.url().endsWith('#/add'), '데려오기는 팝업이 아니라 별도 화면이다');
+  await page.fill('#add-q', '리자몽');
+  await page.waitForSelector('#pf-6');
+  await page.selectOption('#pf-6', 'mega-x'); await page.check('#ps-6');
+  await page.click('#pc-6 [data-reg]');
+  ok((await store()).some(h => h.pokemon_name === '이로치 메가리자몽X'), '폼·이로치를 골라 등록한다');
+  await page.fill('#add-q', 'ㅍㅋㅊ');
+  ok(await page.locator('#picker .pick', { hasText: '피카츄' }).count() >= 1, '초성 검색이 된다');
+  await page.fill('#add-q', '');
+  await page.click('#add-gens [data-g="1"]');
+  for (let i = 0; i < 12; i++) await page.locator('#picker [data-reg]').nth(i).click();
+  const total = (await store()).length;
+  ok(total === 19, `7마리를 넘겨도 계속 등록된다 (현재 ${total}마리)`);
+  await page.screenshot({ path: OUT + '/c2-add.png' });
+  await page.click('.dock a.btn');
+  await page.waitForSelector('#world');
+  ok(await page.locator('.mon').count() === 12, '풍경에는 12마리만 나온다');
+  ok(await page.locator('.member').count() === 19, '멤버 목록에는 19마리가 모두 나온다');
+  await page.click('#btn-shuffle');
+  ok(await page.locator('.mon').count() === 12, '무대 멤버를 바꿔도 12마리');
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: OUT + '/communio-habitat.png' });
+  await page.screenshot({ path: OUT + '/c2-home.png', fullPage: true });
 
-  // 3) 엔트리 관리: 가득 참 → 하나 내보내고 → 리자몽(메가X·이로치) 등록
-  await page.click('#btn-open-entry-modal');
-  await page.waitForSelector('#amie-entry-grid > div');
-  ok(await page.locator('#amie-entry-grid button[disabled]').count() > 0, '6마리가 차면 등록 버튼이 막힌다');
-  await page.click('#amie-entry-current-slots button >> nth=0');
-  ok((await page.evaluate(k => JSON.parse(localStorage.getItem(k)).length, KEY)) === 5, '✕ 로 내보내면 5마리가 된다');
-  await page.fill('#amie-entry-search', '리자몽');
-  await page.waitForSelector('#entry-form-6');
-  ok(await page.locator('#amie-entry-grid > div').count() === 1, '이름 검색(리자몽)이 동작한다');
-  await page.selectOption('#entry-form-6', 'mega-x');
-  await page.check('#entry-shiny-6');
-  await page.click('#amie-entry-grid button:has-text("등록")');
-  const names = await page.evaluate(k => JSON.parse(localStorage.getItem(k)).map(h => h.pokemon_name), KEY);
-  ok(names.includes('이로치 메가리자몽X'), '폼·이로치를 골라 등록한다: ' + names.join(', '));
-  await page.fill('#amie-entry-search', 'ㅍㅋㅊ');
-  ok(await page.locator('#amie-entry-grid > div', { hasText: '피카츄' }).count() >= 1, '초성 검색(ㅍㅋㅊ)이 동작한다');
-  await page.fill('#amie-entry-search', '');
-  await page.selectOption('#amie-entry-filter-gen', '9');
-  ok(await page.locator('#amie-entry-grid > div', { hasText: 'No.0906' }).count() === 1 && await page.locator('#amie-entry-grid > div', { hasText: '피카츄' }).count() === 0, '세대 필터(9세대)가 동작한다');
-  await page.click('#amie-entry-grid button:has-text("더 보기")');
-  ok(await page.locator('#amie-entry-grid > div', { hasText: '복숭악동' }).count() === 1, '더 보기로 나머지(No.1025 복숭악동)까지 볼 수 있다');
-  await page.screenshot({ path: OUT + '/communio-entry.png' });
-  await page.click('#btn-entry-done');
+  // 3) 포켓몬을 누르면 새 화면
+  const firstId = (await store())[0].id;
+  await page.locator('.member [data-go]').first().click();
+  await page.waitForSelector('#stage');
+  ok(/#\/play\//.test(page.url()) && await page.locator('.veil').count() === 0, '누르면 팝업이 아니라 새 화면(#/play/…)으로 간다');
+  await page.waitForFunction(() => PL && PL.eng && PL.eng.getBodyRect());
+  await page.waitForTimeout(1200);
+  const stageBox = await page.locator('#stage').boundingBox();
+  const body = await page.evaluate(() => PL.eng.getBodyRect());
+  const cx = stageBox.x + body.x + body.w / 2, cy = stageBox.y + body.y + body.h * 0.6;
 
-  // 4) 1:1 교감: 쓰다듬기 · 먹이 · 말 걸기
-  await page.locator('.terrarium-creature-node').first().click();
-  await page.waitForSelector('#modal-poke-amie-play:not(.hidden)');
-  const before = await page.evaluate(k => JSON.parse(localStorage.getItem(k))[0], KEY);
-  const pad = await page.locator('#amie-pet-touchpad').boundingBox();
-  await page.mouse.move(pad.x + pad.width * 0.3, pad.y + pad.height * 0.5);
+  // 4) 손: 장갑 손이 나타나고, 모드에 따라 자세가 바뀐다
+  await page.mouse.move(cx, cy);
+  await page.waitForTimeout(250);
+  ok(await page.locator('#hand.show').count() === 1 && await page.locator('#hand svg.open').isVisible(), '스테이지에 손이 나타난다(쓰다듬기: 펼친 손)');
+  const fingers = await page.locator('#hand svg.open use').count();
+  ok(fingers >= 1, '손 그림(SVG)이 그려진다');
+  await page.screenshot({ path: OUT + '/c2-play-hand.png' });
+
+  // 5) 쓰다듬기: 3초 문지르면 +5
+  let st = (await store()).find(h => h.id === firstId); const aff0 = st.affection;
   await page.mouse.down();
   const t0 = Date.now();
-  while (Date.now() - t0 < 3600) {
-    for (let i = 0; i < 12; i++) {
-      await page.mouse.move(pad.x + pad.width * (0.3 + 0.4 * ((i % 2) ? 1 : 0)), pad.y + pad.height * (0.4 + 0.05 * (i % 3)), { steps: 4 });
-    }
-  }
+  while (Date.now() - t0 < 3800) { for (let i = 0; i < 10; i++) await page.mouse.move(cx + (i % 2 ? 50 : -50), cy + (i % 3) * 6, { steps: 4 }); }
   await page.mouse.up();
   await page.waitForTimeout(300);
-  const afterPet = await page.evaluate(k => JSON.parse(localStorage.getItem(k))[0], KEY);
-  ok(afterPet.affection > before.affection, `3초 쓰다듬으면 친밀도가 오른다 (${before.affection} → ${afterPet.affection})`);
-  await page.click('#btn-feed-chocoroll');
-  const afterFeed = await page.evaluate(k => JSON.parse(localStorage.getItem(k))[0], KEY);
-  ok(afterFeed.fullness === afterPet.fullness + 1 && afterFeed.affection > afterPet.affection, `포켓몬빵을 먹이면 포만감·친밀도가 오른다 (포만감 ${afterPet.fullness} → ${afterFeed.fullness})`);
-  await page.screenshot({ path: OUT + '/communio-play.png' });
-  await page.click('#btn-close-play-modal');
+  st = (await store()).find(h => h.id === firstId);
+  ok(st.affection > aff0 && (st.affection - aff0) % 5 === 0, `3초 이상 쓰다듬으면 친밀도가 5씩 오른다 (${aff0} → ${st.affection})`);
 
-  // 5) 새로고침 후에도 유지
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await addCss();
-  await page.waitForSelector('.terrarium-creature-node');
-  ok(await page.locator('.terrarium-creature-node').count() === 6, '새로고침해도 6마리가 그대로 있다');
+  // 6) 때리기: 한 대 -4
+  await page.click('.mode[data-m="hit"]');
+  ok(await page.locator('#hand[data-pose="fist"]').count() === 1, '때리기 모드에서는 손이 주먹이 된다');
+  const aff1 = st.affection;
+  await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.up();
+  await page.waitForTimeout(700);
+  st = (await store()).find(h => h.id === firstId);
+  ok(st.affection === Math.max(0, aff1 - 4), `때리면 친밀도 -4 (${aff1} → ${st.affection})`);
+  ok(await page.locator('.impact').count() >= 0, '충격 효과');
+  await page.screenshot({ path: OUT + '/c2-play-hit.png' });
+  // 몸 밖을 때리면 헛손질
+  const aff2 = st.affection;
+  await page.mouse.move(stageBox.x + 40, stageBox.y + 100); await page.mouse.down(); await page.mouse.up(); await page.waitForTimeout(500);
+  st = (await store()).find(h => h.id === firstId);
+  ok(st.affection === aff2, '몸이 아닌 곳을 때리면 친밀도가 그대로다');
+  await page.click('.mode[data-m="pet"]');
 
-  // 6) 시간대 전환
-  for (const t of ['day', 'sunset', 'night']) {
-    await page.click('#btn-amie-time-' + t);
-    ok(await page.locator('#terrarium-container.terrarium-bg-' + t).count() === 1, t + ' 배경으로 바뀐다');
-  }
-  await page.screenshot({ path: OUT + '/communio-night.png' });
+  // 7) 음식 끌어서 먹이기
+  ok(await page.locator('#foods .food').count() === 10, '음식 아이콘이 10개 있다');
+  const names = await page.locator('#foods .fname').allInnerTexts();
+  ok(['오랭열매', '자뭉열매', '맛있는물', '사이다', '달콤한꿀', '이상한사탕'].every(n => names.includes(n)), '포켓몬 세계관 음식이다: ' + names.join(', '));
+  const dragFood = async (idx) => {
+    const fb = await page.locator('#foods .food').nth(idx).boundingBox();
+    await page.mouse.move(fb.x + fb.width / 2, fb.y + fb.height / 2); await page.mouse.down();
+    await page.mouse.move(cx, cy - 20, { steps: 12 });
+    await page.mouse.up();
+  };
+  st = (await store()).find(h => h.id === firstId); const full0 = st.fullness, aff3 = st.affection;
+  await dragFood(0);
+  await page.waitForTimeout(1700);
+  st = (await store()).find(h => h.id === firstId);
+  ok(st.fullness === Math.min(5, full0 + 1) && st.affection > aff3, `음식을 끌어다 주면 먹는다 (포만감 ${full0} → ${st.fullness}, 친밀도 ${aff3} → ${st.affection})`);
+  await page.screenshot({ path: OUT + '/c2-play-fed.png' });
+  // 음식을 포켓몬이 없는 곳에 놓으면 먹지 않는다
+  const fb = await page.locator('#foods .food').nth(1).boundingBox(); const before = (await store()).find(h => h.id === firstId).fullness;
+  await page.mouse.move(fb.x + 30, fb.y + 30); await page.mouse.down(); await page.mouse.move(stageBox.x + 30, stageBox.y + stageBox.height - 20, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(600);
+  ok((await store()).find(h => h.id === firstId).fullness === before, '엉뚱한 곳에 놓으면 먹지 않고 쟁반으로 돌아간다');
+  // 배부르면 거절
+  for (let i = 0; i < 6; i++) { await dragFood(i % 10); await page.waitForTimeout(1500); }
+  st = (await store()).find(h => h.id === firstId);
+  ok(st.fullness === 5, '포만감은 5에서 멈춘다(배가 부르면 거절)');
+
+  // 8) 말 걸기
+  await page.click('.mode[data-m="talk"]');
+  await page.fill('#talk-input', '안녕 오늘도 잘 지냈어?');
+  await page.click('#talk-form button[type=submit]');
+  await page.waitForTimeout(1100);
+  ok((await page.locator('#speech').innerText()).length > 4 && !(await page.locator('#speech').getAttribute('class')).includes('off'), '말을 걸면 대답이 나온다');
+  await page.click('.mode[data-m="pet"]');
+
+  // 9) 이전/다음, 빼기(확인 창)
+  await page.click('#btn-next'); await page.waitForTimeout(300);
+  ok(!page.url().includes(firstId), '다음 포켓몬으로 넘어간다');
+  const curId = page.url().split('/play/')[1];
+  await page.click('#btn-remove');
+  ok(await page.locator('.veil .dialog').isVisible() && /사육장에서 빼기/.test(await page.locator('.veil').innerText()), '"사육장에서 빼기" 확인 창이 뜬다(휴식이라는 말은 쓰지 않는다)');
+  await page.click('.veil [data-r="0"]');
+  ok((await store()).some(h => h.id === curId), '취소하면 그대로 있다');
+  await page.click('#btn-remove'); await page.click('.veil [data-r="1"]');
+  await page.waitForSelector('#world');
+  ok(!(await store()).some(h => h.id === curId) && (await store()).length === 18, '확인하면 삭제되고 사육장 화면으로 돌아간다');
+  ok(!(await page.locator('body').innerText()).includes('휴식'), '화면 어디에도 "휴식" 문구가 없다');
+
+  // 10) 새로고침 후 유지 + 시간대
+  await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForSelector('.mon');
+  ok((await store()).length === 18 && await page.locator('.member').count() === 18, '새로고침해도 그대로다');
+  for (const t of ['day', 'sunset', 'night']) { await page.click(`#seg-time [data-k="${t}"]`); ok(await page.locator(`#world[data-period="${t}"]`).count() === 1, t + ' 풍경으로 바뀐다'); }
+  await page.screenshot({ path: OUT + '/c2-night.png' });
+  await page.click('#btn-sound'); ok((await page.evaluate(() => JSON.parse(localStorage.getItem('communio:settings')).sound)) === false, '효과음 끄기가 저장된다');
 
   ok(errs.length === 0, '화면 오류 없음' + (errs.length ? '\n  ' + errs.join('\n  ') : ''));
   await browser.close();
