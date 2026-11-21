@@ -27,7 +27,7 @@ export function mount(root, { go }) {
         <svg class="ringtxt" viewBox="0 0 200 200"><defs><path id="rtxt" d="M100 100m-96 0a96 96 0 1 1 192 0a96 96 0 1 1 -192 0"/></defs><text><textPath href="#rtxt">PROELIUM · BATTLE ARENA · 3 ON 3 · 1,254 POKÉMON · PROELIUM · BATTLE ARENA · 3 ON 3 · 1,254 POKÉMON ·</textPath></text></svg>
       </div>
       <header class="home-top">
-        <a class="iconbtn" href="../" title="띠부씰 아카이브(Holo)로" data-sfx>🗂</a>
+        <a class="iconbtn" href="../" title="앱 선택 화면으로" data-sfx>🏠</a>
         <span class="sp"></span>
         <button class="iconbtn" data-act="sound" title="효과음">${store.sound ? '🔊' : '🔇'}</button>
       </header>

@@ -4,16 +4,17 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 /**
- * 한 저장소, 세 앱 (GitHub Pages 하위 경로 배포)
+ * 한 저장소, 세 앱 + 선택 화면 (GitHub Pages 하위 경로 배포)
  *
- *   vite --mode holo       → apps/holo      (배포: /            )  띠부씰 아카이브
+ *   vite --mode hub        → apps/hub       (배포: /            )  앱 선택 화면(허브), 패키지에 의존하지 않는 단일 파일
+ *   vite --mode holo       → apps/holo      (배포: /holo/       )  띠부씰 아카이브
  *   vite --mode proelium   → apps/proelium  (배포: /proelium/   )  배틀 중심 앱
  *   vite --mode communio   → apps/communio  (배포: /communio/   )  포켓몬과의 교감(사육장) 앱, 패키지에 의존하지 않는 단일 파일
  *
- * 두 앱은 packages/ 의 Rembrandt(엔진)·battle-ui(전투 화면)를 일반 <script> 로 불러온다.
+ * holo·proelium 은 packages/ 의 Rembrandt(엔진)·battle-ui(전투 화면)를 일반 <script> 로 불러온다(둘 다 ../packages/).
  *  - 개발 서버: /packages/* 요청을 저장소의 packages/ 로 연결한다.
  *  - 빌드     : holo 빌드가 dist/packages/ 로 복사하고, proelium(dist/proelium/)도 ../packages/ 로 함께 쓴다.
- *    (holo 를 먼저 빌드해야 한다 → npm run build)
+ *    (hub 가 dist/ 를 비우므로 hub → holo 순서로 빌드해야 한다 → npm run build)
  */
 const ROOT = __dirname;
 const PACKAGES = path.resolve(ROOT, 'packages');
@@ -58,25 +59,28 @@ function sharedPackages(copyOnBuild: boolean) {
   };
 }
 
+const PORT: Record<string, number> = { holo: 3000, proelium: 3001, communio: 3002, hub: 3003 };
+
 export default defineConfig(({ mode }) => {
   const isProelium = mode === 'proelium';
   const isCommunio = mode === 'communio';
-  const appName = isProelium ? 'proelium' : isCommunio ? 'communio' : 'holo';
+  const isHub = mode === 'hub';
+  const appName = isHub ? 'hub' : isProelium ? 'proelium' : isCommunio ? 'communio' : 'holo';
   const appDir = path.resolve(ROOT, 'apps', appName);
   return {
     root: appDir,
     base: './', // 하위 경로 배포·file:// 에서도 상대경로로 열리도록
-    plugins: isCommunio ? [] : [sharedPackages(!isProelium)],
+    plugins: isCommunio || isHub ? [] : [sharedPackages(!isProelium)],
     build: {
-      outDir: path.resolve(ROOT, 'dist', isProelium || isCommunio ? appName : ''),
-      emptyOutDir: true,
+      outDir: path.resolve(ROOT, 'dist', isHub ? '' : appName),
+      emptyOutDir: true,       // hub 는 dist/ 전체를 비우고 시작한다(다른 앱보다 먼저 빌드)
       chunkSizeWarningLimit: 8000,       // @pkmn/sim 이 크다 (gzip 약 1MB)
     },
     // @pkmn/sim 의 복제(직렬화)는 클래스 이름('[Pokemon:p1a]')으로 참조를 되살린다. 최소화가 이름을 줄이면 깨지므로 이름을 보존한다.
     esbuild: isProelium ? { keepNames: true } : undefined,
     optimizeDeps: isProelium ? { esbuildOptions: { keepNames: true } } : undefined,       // 개발 서버의 의존성 묶음에도 같은 이유
     resolve: isProelium ? { alias: { rembrandt2: path.resolve(ROOT, 'packages', 'rembrandt2', 'src', 'index.js') } } : undefined,       // Proelium 은 Rembrandt 2(ESM)를 번들에 넣는다
-    server: { port: isProelium ? 3001 : isCommunio ? 3002 : 3000, host: '0.0.0.0', fs: { allow: [ROOT] } },
-    preview: { port: isProelium ? 3001 : isCommunio ? 3002 : 3000, host: '0.0.0.0' },
+    server: { port: PORT[appName], host: '0.0.0.0', fs: { allow: [ROOT] } },
+    preview: { port: PORT[appName], host: '0.0.0.0' },
   };
 });

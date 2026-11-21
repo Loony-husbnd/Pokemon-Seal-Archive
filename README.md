@@ -4,7 +4,8 @@
 
 | 프로그램 | 버전 | 한 줄 소개 | 주소 |
 |---|---|---|---|
-| **Holo** | 4.0 | 포켓몬 띠부씰 아카이브. 도감·바인더·사육장·3:3 배틀 탭 (**Rembrandt 1.3 탑재**) | `/` |
+| **Hub** | 1.0 | 세 앱을 고르는 선택 화면. 어두운 홀로그램 카드 3장, 기울기·호일 반짝임, 앱 색으로 번지는 입장 전환 | `/` |
+| **Holo** | 4.0 | 포켓몬 띠부씰 아카이브. 도감·바인더·사육장·3:3 배틀 탭 (**Rembrandt 1.3 탑재**) | `/holo/` |
 | **Proelium** | 1.1.2 | 포켓몬 3마리와 기술 4개·특성·도구를 직접 고르는 배틀 아레나 (**Rembrandt 2.0 탑재**) | `/proelium/` |
 | **Communio** | 2.0 | 포켓몬과의 교감. 손으로 쓰다듬고, 음식을 끌어 먹이고, 말을 거는 사육장 앱 (띠부씰과 무관, 인원 제한 없음) | `/communio/` |
 | **Rembrandt** | **2.0.1** | **새로 쓴 배틀 엔진** — Pokémon Showdown 시뮬레이터 기반. 특성·도구·메가진화, 전국도감 1,254종, 상대 정보 가리기, 팀 빌더, AI 4단계 | (라이브러리) |
@@ -55,8 +56,8 @@
 ## 실행 방법
 
 - **바로 쓰기:** 배포된 주소(`/`)를 엽니다.
-- **개발 서버:** Node.js 설치 후 `npm install` → `npm run dev:holo` → http://localhost:3000
-- **배포용 빌드:** `npm run build` → `dist/`(Holo)와 `dist/proelium/`(Proelium)가 만들어집니다. 정적 호스팅에 올리면 됩니다. 파일을 직접 더블클릭해서 여는 방식은 지원하지 않습니다.
+- **개발 서버:** Node.js 설치 후 `npm install` → `npm run dev:holo` → http://localhost:3000 (선택 화면은 `npm run dev` → http://localhost:3003, 카드가 각 개발 서버로 연결됩니다)
+- **배포용 빌드:** `npm run build` → `dist/`(선택 화면), `dist/holo/`(Holo), `dist/proelium/`(Proelium), `dist/communio/`(Communio)가 만들어집니다. 정적 호스팅에 올리면 됩니다. 파일을 직접 더블클릭해서 여는 방식은 지원하지 않습니다.
 - **인터넷 연결:** 스타일·차트·아이콘 라이브러리(CDN)와 포켓몬 공식 일러스트 이미지를 외부에서 불러오므로 접속 환경이 필요합니다. 속성(타입) 정보는 내장 표를 우선 사용하고, 없을 때만 PokeAPI로 보완합니다.
 
 ## 도감 아카이브
@@ -518,7 +519,8 @@ const events = T.pull();
 packages/rembrandt2/  새 배틀 엔진 2.0 (Showdown 기반, 화면 없음, 테스트 포함)  → Proelium 이 사용
 packages/rembrandt/   옛 배틀 엔진 1.3·AI·파티·데이터 (화면 없음, 테스트 포함)  → Holo 가 사용
 packages/battle-ui/   Holo 전투 화면
-apps/holo/            띠부씰 아카이브 (Holo 4.0)        → 배포 /
+apps/hub/             앱 선택 화면 (Hub 1.0)            → 배포 /
+apps/holo/            띠부씰 아카이브 (Holo 4.0)        → 배포 /holo/
 apps/proelium/        배틀 아레나 (Proelium 1.1.2)      → 배포 /proelium/
 apps/communio/        포켓몬과의 교감 (Communio 2.0)    → 배포 /communio/
 spike/showdown/       Showdown 도입 가능성 시험(번들 크기·복제 난수·속도 등)과 결과
@@ -530,7 +532,7 @@ tools/                데이터 생성·검증·시뮬레이터·경계 검사·
 | 명령 | 내용 |
 |---|---|
 | `npm run dev:holo` / `dev:proelium` / `dev:communio` | 개발 서버 (3000 / 3001 / 3002) |
-| `npm run build` | 세 앱을 `dist/`, `dist/proelium/`, `dist/communio/`로 빌드 (Holo 를 먼저 빌드해야 한다) |
+| `npm run build` | 허브와 세 앱을 `dist/`, `dist/holo/`, `dist/proelium/`, `dist/communio/`로 빌드 (허브 → Holo 순서여야 한다) |
 | `npm run battle:data` | PokeAPI/Showdown 데이터로 `battle-data.js`·`battle-learnsets.js` 재생성 (`--sample`, `--show 6,25`, `--explain=25`) |
 | `npm run battle:validate` | 데이터 무결성 검증 |
 | `npm run test:battle` | 옛 엔진(1.3)·AI·파티·변화기·특수 공격기 테스트 (244개) |
