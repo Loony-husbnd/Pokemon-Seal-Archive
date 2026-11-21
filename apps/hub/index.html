@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05060f">
+<title>Pokémon Seal Archive</title>
+<meta name="description" content="포켓몬 띠부씰 아카이브 Holo, 배틀 아레나 Proelium, 교감 사육장 Communio. 세 개의 앱 중 하나를 고르세요.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2305060f'/%3E%3Cpath d='M32 8l5 19 19 5-19 5-5 19-5-19-19-5 19-5z' fill='%23ffd86e'/%3E%3C/svg%3E">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;800;900&family=Jua&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* =========================================================
+   Pokémon Seal Archive — 앱 선택 허브
+   어두운 홀로그램 쇼케이스: 카드 3장이 각자의 색으로 빛나고, 기울이면 호일이 반짝인다.
+   ========================================================= */
+@property --a1 { syntax: '<color>'; inherits: true; initial-value: #5b4bff; }
+@property --a2 { syntax: '<color>'; inherits: true; initial-value: #ff5fb0; }
+@property --a3 { syntax: '<color>'; inherits: true; initial-value: #2fd4ff; }
+
+:root {
+  --bg: #05060f; --ink: #f4f3fb; --mute: #a4a7c0; --dim: #6a6e8c;
+  --font: 'Pretendard Variable', Pretendard, system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --display: 'Hahmlet', 'Noto Serif KR', Batang, serif;
+  --cute: 'Jua', 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  --ease: cubic-bezier(.2, .9, .2, 1);
+  --spring: cubic-bezier(.2, 1.15, .3, 1.2);
+  --a1: #5b4bff; --a2: #ff5fb0; --a3: #2fd4ff;
+  transition: --a1 .9s ease, --a2 .9s ease, --a3 .9s ease;
+}
+body[data-active="holo"]     { --a1: #a56eff; --a2: #ff6ec7; --a3: #6ec9ff; }
+body[data-active="proelium"] { --a1: #2a62ff; --a2: #ffb21f; --a3: #9bb8ff; }
+body[data-active="communio"] { --a1: #ff7f8f; --a2: #ffd36b; --a3: #ffb7c5; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { background: var(--bg); color-scheme: dark; }
+body {
+  min-height: 100vh; min-height: 100svh; overflow-x: hidden;
+  background: var(--bg); color: var(--ink); font-family: var(--font);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  transition: --a1 .9s ease, --a2 .9s ease, --a3 .9s ease;
+}
+
+/* ───────── 배경 ───────── */
+#sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.aurora i {
+  position: absolute; width: 62vmax; height: 62vmax; border-radius: 50%;
+  filter: blur(70px); opacity: .5; will-change: transform;
+  mix-blend-mode: screen;
+}
+.aurora i:nth-child(1) { left: -18vmax; top: -22vmax; background: radial-gradient(circle at 40% 40%, var(--a1), transparent 62%); animation: drift1 26s ease-in-out infinite alternate; }
+.aurora i:nth-child(2) { right: -22vmax; top: 6vmax;  background: radial-gradient(circle at 50% 50%, var(--a2), transparent 62%); animation: drift2 31s ease-in-out infinite alternate; opacity: .36; }
+.aurora i:nth-child(3) { left: 14vmax; bottom: -34vmax; background: radial-gradient(circle at 50% 50%, var(--a3), transparent 62%); animation: drift3 37s ease-in-out infinite alternate; opacity: .34; }
+@keyframes drift1 { to { transform: translate(14vmax, 10vmax) rotate(40deg) scale(1.12); } }
+@keyframes drift2 { to { transform: translate(-12vmax, 14vmax) rotate(-30deg) scale(.92); } }
+@keyframes drift3 { to { transform: translate(10vmax, -12vmax) rotate(24deg) scale(1.1); } }
+.grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(0, 0, 0, .72) 100%); }
+.spot { position: fixed; left: 0; top: 0; width: 520px; height: 520px; margin: -260px 0 0 -260px; z-index: 1; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a2) 26%, transparent), transparent 64%); opacity: 0; transition: opacity .5s; will-change: transform; mix-blend-mode: screen; }
+.spot.on { opacity: 1; }
+
+/* ───────── 본문 ───────── */
+main { position: relative; z-index: 2; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(26px, 5vh, 54px); padding: clamp(28px, 6vh, 64px) 24px calc(clamp(28px, 6vh, 64px) + env(safe-area-inset-bottom, 0px)); }
+
+.head { text-align: center; display: grid; gap: 14px; justify-items: center; }
+.eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: .34em; color: var(--mute); text-transform: uppercase; padding-left: .34em; }
+.eyebrow b { width: 8px; height: 8px; border-radius: 50%; background: var(--a2); box-shadow: 0 0 0 0 var(--a2), 0 0 14px var(--a2); animation: ping 2.4s ease-out infinite; }
+@keyframes ping { 70%, 100% { box-shadow: 0 0 0 12px transparent, 0 0 14px var(--a2); } }
+h1 { font-family: var(--display); font-weight: 900; font-size: clamp(2.3rem, 6.2vw, 4.4rem); line-height: 1.08; letter-spacing: -.02em; }
+h1 .w { display: inline-block; white-space: nowrap; }
+h1 .ch { display: inline-block; background: linear-gradient(100deg, #fff 0%, #fff 30%, color-mix(in srgb, var(--a3) 80%, #fff) 52%, color-mix(in srgb, var(--a2) 85%, #fff) 70%, #fff 100%);
+  background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sheen 6s ease-in-out infinite; }
+@keyframes sheen { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+.sub { color: var(--mute); font-size: clamp(14px, 1.6vw, 17px); letter-spacing: -.01em; }
+
+/* ───────── 카드 ───────── */
+.deck { width: min(1120px, 100%); display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 2.6vw, 34px); perspective: 1400px; }
+.card { position: relative; display: block; color: inherit; text-decoration: none; outline: none; aspect-ratio: 3 / 4.25; min-height: 500px; transform-style: preserve-3d; }
+.float { position: absolute; inset: 0; animation: float 7s ease-in-out infinite; animation-delay: calc(var(--i) * -2.3s); transform-style: preserve-3d; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+.tilt { position: absolute; inset: 0; transform-style: preserve-3d;
+  transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--s, 1)); will-change: transform; }
+.glow { position: absolute; inset: 6% 4% -4%; border-radius: 40px; background: radial-gradient(closest-side, var(--c1), transparent); filter: blur(34px); opacity: .0; transition: opacity .5s; transform: translateZ(-60px); }
+.card.is-active .glow, .card.chosen .glow { opacity: .62; }
+.face { position: absolute; inset: 0; border-radius: 30px; overflow: hidden; isolation: isolate; display: flex; flex-direction: column; padding: 22px 22px 22px;
+  background: var(--bg-face); box-shadow: 0 0 0 1px var(--edge), 0 30px 60px -28px rgba(0, 0, 0, .9), 0 2px 0 rgba(255, 255, 255, .08) inset; transition: box-shadow .4s; }
+.card.is-active .face, .card:focus-visible .face { box-shadow: 0 0 0 1.5px var(--c1), 0 0 0 5px color-mix(in srgb, var(--c1) 26%, transparent), 0 40px 80px -30px rgba(0, 0, 0, .95); }
+.card:focus-visible .face { box-shadow: 0 0 0 2px #fff, 0 0 0 6px var(--c1), 0 40px 80px -30px rgba(0, 0, 0, .95); }
+
+/* 카드 위 레이어: 호일 · 반사광 */
+.layer { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.glare { z-index: 3; mix-blend-mode: soft-light; opacity: 0; transition: opacity .35s;
+  background: radial-gradient(circle at calc(var(--mx, .5) * 100%) calc(var(--my, .3) * 100%), rgba(255, 255, 255, .9), rgba(255, 255, 255, .0) 46%); }
+.card.is-active .glare { opacity: .8; }
+.sweep { z-index: 3; opacity: .0; background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .16) 50%, transparent 62%); transform: translateX(-120%); animation: sweep 6.5s ease-in-out infinite; animation-delay: calc(var(--i) * 1.4s + 2s); }
+@keyframes sweep { 0% { transform: translateX(-120%); opacity: 1; } 22%, 100% { transform: translateX(120%); opacity: 1; } }
+
+.content { position: relative; z-index: 2; display: flex; flex-direction: column; flex: 1; transform: translateZ(40px); }
+.meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+.no { font-variant-numeric: tabular-nums; opacity: .7; }
+.ver { padding: 5px 11px; border-radius: 99px; background: var(--chip-bg); border: 1px solid var(--chip-line); font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.stage { flex: 1; display: grid; place-items: center; min-height: 160px; }
+.emblem { width: 132px; height: 132px; position: relative; transform: translate3d(calc(var(--px, 0) * 18px), calc(var(--py, 0) * 18px), 0); transition: filter .4s; }
+.card.is-active .emblem { filter: drop-shadow(0 0 22px var(--c1)); }
+.name { font-size: clamp(2rem, 3.4vw, 2.7rem); font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+.kr { margin-top: 8px; font-size: 14px; font-weight: 700; letter-spacing: .02em; opacity: .85; }
+.desc { margin-top: 12px; font-size: 13.5px; line-height: 1.6; color: var(--desc); letter-spacing: -.01em; word-break: keep-all; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.tags span { font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 99px; background: var(--chip-bg); border: 1px solid var(--chip-line); }
+.go { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; padding: 13px 16px 13px 20px; border-radius: 16px; font-weight: 800; font-size: 14.5px; letter-spacing: .02em;
+  background: var(--go-bg); color: var(--go-ink); overflow: hidden; position: relative; transition: transform .35s var(--spring); }
+.go svg { width: 20px; height: 20px; transition: transform .4s var(--spring); }
+.card.is-active .go { transform: translateY(-2px); }
+.card.is-active .go svg { transform: translateX(6px); }
+
+/* ── Holo : 무지개 홀로그램 호일 ── */
+.card[data-app="holo"] { --c1: #b98bff; --c2: #6ec9ff; --edge: rgba(255, 255, 255, .16);
+  --bg-face: radial-gradient(120% 80% at 20% 0%, #2a1d6b 0%, transparent 60%), radial-gradient(90% 70% at 100% 100%, #0d4a74 0%, transparent 62%), #0b0a24;
+  --chip-bg: rgba(255, 255, 255, .09); --chip-line: rgba(255, 255, 255, .16); --desc: #c3c1e2; --go-bg: linear-gradient(100deg, #ff8fd0, #b98bff 45%, #6ec9ff); --go-ink: #120b30; }
+.foil { background: repeating-linear-gradient(115deg, #ff6ec7 0%, #ffd86e 9%, #6effa8 18%, #6ec9ff 27%, #a56eff 36%, #ff6ec7 45%);
+  background-size: 300% 300%; background-position: calc(var(--mx, .5) * 100%) calc(var(--my, .5) * 100%); mix-blend-mode: color-dodge; opacity: .22; transition: opacity .4s; z-index: 1; }
+.card.is-active .foil { opacity: .55; }
+.foil-dots { z-index: 1; opacity: .35; mix-blend-mode: screen; background-image: radial-gradient(circle, rgba(255, 255, 255, .9) 0 1px, transparent 1.5px); background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(circle at calc(var(--mx, .5) * 100%) calc(var(--my, .5) * 100%), #000, transparent 55%); mask-image: radial-gradient(circle at calc(var(--mx, .5) * 100%) calc(var(--my, .5) * 100%), #000, transparent 55%); }
+.em-holo .ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, #ff6ec7, #ffd86e, #6effa8, #6ec9ff, #a56eff, #ff6ec7);
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 62%); mask: radial-gradient(circle, transparent 60%, #000 62%); animation: spin 7s linear infinite; }
+.em-holo .ring.r2 { inset: 12px; opacity: .5; filter: blur(2px); animation-duration: 11s; animation-direction: reverse; }
+.em-holo .disc { position: absolute; inset: 24px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4a3a9c, #130f3a 70%); box-shadow: inset 0 0 18px rgba(255, 255, 255, .22), 0 0 30px rgba(165, 110, 255, .4); display: grid; place-items: center; overflow: hidden; }
+.em-holo .disc::after { content: ''; position: absolute; inset: -20%; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .5) 50%, transparent 60%); animation: discsheen 4.2s ease-in-out infinite; }
+@keyframes discsheen { 0% { transform: translateX(-80%); } 55%, 100% { transform: translateX(80%); } }
+.em-holo .disc svg { width: 56%; height: 56%; animation: starpulse 3s ease-in-out infinite; position: relative; z-index: 1; }
+@keyframes starpulse { 0%, 100% { transform: scale(.92) rotate(0deg); } 50% { transform: scale(1.08) rotate(12deg); } }
+.em-holo .sp { position: absolute; width: 14px; height: 14px; background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: twinkle 2.6s ease-in-out infinite; }
+.em-holo .s1 { left: -6px; top: 10px; } .em-holo .s2 { right: -10px; top: 50px; width: 10px; height: 10px; animation-delay: -.9s; } .em-holo .s3 { right: 12px; bottom: -8px; width: 12px; height: 12px; animation-delay: -1.7s; }
+@keyframes twinkle { 0%, 100% { transform: scale(.2) rotate(0); opacity: .2; } 50% { transform: scale(1) rotate(45deg); opacity: 1; } }
+
+/* ── Proelium : 검정 + 파랑·금색 아레나 ── */
+.card[data-app="proelium"] { --c1: #ffb21f; --c2: #2a62ff; --edge: rgba(255, 178, 31, .26);
+  --bg-face: radial-gradient(80% 60% at 85% 0%, rgba(255, 178, 31, .2), transparent 62%), radial-gradient(90% 60% at 10% 100%, rgba(42, 98, 255, .34), transparent 65%), #02040a;
+  --chip-bg: rgba(42, 98, 255, .14); --chip-line: rgba(155, 184, 255, .28); --desc: #aeb2cc; --go-bg: linear-gradient(120deg, #ffe3a6, #ffb21f 55%, #ff9a1f); --go-ink: #1a1200; }
+.card[data-app="proelium"] .name { font-family: var(--display); letter-spacing: .01em; background: linear-gradient(120deg, #fff3c4, #ffb21f 60%, #d98a00); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.grid-floor { z-index: 0; top: 46%; background-image: linear-gradient(rgba(42, 98, 255, .55) 1px, transparent 1px), linear-gradient(90deg, rgba(42, 98, 255, .55) 1px, transparent 1px); background-size: 34px 34px;
+  transform: perspective(300px) rotateX(58deg); transform-origin: 50% 0; -webkit-mask-image: linear-gradient(transparent, #000 40%, transparent); mask-image: linear-gradient(transparent, #000 40%, transparent); animation: gridrun 3.2s linear infinite; opacity: .55; }
+@keyframes gridrun { to { background-position: 0 34px, 34px 0; } }
+.brackets { z-index: 2; inset: 12px; border-radius: 22px; border: 0;
+  background: linear-gradient(#ffb21f, #ffb21f) left top / 22px 2px no-repeat, linear-gradient(#ffb21f, #ffb21f) left top / 2px 22px no-repeat, linear-gradient(#ffb21f, #ffb21f) right top / 22px 2px no-repeat, linear-gradient(#ffb21f, #ffb21f) right top / 2px 22px no-repeat,
+    linear-gradient(#2a62ff, #2a62ff) left bottom / 22px 2px no-repeat, linear-gradient(#2a62ff, #2a62ff) left bottom / 2px 22px no-repeat, linear-gradient(#2a62ff, #2a62ff) right bottom / 22px 2px no-repeat, linear-gradient(#2a62ff, #2a62ff) right bottom / 2px 22px no-repeat;
+  opacity: .5; transition: opacity .3s, inset .45s var(--spring); }
+.card.is-active .brackets { opacity: 1; inset: 8px; }
+.scan { z-index: 1; background: linear-gradient(transparent 0, rgba(255, 178, 31, .13) 50%, transparent 100%); height: 36%; animation: scan 4.5s linear infinite; }
+@keyframes scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(300%); } }
+.em-pro svg { width: 100%; height: 100%; overflow: visible; }
+.em-pro .o1, .em-pro .o2, .em-pro .shock, .em-pro .bl, .em-pro .core { transform-box: fill-box; transform-origin: center; }
+.em-pro .o1 { animation: spin 18s linear infinite; }
+.em-pro .o2 { animation: spin 9s linear infinite reverse; }
+.em-pro .shock { animation: shock 2.6s ease-out infinite; }
+.em-pro .core { animation: corepulse 2.6s ease-out infinite; }
+.em-pro .bl.g { animation: clashG 2.6s var(--ease) infinite; }
+.em-pro .bl.b { animation: clashB 2.6s var(--ease) infinite; }
+@keyframes clashG { 0% { transform: translate(-22px, 22px); opacity: 0; } 25% { opacity: 1; } 38%, 100% { transform: translate(0, 0); opacity: 1; } }
+@keyframes clashB { 0% { transform: translate(22px, 22px); opacity: 0; } 25% { opacity: 1; } 38%, 100% { transform: translate(0, 0); opacity: 1; } }
+@keyframes shock { 0%, 36% { transform: scale(.4); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(5.6); opacity: 0; } }
+@keyframes corepulse { 0%, 36% { transform: scale(.4); } 44% { transform: scale(1.9); } 100% { transform: scale(1); } }
+
+/* ── Communio : 크림 + 코랄 스티커 ── */
+.card[data-app="communio"] { --c1: #ff7f8f; --c2: #ffd36b; --edge: rgba(255, 255, 255, .8); color: #5a4640;
+  --bg-face: radial-gradient(90% 60% at 100% 0%, #ffe9a8 0%, transparent 60%), radial-gradient(90% 70% at 0% 100%, #ffc9d2 0%, transparent 62%), linear-gradient(165deg, #fff7ea, #ffeed9);
+  --chip-bg: rgba(255, 255, 255, .72); --chip-line: #f2e1cc; --desc: #8c7770; --go-bg: linear-gradient(180deg, #ff8c9b, #e9566e); --go-ink: #fff; }
+.card[data-app="communio"] .face { border: 4px solid #fff; box-shadow: 0 0 0 1px rgba(255, 190, 170, .5), 0 30px 60px -26px rgba(255, 127, 143, .55), 0 3px 0 #fff inset; }
+.card[data-app="communio"].is-active .face { box-shadow: 0 0 0 2px #fff, 0 0 0 6px rgba(255, 127, 143, .55), 0 40px 80px -28px rgba(255, 127, 143, .75); }
+.card[data-app="communio"] .name { font-family: var(--cute); font-weight: 400; font-size: clamp(2.2rem, 3.8vw, 3rem); color: #e9566e; text-shadow: 0 3px 0 #fff, 0 5px 0 rgba(233, 86, 110, .15); letter-spacing: 0; }
+.card[data-app="communio"] .go { box-shadow: 0 4px 0 #c9405a, 0 10px 18px -6px rgba(233, 86, 110, .6); }
+.card[data-app="communio"] .ver { color: #e9566e; }
+.dots { z-index: 0; opacity: .55; background-image: radial-gradient(circle, #ffd9de 0 3px, transparent 3.5px); background-size: 26px 26px; -webkit-mask-image: linear-gradient(160deg, #000, transparent 70%); mask-image: linear-gradient(160deg, #000, transparent 70%); animation: dotsmove 14s linear infinite; }
+@keyframes dotsmove { to { background-position: 26px 26px; } }
+.blob { z-index: 0; border-radius: 50%; background: #ffd36b; opacity: .5; filter: blur(2px); }
+.blob.b1 { inset: auto auto 18% -8%; width: 120px; height: 120px; animation: blobmove 9s ease-in-out infinite alternate; }
+.blob.b2 { inset: 6% -6% auto auto; width: 90px; height: 90px; background: #ffb7c5; animation: blobmove 11s ease-in-out infinite alternate-reverse; }
+@keyframes blobmove { to { transform: translate(16px, -18px) scale(1.14); } }
+.em-com svg { width: 100%; height: 100%; overflow: visible; }
+.em-com .heart { transform-box: fill-box; transform-origin: 50% 60%; animation: beat 1.9s ease-in-out infinite; }
+@keyframes beat { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.12); } 24% { transform: scale(.97); } 36% { transform: scale(1.08); } 52% { transform: scale(1); } }
+.em-com .rip { transform-box: fill-box; transform-origin: center; animation: ripple 3.6s ease-out infinite; }
+.em-com .rip:nth-of-type(2) { animation-delay: 1.2s; } .em-com .rip:nth-of-type(3) { animation-delay: 2.4s; }
+@keyframes ripple { 0% { transform: scale(.55); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
+.em-com .fl { position: absolute; font-size: 15px; color: #ff7f8f; opacity: 0; animation: rise 4.2s ease-in infinite; text-shadow: 0 0 10px rgba(255, 127, 143, .6); }
+.em-com .f1 { left: 4px; bottom: 18px; } .em-com .f2 { right: 0; bottom: 30px; font-size: 11px; color: #ffb21f; animation-delay: -1.4s; } .em-com .f3 { left: 50%; bottom: 8px; font-size: 12px; animation-delay: -2.8s; color: #ff9aa8; }
+@keyframes rise { 0% { transform: translateY(10px) scale(.4); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-80px) rotate(14deg) scale(1.1); opacity: 0; } }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ───────── 입장 연출 ───────── */
+.js .eyebrow, .js .sub, .js .hint { opacity: 0; }
+.js h1 .ch { opacity: 0; }
+.ready .eyebrow { animation: fadeup .9s var(--ease) .1s both; }
+.ready h1 .ch { animation: chIn .9s var(--spring) calc(.2s + var(--k) * 38ms) both, sheen 6s ease-in-out calc(1.4s + var(--k) * 90ms) infinite; }
+.ready .sub { animation: fadeup .9s var(--ease) .75s both; }
+.ready .hint { animation: fadeup .9s var(--ease) 1.6s both; }
+@keyframes fadeup { from { opacity: 0; transform: translateY(14px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes chIn { from { opacity: 0; transform: translateY(.6em) rotate(5deg) scale(.7); filter: blur(10px); } to { opacity: 1; transform: none; filter: none; } }
+.js .card { opacity: 0; }
+.ready .card { opacity: 1; animation: cardIn 1.15s var(--ease) calc(.55s + var(--i) * .16s) backwards; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(70px) rotateX(18deg) scale(.88); filter: blur(14px); } 60% { filter: blur(0); } to { opacity: 1; transform: none; filter: none; } }
+
+.deck.has-active .card:not(.is-active) .tilt { opacity: .62; filter: saturate(.7); }
+.tilt { transition: opacity .4s, filter .4s; }
+
+/* 떠날 때 */
+body.leaving { pointer-events: none; }
+body.leaving .head, body.leaving .hint { opacity: 0; transform: translateY(-14px); transition: opacity .4s, transform .5s var(--ease); animation: none; }
+body.leaving .card:not(.chosen) { opacity: 0; transform: scale(.9) translateY(26px); filter: blur(8px); transition: opacity .45s, transform .55s var(--ease), filter .45s; }
+.curtain { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; pointer-events: none; clip-path: circle(0 at 50% 50%); }
+.curtain .cname { text-align: center; transform: scale(.82); opacity: 0; }
+.curtain .cname b { display: block; font-size: clamp(2.6rem, 9vw, 6rem); line-height: 1; letter-spacing: -.02em; }
+.curtain .cname span { display: block; margin-top: 14px; font-size: clamp(13px, 2vw, 17px); font-weight: 700; letter-spacing: .3em; text-transform: uppercase; opacity: .75; }
+.curtain .bar { margin: 26px auto 0; width: 140px; height: 4px; border-radius: 4px; background: currentColor; opacity: .18; position: relative; overflow: hidden; }
+.curtain .bar::after { content: ''; position: absolute; inset: 0; width: 40%; border-radius: 4px; background: currentColor; animation: barrun 1s ease-in-out infinite; }
+@keyframes barrun { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.curtain[data-app="holo"] { background: radial-gradient(circle at 30% 20%, #ffe3f4, transparent 50%), radial-gradient(circle at 80% 80%, #d9efff, transparent 55%), linear-gradient(135deg, #f7f3ff, #eaf6ff); color: #2b2260; }
+.curtain[data-app="holo"] .cname b { background: linear-gradient(100deg, #ff6ec7, #a56eff, #6ec9ff, #6effa8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.curtain[data-app="proelium"] { background: radial-gradient(circle at 50% 120%, rgba(42, 98, 255, .5), transparent 60%), #000; color: #ffe3a6; }
+.curtain[data-app="proelium"] .cname b { font-family: var(--display); background: linear-gradient(120deg, #fff3c4, #ffb21f 60%, #d98a00); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.curtain[data-app="communio"] { background: radial-gradient(circle at 20% 20%, #ffe9a8, transparent 55%), radial-gradient(circle at 85% 85%, #ffc9d2, transparent 55%), #fff7ea; color: #e9566e; }
+.curtain[data-app="communio"] .cname b { font-family: var(--cute); font-weight: 400; text-shadow: 0 4px 0 #fff; }
+
+.hint { position: relative; z-index: 2; flex-wrap: wrap; justify-content: center; text-align: center; font-size: 12.5px; color: var(--dim); letter-spacing: .04em; display: flex; gap: 8px; align-items: center; }
+.hint kbd { font: inherit; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .06); color: var(--mute); }
+@media (hover: none) { .hint { display: none; } }
+
+/* ───────── 좁은 화면 ───────── */
+@media (max-width: 900px) {
+  .deck { grid-template-columns: 1fr; max-width: 460px; gap: 22px; }
+  .card { aspect-ratio: auto; min-height: 510px; }
+  .stage { min-height: 150px; }
+  main { justify-content: flex-start; }
+}
+@media (max-height: 640px) and (min-width: 901px) { .card { min-height: 480px; } }
+
+/* ───────── 움직임 줄이기 ───────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
+  .js .card, .js .eyebrow, .js .sub, .js .hint, .js h1 .ch { opacity: 1; }
+  .aurora i { animation: none !important; }
+}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="spot" id="spot" aria-hidden="true"></div>
+
+<!-- 공용 그라디언트 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gStar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd86e"/><stop offset=".5" stop-color="#ff8fd0"/><stop offset="1" stop-color="#6ec9ff"/></linearGradient>
+    <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".6" stop-color="#ffb21f"/><stop offset="1" stop-color="#d98a00"/></linearGradient>
+    <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9bb8ff"/><stop offset="1" stop-color="#2a62ff"/></linearGradient>
+    <linearGradient id="gHeart" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9aa8"/><stop offset="1" stop-color="#e9566e"/></linearGradient>
+  </defs>
+</svg>
+
+<main>
+  <header class="head">
+    <div class="eyebrow"><b></b>Pokémon Seal Archive</div>
+    <h1 id="title" aria-label="어디로 갈까요?">어디로 갈까요?</h1>
+    <p class="sub">하나의 아카이브, 세 개의 앱</p>
+  </header>
+
+  <nav class="deck" id="deck" aria-label="앱 선택">
+
+    <!-- 1 · Holo -->
+    <a class="card" data-app="holo" data-name="Holo" data-kr="Seal Archive" href="./holo/" style="--i:0" aria-label="Holo — 띠부씰 아카이브">
+      <div class="float"><div class="tilt">
+        <div class="glow"></div>
+        <div class="face">
+          <i class="layer foil"></i><i class="layer foil-dots"></i><i class="layer glare"></i><i class="layer sweep"></i>
+          <div class="content">
+            <div class="meta"><span class="no">01</span><span class="ver">v4.0</span></div>
+            <div class="stage"><div class="emblem em-holo" aria-hidden="true">
+              <i class="ring"></i><i class="ring r2"></i>
+              <div class="disc"><svg viewBox="0 0 48 48"><path d="M24 2l5 17 17 5-17 5-5 17-5-17-17-5 17-5z" fill="url(#gStar)"/></svg></div>
+              <i class="sp s1"></i><i class="sp s2"></i><i class="sp s3"></i>
+            </div></div>
+            <h2 class="name">Holo</h2>
+            <p class="kr">띠부씰 아카이브</p>
+            <p class="desc">모은 띠부씰을 기록하고, 도감 완성률과 앞으로의 수집을 분석합니다.</p>
+            <div class="tags"><span>도감</span><span>바인더</span><span>3:3 배틀</span></div>
+            <div class="go"><span>입장하기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+        </div>
+      </div></div>
+    </a>
+
+    <!-- 2 · Proelium -->
+    <a class="card" data-app="proelium" data-name="Proelium" data-kr="Battle Arena" href="./proelium/" style="--i:1" aria-label="Proelium — 배틀 아레나">
+      <div class="float"><div class="tilt">
+        <div class="glow"></div>
+        <div class="face">
+          <i class="layer grid-floor"></i><i class="layer scan"></i><i class="layer brackets"></i><i class="layer glare"></i><i class="layer sweep"></i>
+          <div class="content">
+            <div class="meta"><span class="no">02</span><span class="ver">v1.1.2</span></div>
+            <div class="stage"><div class="emblem em-pro" aria-hidden="true">
+              <svg viewBox="0 0 132 132">
+                <circle class="o1" cx="66" cy="66" r="62" fill="none" stroke="url(#gGold)" stroke-width="2" stroke-dasharray="3 9" stroke-linecap="round"/>
+                <circle class="o2" cx="66" cy="66" r="50" fill="none" stroke="url(#gBlue)" stroke-width="3.5" stroke-dasharray="34 16" stroke-linecap="round"/>
+                <g class="bl g"><path d="M30 102L98 34" stroke="url(#gGold)" stroke-width="7" stroke-linecap="round"/><path d="M98 34l-4 15-11-11z" fill="#ffe3a6"/></g>
+                <g class="bl b"><path d="M102 102L34 34" stroke="url(#gBlue)" stroke-width="7" stroke-linecap="round"/><path d="M34 34l4 15 11-11z" fill="#cfdcff"/></g>
+                <circle class="shock" cx="66" cy="68" r="10" fill="none" stroke="#ffe3a6" stroke-width="2"/>
+                <circle class="core" cx="66" cy="68" r="7" fill="#fff"/>
+              </svg>
+            </div></div>
+            <h2 class="name">Proelium</h2>
+            <p class="kr">배틀 아레나</p>
+            <p class="desc">포켓몬 3마리와 기술·특성·도구를 직접 골라 AI와 겨룹니다.</p>
+            <div class="tags"><span>팀 빌더</span><span>메가진화</span><span>AI 4단계</span></div>
+            <div class="go"><span>입장하기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+        </div>
+      </div></div>
+    </a>
+
+    <!-- 3 · Communio -->
+    <a class="card" data-app="communio" data-name="Communio" data-kr="Communion" href="./communio/" style="--i:2" aria-label="Communio — 교감 사육장">
+      <div class="float"><div class="tilt">
+        <div class="glow"></div>
+        <div class="face">
+          <i class="layer dots"></i><i class="layer blob b1"></i><i class="layer blob b2"></i><i class="layer glare"></i><i class="layer sweep"></i>
+          <div class="content">
+            <div class="meta"><span class="no">03</span><span class="ver">v2.0</span></div>
+            <div class="stage"><div class="emblem em-com" aria-hidden="true">
+              <svg viewBox="0 0 132 132">
+                <circle class="rip" cx="66" cy="68" r="40" fill="none" stroke="#ff7f8f" stroke-width="3"/>
+                <circle class="rip" cx="66" cy="68" r="40" fill="none" stroke="#ff7f8f" stroke-width="3"/>
+                <circle class="rip" cx="66" cy="68" r="40" fill="none" stroke="#ff7f8f" stroke-width="3"/>
+                <g class="heart">
+                  <path d="M66 112C22 82 14 46 40 35c14-5 24 3 26 12 2-9 12-17 26-12 26 11 18 47-26 77z" fill="url(#gHeart)"/>
+                  <path d="M34 50c1-7 7-11 13-9" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".75"/>
+                </g>
+              </svg>
+              <span class="fl f1">♥</span><span class="fl f2">✦</span><span class="fl f3">♥</span>
+            </div></div>
+            <h2 class="name">Communio</h2>
+            <p class="kr">교감 사육장</p>
+            <p class="desc">쓰다듬고, 먹이고, 말을 걸며 포켓몬과 친밀해지는 시간입니다.</p>
+            <div class="tags"><span>쓰다듬기</span><span>간식</span><span>대화</span></div>
+            <div class="go"><span>입장하기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+        </div>
+      </div></div>
+    </a>
+
+  </nav>
+
+  <p class="hint"><kbd>←</kbd><kbd>→</kbd> 로 고르고 <kbd>Enter</kbd> 로 입장 · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 바로 가기</p>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const mqReduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const reduce = () => mqReduce.matches;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+  const body = document.body;
+  const deck = $('#deck');
+  const cards = $$('.card', deck);
+
+  /* 개발 서버에서는 세 앱이 서로 다른 포트에서 돈다 */
+  const DEV_PORT = { holo: 3000, proelium: 3001, communio: 3002 };
+  if ($('script[src*="/@vite/client"]')) {
+    cards.forEach(c => { c.href = `${location.protocol}//${location.hostname}:${DEV_PORT[c.dataset.app]}/`; });
+  }
+
+  /* ───────── 제목 글자 쪼개기 ───────── */
+  (() => {
+    const h = $('#title'); const text = h.textContent; h.textContent = '';
+    let k = 0;
+    text.split(' ').forEach((word, wi, arr) => {
+      const w = document.createElement('span'); w.className = 'w'; w.setAttribute('aria-hidden', 'true');
+      [...word].forEach(ch => { const s = document.createElement('span'); s.className = 'ch'; s.textContent = ch; s.style.setProperty('--k', k++); w.appendChild(s); });
+      h.appendChild(w);
+      if (wi < arr.length - 1) { h.appendChild(document.createTextNode(' ')); k++; }
+    });
+  })();
+
+  /* ───────── 별하늘 캔버스 ───────── */
+  const cv = $('#sky'), ctx = cv.getContext('2d');
+  const TINTS = { holo: [190, 160, 255], proelium: [130, 170, 255], communio: [255, 160, 175], none: [175, 180, 255] };
+  const tint = TINTS.none.slice(); let tintT = TINTS.none;
+  const ptr = { x: -9999, y: -9999, nx: 0, ny: 0, sx: 0, sy: 0 };
+  let W = 0, H = 0, dpr = 1, stars = [], shooters = [], nextShoot = 2.5, last = 0, running = false;
+
+  function seedStars() {
+    const n = clamp(Math.round(W * H / 9000), 60, 190);
+    stars = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, z: .15 + Math.random() * .85, r: .4 + Math.random() * 1.3, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.6 }));
+  }
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    seedStars(); if (reduce()) draw(0);
+  }
+  function draw(dt) {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < 3; i++) tint[i] = lerp(tint[i], tintT[i], .05);
+    const col = tint.map(Math.round).join(',');
+    ptr.sx = lerp(ptr.sx, ptr.nx, .06); ptr.sy = lerp(ptr.sy, ptr.ny, .06);
+    const t = last / 1000;
+    for (const s of stars) {
+      if (!reduce()) { s.y -= dt * 4 * s.z; if (s.y < -4) { s.y = H + 4; s.x = Math.random() * W; } }
+      const x = s.x - ptr.sx * 34 * s.z, y = s.y - ptr.sy * 24 * s.z;
+      const tw = reduce() ? .8 : .55 + .45 * Math.sin(t * s.sp + s.ph);
+      const dx = x - ptr.x, dy = y - ptr.y, d = Math.hypot(dx, dy);
+      const near = d < 150 ? 1 - d / 150 : 0;
+      ctx.globalAlpha = clamp(.25 + .6 * s.z * tw + near * .5, 0, 1);
+      ctx.fillStyle = `rgb(${col})`;
+      ctx.beginPath(); ctx.arc(x, y, s.r * (1 + near * .9), 0, 6.283); ctx.fill();
+      if (near > .15) { ctx.globalAlpha = near * .45; ctx.strokeStyle = `rgb(${col})`; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ptr.x, ptr.y); ctx.stroke(); }
+    }
+    for (let i = shooters.length - 1; i >= 0; i--) {
+      const s = shooters[i]; s.life += dt; s.x += s.vx * dt; s.y += s.vy * dt;
+      const a = 1 - s.life / s.max; if (a <= 0) { shooters.splice(i, 1); continue; }
+      const g = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * .12, s.y - s.vy * .12);
+      g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.globalAlpha = 1; ctx.strokeStyle = g; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * .12, s.y - s.vy * .12); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function frame(ts) {
+    if (!running) return;
+    const dt = Math.min((ts - last) / 1000 || .016, .05); last = ts;
+    nextShoot -= dt;
+    if (nextShoot <= 0) {
+      nextShoot = 3 + Math.random() * 4;
+      const ang = (Math.PI / 180) * (18 + Math.random() * 24), sp = 700 + Math.random() * 500;
+      shooters.push({ x: Math.random() * W * .7, y: Math.random() * H * .4, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 0, max: .8 });
+    }
+    draw(dt); requestAnimationFrame(frame);
+  }
+  function startSky() { if (reduce() || running) return; running = true; last = performance.now(); requestAnimationFrame(frame); }
+  function stopSky() { running = false; }
+  addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', () => document.hidden ? stopSky() : startSky());
+  mqReduce.addEventListener?.('change', () => { reduce() ? (stopSky(), draw(0)) : startSky(); });
+  resize(); startSky();
+
+  /* ───────── 포인터: 스포트라이트 + 시차 ───────── */
+  const spot = $('#spot'); let spotRaf = 0, sx = innerWidth / 2, sy = innerHeight / 2;
+  addEventListener('pointermove', e => {
+    ptr.x = e.clientX; ptr.y = e.clientY;
+    ptr.nx = e.clientX / innerWidth - .5; ptr.ny = e.clientY / innerHeight - .5;
+    if (e.pointerType !== 'touch') { spot.classList.add('on'); if (!spotRaf) spotRaf = requestAnimationFrame(moveSpot); }
+  }, { passive: true });
+  document.addEventListener('pointerleave', () => { spot.classList.remove('on'); ptr.x = ptr.y = -9999; });
+  function moveSpot() {
+    sx = lerp(sx, ptr.x, .14); sy = lerp(sy, ptr.y, .14);
+    spot.style.transform = `translate3d(${sx}px,${sy}px,0)`;
+    spotRaf = (Math.abs(sx - ptr.x) + Math.abs(sy - ptr.y) > .5) ? requestAnimationFrame(moveSpot) : 0;
+  }
+
+  /* ───────── 카드 기울기·호일 ───────── */
+  const setActive = (card) => {
+    cards.forEach(c => c.classList.toggle('is-active', c === card));
+    deck.classList.toggle('has-active', !!card);
+    if (card) body.dataset.active = card.dataset.app; else delete body.dataset.active;
+    tintT = card ? TINTS[card.dataset.app] : TINTS.none;
+  };
+  const states = new Map();
+  cards.forEach(card => {
+    const tilt = $('.tilt', card), face = $('.face', card);
+    const st = { rx: 0, ry: 0, s: 1, mx: .5, my: .35, px: 0, py: 0, t: { rx: 0, ry: 0, s: 1, mx: .5, my: .35, px: 0, py: 0 }, raf: 0, hold: false };
+    states.set(card, st);
+    const apply = () => {
+      tilt.style.setProperty('--rx', st.rx.toFixed(2) + 'deg'); tilt.style.setProperty('--ry', st.ry.toFixed(2) + 'deg'); tilt.style.setProperty('--s', st.s.toFixed(3));
+      face.style.setProperty('--mx', st.mx.toFixed(3)); face.style.setProperty('--my', st.my.toFixed(3));
+      face.style.setProperty('--px', st.px.toFixed(3)); face.style.setProperty('--py', st.py.toFixed(3));
+    };
+    const loop = () => {
+      const k = .14; let moving = false;
+      for (const key of ['rx', 'ry', 's', 'mx', 'my', 'px', 'py']) { const d = st.t[key] - st[key]; if (Math.abs(d) > .002) moving = true; st[key] += d * k; }
+      apply(); st.raf = moving ? requestAnimationFrame(loop) : 0;
+    };
+    st.kick = () => { if (!st.raf) st.raf = requestAnimationFrame(loop); };
+    st.settle = () => { Object.assign(st.t, { rx: 0, ry: 0, s: 1, mx: .5, my: .35, px: 0, py: 0 }); st.kick(); };
+    const aim = e => {
+      if (st.hold || reduce()) return;
+      const r = card.getBoundingClientRect();
+      const nx = clamp((e.clientX - r.left) / r.width, 0, 1), ny = clamp((e.clientY - r.top) / r.height, 0, 1);
+      Object.assign(st.t, { ry: (nx - .5) * 20, rx: (.5 - ny) * 16, s: 1.035, mx: nx, my: ny, px: (nx - .5) * 2, py: (ny - .5) * 2 });
+      st.kick();
+    };
+    card.addEventListener('pointerenter', e => { setActive(card); aim(e); });
+    card.addEventListener('pointermove', aim, { passive: true });
+    card.addEventListener('pointerdown', aim, { passive: true });
+    card.addEventListener('pointerleave', () => { if (st.hold) return; setActive(null); st.settle(); });
+    card.addEventListener('focus', () => { if (card.matches(':focus-visible')) { setActive(card); if (!reduce()) { Object.assign(st.t, { s: 1.035, mx: .5, my: .3, ry: 0, rx: 3 }); st.kick(); } } });
+    card.addEventListener('blur', () => { if (st.hold) return; setActive(null); st.settle(); });
+  });
+
+  /* ───────── 입장 전환 ───────── */
+  let leaving = false, curtain = null;
+  function cleanup() {
+    leaving = false; body.classList.remove('leaving');
+    cards.forEach(c => { c.classList.remove('chosen'); const st = states.get(c); st.hold = false; st.settle(); });
+    setActive(null);
+    if (curtain) { curtain.remove(); curtain = null; }
+  }
+  function enter(card, x, y) {
+    if (leaving) return; leaving = true;
+    const app = card.dataset.app, href = card.href;
+    const st = states.get(card); st.hold = true; Object.assign(st.t, { rx: 0, ry: 0, s: 1.07, mx: .5, my: .4, px: 0, py: 0 }); st.kick();
+    setActive(card); card.classList.add('chosen'); body.classList.add('leaving');
+
+    if (reduce()) { location.href = href; return; }
+
+    curtain = document.createElement('div'); curtain.className = 'curtain'; curtain.dataset.app = app; curtain.setAttribute('aria-hidden', 'true');
+    curtain.innerHTML = `<div class="cname"><b>${card.dataset.name}</b><span>${card.dataset.kr}</span><div class="bar"></div></div>`;
+    document.body.appendChild(curtain);
+    const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) + 40;
+    const spread = curtain.animate(
+      [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${R}px at ${x}px ${y}px)` }],
+      { duration: 820, easing: 'cubic-bezier(.7, 0, .15, 1)', fill: 'forwards', delay: 180 });
+    $('.cname', curtain).animate(
+      [{ opacity: 0, transform: 'scale(.8)', filter: 'blur(12px)' }, { opacity: 1, transform: 'scale(1)', filter: 'blur(0)' }],
+      { duration: 560, easing: 'cubic-bezier(.2, 1.1, .3, 1.1)', fill: 'forwards', delay: 620 });
+    const go = () => { location.href = href; };
+    spread.finished.then(() => setTimeout(go, 380)).catch(go);
+    setTimeout(go, 2400);              // 어떤 이유로든 애니메이션이 멈추면 그냥 이동
+  }
+  cards.forEach(card => card.addEventListener('click', e => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button > 0) return;     // 새 탭 열기 등은 그대로
+    e.preventDefault();
+    const r = card.getBoundingClientRect();
+    const keyboard = e.detail === 0 && !e.clientX && !e.clientY;
+    enter(card, keyboard ? r.left + r.width / 2 : e.clientX, keyboard ? r.top + r.height / 2 : e.clientY);
+  }));
+  addEventListener('pageshow', e => { if (e.persisted || leaving) cleanup(); });      // 뒤로가기로 돌아왔을 때
+
+  /* ───────── 키보드 ───────── */
+  addEventListener('keydown', e => {
+    if (leaving || e.metaKey || e.ctrlKey || e.altKey) return;
+    const i = cards.indexOf(document.activeElement);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); cards[(i + 1) % cards.length].focus({ focusVisible: true }); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); cards[(i <= 0 ? cards.length : i) - 1].focus({ focusVisible: true }); }
+    else if (/^[1-3]$/.test(e.key)) { const c = cards[+e.key - 1]; c.focus({ focusVisible: true }); c.click(); }
+  });
+
+  /* ───────── 시작 ───────── */
+  const start = () => requestAnimationFrame(() => body.classList.add('ready'));
+  (document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 900))]) : Promise.resolve()).then(start);
+})();
+</script>
+</body>
+</html>
