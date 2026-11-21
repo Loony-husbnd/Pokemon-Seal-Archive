@@ -4,10 +4,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 /**
- * 한 저장소, 두 앱 (GitHub Pages 하위 경로 배포)
+ * 한 저장소, 세 앱 (GitHub Pages 하위 경로 배포)
  *
  *   vite --mode holo       → apps/holo      (배포: /            )  띠부씰 아카이브
  *   vite --mode proelium   → apps/proelium  (배포: /proelium/   )  배틀 중심 앱
+ *   vite --mode communio   → apps/communio  (배포: /communio/   )  포켓몬과의 교감(사육장) 앱, 패키지에 의존하지 않는 단일 파일
  *
  * 두 앱은 packages/ 의 Rembrandt(엔진)·battle-ui(전투 화면)를 일반 <script> 로 불러온다.
  *  - 개발 서버: /packages/* 요청을 저장소의 packages/ 로 연결한다.
@@ -59,13 +60,15 @@ function sharedPackages(copyOnBuild: boolean) {
 
 export default defineConfig(({ mode }) => {
   const isProelium = mode === 'proelium';
-  const appDir = path.resolve(ROOT, 'apps', isProelium ? 'proelium' : 'holo');
+  const isCommunio = mode === 'communio';
+  const appName = isProelium ? 'proelium' : isCommunio ? 'communio' : 'holo';
+  const appDir = path.resolve(ROOT, 'apps', appName);
   return {
     root: appDir,
     base: './', // 하위 경로 배포·file:// 에서도 상대경로로 열리도록
-    plugins: [sharedPackages(!isProelium)],
+    plugins: isCommunio ? [] : [sharedPackages(!isProelium)],
     build: {
-      outDir: path.resolve(ROOT, 'dist', isProelium ? 'proelium' : ''),
+      outDir: path.resolve(ROOT, 'dist', isProelium || isCommunio ? appName : ''),
       emptyOutDir: true,
       chunkSizeWarningLimit: 8000,       // @pkmn/sim 이 크다 (gzip 약 1MB)
     },
@@ -73,7 +76,7 @@ export default defineConfig(({ mode }) => {
     esbuild: isProelium ? { keepNames: true } : undefined,
     optimizeDeps: isProelium ? { esbuildOptions: { keepNames: true } } : undefined,       // 개발 서버의 의존성 묶음에도 같은 이유
     resolve: isProelium ? { alias: { rembrandt2: path.resolve(ROOT, 'packages', 'rembrandt2', 'src', 'index.js') } } : undefined,       // Proelium 은 Rembrandt 2(ESM)를 번들에 넣는다
-    server: { port: isProelium ? 3001 : 3000, host: '0.0.0.0', fs: { allow: [ROOT] } },
-    preview: { port: isProelium ? 3001 : 3000, host: '0.0.0.0' },
+    server: { port: isProelium ? 3001 : isCommunio ? 3002 : 3000, host: '0.0.0.0', fs: { allow: [ROOT] } },
+    preview: { port: isProelium ? 3001 : isCommunio ? 3002 : 3000, host: '0.0.0.0' },
   };
 });

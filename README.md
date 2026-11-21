@@ -1,11 +1,12 @@
 # Pokémon Seal Archive
 
-한 저장소에서 만드는 세 가지 프로그램입니다. 띠부씰을 기록하고 키우는 **Holo**, 내가 고른 포켓몬으로 겨루는 **Proelium**, 둘이 함께 쓰는 배틀 엔진 **Rembrandt**.
+한 저장소에서 만드는 네 가지 프로그램입니다. 띠부씰을 기록하고 키우는 **Holo**, 내가 고른 포켓몬으로 겨루는 **Proelium**, 포켓몬과 교감하는 **Communio**, 배틀 엔진 **Rembrandt**.
 
 | 프로그램 | 버전 | 한 줄 소개 | 주소 |
 |---|---|---|---|
 | **Holo** | 4.0 | 포켓몬 띠부씰 아카이브. 도감·바인더·사육장·3:3 배틀 탭 (**Rembrandt 1.3 탑재**) | `/` |
 | **Proelium** | 1.1.2 | 포켓몬 3마리와 기술 4개·특성·도구를 직접 고르는 배틀 아레나 (**Rembrandt 2.0 탑재**) | `/proelium/` |
+| **Communio** | 2.0 | 포켓몬과의 교감. 손으로 쓰다듬고, 음식을 끌어 먹이고, 말을 거는 사육장 앱 (띠부씰과 무관, 인원 제한 없음) | `/communio/` |
 | **Rembrandt** | **2.0.1** | **새로 쓴 배틀 엔진** — Pokémon Showdown 시뮬레이터 기반. 특성·도구·메가진화, 전국도감 1,254종, 상대 정보 가리기, 팀 빌더, AI 4단계 | (라이브러리) |
 | Rembrandt | 1.3 | 옛 엔진(직접 구현): 변화기 270개·공격기 525개. **Holo 의 배틀 탭이 아직 이것을 씁니다** | (라이브러리) |
 
@@ -30,9 +31,10 @@
 
 1. [Holo 4.0](#holo-40)
 2. [Proelium 1.1](#proelium-11)
-3. [Rembrandt 2.0 (새 배틀 엔진)](#rembrandt-20-새-배틀-엔진)
-4. [Rembrandt 1.3 (옛 배틀 엔진)](#rembrandt-13-옛-배틀-엔진)
-5. [개발자용](#개발자용)
+3. [Communio 2.0](#communio-20)
+4. [Rembrandt 2.0 (새 배틀 엔진)](#rembrandt-20-새-배틀-엔진)
+5. [Rembrandt 1.3 (옛 배틀 엔진)](#rembrandt-13-옛-배틀-엔진)
+6. [개발자용](#개발자용)
 
 ---
 
@@ -245,6 +247,40 @@
 - **지옥은 화면 스레드에서 계산합니다.** 상대 구성과 배틀 중 판단 때 잠깐 멈춘 느낌이 날 수 있습니다(웹 워커로 옮기는 것이 후속 과제).
 - 노력치·성격을 고르는 화면은 아직 없습니다(엔진은 지원, 지금은 노력치 0·무보정).
 - 상대 팀을 직접 구성하는 기능, 리플레이는 아직 없습니다.
+
+---
+
+# Communio 2.0
+
+포켓몬과 **교감**하는 사육장 앱입니다. Holo 의 띠부파를레에서 시작했지만 2.0 에서 디자인·구조를 모두 새로 썼습니다. 배포 주소 `/communio/`, 소스는 `apps/communio/index.html` 한 파일이며 **외부 CSS 프레임워크(Tailwind)·아이콘 CDN 없이** 직접 쓴 CSS 로 동작합니다(글꼴만 Google Fonts·Pretendard). 띠부씰 도감과는 연결되어 있지 않습니다.
+
+## 디자인
+- **파스텔 크림 + 코랄 핑크.** 띠부씰 스티커처럼 통통한 흰 테두리, 말랑한 그림자, 누르면 눌리는 3D 버튼, 제목은 Jua 글꼴.
+- 사육장 풍경은 새로 그렸습니다: 둥근 언덕·몽글한 구름·동글동글 나무와 열매·돔 지붕 집·연못·울타리·꽃밭. 낮·노을·밤 3종이 있고 밤에는 별·달·반딧불이가 나옵니다.
+- 교감 화면은 폴카 도트 벽지·가랜드·창문(시간대 연동)·원목 바닥·러그가 있는 아늑한 방입니다.
+
+## 화면 (주소 해시)
+| 주소 | 화면 |
+|---|---|
+| `#/` | **사육장**: 풍경 위를 돌아다니는 포켓몬, 시간대 전환, 멤버 목록(검색·정렬) |
+| `#/play/<id>` | **교감 화면**: 팝업이 아니라 새 화면. 이전/다음, 사육장에서 빼기 |
+| `#/add` | **데려오기**: 전국도감 검색(이름·초성·번호)·세대 필터·폼·이로치 선택 |
+
+## 교감
+- **손**: 포켓파를레처럼 흰 장갑을 낀 통통한 손(손가락 4개)이 포인터를 따라다니고, 누르면 눌리고, 문지르면 따라 움직입니다. 터치에서는 손가락 위치에 나타납니다.
+- **쓰다듬기** 포켓몬을 3초 동안 쓱쓱 문지르면 친밀도 +5(1초 쿨다운).
+- **때리기** 주먹으로 바뀐 손으로 포켓몬을 누르면 아파하며 친밀도 -4(최저 0). 몸 밖을 때리면 헛손질입니다.
+- **먹이기** 화면 아래 음식 아이콘을 **끌어서** 포켓몬에게 가져다 주면 먹습니다(포만감 +1, 친밀도 상승, 가득 차면 거절, 엉뚱한 곳에 놓으면 쟁반으로 돌아감). 음식은 포켓몬 세계관의 오랭열매·자뭉열매·복슝열매·버치열매·나나열매·파인열매·맛있는물·사이다·달콤한꿀·이상한사탕이며 PokeAPI 공식 아이템 그림을 쓰고 못 불러오면 이모지로 대신합니다. 포켓몬마다 최애 음식이 있어 주면 친밀도가 더 오릅니다.
+- **말 걸기** 30자까지 건네면 속마음 대답이 돌아옵니다(외부 API 없음). 친밀도가 아주 낮으면 대답을 피합니다.
+- 효과음(쓰다듬기·먹기·때리기·집기 등)은 WebAudio 로 합성하며 헤더의 🔊 로 끄고 켭니다.
+
+## 규칙
+- **인원 제한이 없습니다.** 풍경에는 최대 12마리만 그리고(🔀 로 바꿀 수 있음) 나머지는 멤버 목록에서 교감합니다.
+- 사육장에서 **빼기**는 확인 창을 거쳐 삭제하며 친밀도·포만감 기록도 함께 사라집니다.
+- 저장 키는 `communio:habitat_v1`(1.0 과 같은 형식이라 그대로 이어받음)·`communio:settings`(효과음·시간대)이며 Holo 와 데이터를 공유하지 않습니다.
+
+## 시험
+`npm run build:communio` 후 `npm run preview:communio` 를 띄우고 `npm run e2e:communio` (Playwright 필요). 빈 사육장 → 추천 6마리 → 데려오기(6마리 초과·폼·이로치·초성·세대) → 새 화면 → 손·쓰다듬기·때리기·음식 끌어 먹이기(거절 포함)·말 걸기 → 빼기 확인 → 새로고침 후 유지까지 확인합니다.
 
 ---
 
@@ -484,6 +520,7 @@ packages/rembrandt/   옛 배틀 엔진 1.3·AI·파티·데이터 (화면 없�
 packages/battle-ui/   Holo 전투 화면
 apps/holo/            띠부씰 아카이브 (Holo 4.0)        → 배포 /
 apps/proelium/        배틀 아레나 (Proelium 1.1.2)      → 배포 /proelium/
+apps/communio/        포켓몬과의 교감 (Communio 2.0)    → 배포 /communio/
 spike/showdown/       Showdown 도입 가능성 시험(번들 크기·복제 난수·속도 등)과 결과
 tools/                데이터 생성·검증·시뮬레이터·경계 검사·브라우저 시험
 ```
@@ -492,14 +529,15 @@ tools/                데이터 생성·검증·시뮬레이터·경계 검사·
 
 | 명령 | 내용 |
 |---|---|
-| `npm run dev:holo` / `npm run dev:proelium` | 개발 서버 (3000 / 3001) |
-| `npm run build` | 두 앱을 `dist/`와 `dist/proelium/`으로 빌드 |
+| `npm run dev:holo` / `dev:proelium` / `dev:communio` | 개발 서버 (3000 / 3001 / 3002) |
+| `npm run build` | 세 앱을 `dist/`, `dist/proelium/`, `dist/communio/`로 빌드 (Holo 를 먼저 빌드해야 한다) |
 | `npm run battle:data` | PokeAPI/Showdown 데이터로 `battle-data.js`·`battle-learnsets.js` 재생성 (`--sample`, `--show 6,25`, `--explain=25`) |
 | `npm run battle:validate` | 데이터 무결성 검증 |
 | `npm run test:battle` | 옛 엔진(1.3)·AI·파티·변화기·특수 공격기 테스트 (244개) |
 | `npm run test:rembrandt2` | 새 엔진(2.0) 테스트 (46개) |
 | `node tools/build-ko-names.mjs` | 한국어 이름표·폼 그림 번호 재생성 (PokeAPI CSV) |
 | `npm run build:proelium` / `preview:proelium` / `e2e:proelium` | Proelium 만 빌드 / 미리보기 / 브라우저 전체 흐름 시험(Playwright) |
+| `npm run build:communio` / `preview:communio` / `e2e:communio` | Communio 만 빌드 / 미리보기 / 브라우저 전체 흐름 시험(Playwright) |
 | `npm run e2e:proelium:megapicker` | 회귀 시험: 메가진화한 포켓몬이 벤치에 있을 때 교체창이 열리는지 |
 | `npm run check:boundaries` | Rembrandt(1.3·2.0)가 화면·저장소에 의존하지 않는지 검사 |
 | `npm run sim:battle` / `sim:ai` | 대량 시뮬레이션(대칭성·밸런스 / 난이도 매트릭스) |
@@ -509,7 +547,7 @@ tools/                데이터 생성·검증·시뮬레이터·경계 검사·
 
 - GitHub Pages는 Settings → Pages → Source를 **GitHub Actions**로 두면 `.github/workflows/deploy-pages.yml`이 main 병합 때마다 검사·테스트·빌드·배포를 합니다(약 1분).
 - `packages/`의 일반 `<script>`/`<link>` 주소에는 파일 내용 해시(`?v=`)가 자동으로 붙습니다. 엔진을 고쳤는데 브라우저에 옛 파일이 남는 일을 막기 위함입니다.
-- 같은 도메인을 공유하므로 Proelium 저장 키는 `proelium:` 접두어를 쓰고, Holo의 기존 키는 호환을 위해 그대로 둡니다.
+- 같은 도메인을 공유하므로 Proelium 저장 키는 `proelium:`, Communio 는 `communio:` 접두어를 쓰고, Holo의 기존 키는 호환을 위해 그대로 둡니다.
 - Proelium 번들에는 Rembrandt 2.0 이 들어갑니다(엔진 청크 약 6.7MB, gzip 약 1.1MB, 화면을 연 뒤 불러옴). 시뮬레이터의 복제가 클래스 이름에 의존하므로 `vite.config.ts` 의 `keepNames` 설정을 빼면 안 됩니다. 배포 워크플로는 지금 `test:battle` 만 돌리며 `test:rembrandt2` 는 포함하지 않습니다.
 
 ## 기여할 때 참고
