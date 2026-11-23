@@ -1,6 +1,6 @@
 /**
  * Communio 2.0 브라우저 전체 흐름 시험
- *   (사육장 → 데려오기(인원 제한 없음) → 교감 화면 → 손으로 쓰다듬기·때리기 → 음식 끌어 먹이기 → 말 걸기 → 빼기 확인 → 저장)
+ *   (사육장 → 데려오기(인원 제한 없음) → 교감 화면 → 손으로 쓰다듬기·때리기 → 음식 끌어 먹이기 → 말 걸기(이름 기억·맥락·반복 방지 포함) → 빼기 확인 → 저장)
  *   npm run build:communio && npm run preview:communio   (다른 터미널에서)
  *   node tools/e2e-communio.cjs        환경 변수 PORT(기본 3002), OUT(스크린샷 폴더, 기본 임시 폴더)
  * Playwright 와 Chromium 이 필요하다. 그림·글꼴 같은 외부 자원은 못 불러와도 되도록 그림은 단색으로 대신한다.
@@ -153,6 +153,16 @@ function blobPng() {
   await page.click('#talk-form button[type=submit]');
   await page.waitForTimeout(1100);
   ok((await page.locator('#speech').innerText()).length > 4 && !(await page.locator('#speech').getAttribute('class')).includes('off'), '말을 걸면 대답이 나온다');
+  // 대화 모델: 이름 기억 · 맥락(직전 질문의 답) · 반복 방지 · 저장
+  const talk = async (text) => { await page.fill('#talk-input', text); await page.click('#talk-form button[type=submit]'); await page.waitForTimeout(1000); return page.locator('#speech').innerText(); };
+  ok((await talk('내 이름은 철수야')).includes('철수'), '이름을 알려 주면 이름을 부르며 대답한다');
+  ok((await store()).find(h => h.id === firstId).talk?.userName === '철수', '알려 준 이름이 저장된다 (m.talk.userName)');
+  ok((await talk('내 이름 알아?')).includes('철수'), '이름을 기억하고 있다');
+  const sorry = await talk('미안해'); ok(/괜찮|용서|알았|됐|다음/.test(sorry), '사과에는 사과를 받아 주는 대답을 한다: ' + sorry);
+  const food = await talk('너 오랭열매 좋아해?'); ok(food.includes('오랭열매'), '말에 나온 음식 이름을 알아듣는다: ' + food);
+  const loves = new Set(); for (let i = 0; i < 4; i++) loves.add((await talk('사랑해')).replace(/^철수[아야], /, '').split(/[.!?…]/)[0]);
+  ok(loves.size >= 2, '같은 말에 같은 대답만 되풀이하지 않는다 (' + loves.size + '가지)');
+  ok((await store()).find(h => h.id === firstId).talk?.turns >= 8, '대화 횟수가 저장된다');
   await page.click('.mode[data-m="pet"]');
 
   // 9) 이전/다음, 빼기(확인 창)
