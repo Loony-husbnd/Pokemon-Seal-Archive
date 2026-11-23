@@ -1478,7 +1478,7 @@ body[data-period="night"] .win .wc { background: rgba(190, 180, 255, .55); box-s
     }
 
 
-      // --- Emotional Dialogue Engine (울음소리 없이 20~35자 내외의 속마음 1~2문장) ---
+      // --- 포켓몬 성격 분류(말투 결정에 쓴다 · 대화 모델은 아래 "7-2. 대화 모델" 참고) ---
       const LEGENDARY_DRAGON_NAMES = new Set([
         '뮤츠', '레시라무', '제크로무', '이벨타르', '제르네아스', '디아루가', '펄기아', '기라티나',
         '레쿠쟈', '그란돈', '가이오가', '루기아', '칠색조', '아르세우스', '망나뇽', '보만다',
@@ -1496,136 +1496,12 @@ body[data-period="night"] .win .wc { background: rgba(190, 180, 255, .55); box-s
         '글레이시아', '님피아', '마릴', '에이팜', '파치리스', '데덴네', '따라큐'
       ]);
 
-      const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
       function getPokemonArchetype(name, types = []) {
         if (LEGENDARY_DRAGON_NAMES.has(name) || types.includes('드래곤')) return 'legendary_dragon';
         if (COOL_LOYAL_NAMES.has(name) || types.includes('격투') || types.includes('강철')) return 'cool_loyal';
         if (types.includes('에스퍼') || types.includes('고스트') || (types.includes('페어리') && !CUTE_NAMES.has(name))) return 'mystic';
         if (CUTE_NAMES.has(name) || types.includes('풀') || types.includes('전기') || types.includes('노말')) return 'cute';
         return 'gentle';
-      }
-
-      function generateEmotionalSpeech({ pokemonName, affection = 50, fullness = 2, userMessage = '', types = [] }) {
-        const msg = (userMessage || '').trim().toLowerCase();
-        const name = getBasePokemonName(pokemonName) || pokemonName;
-        const archetype = getPokemonArchetype(name, types);
-        const affLevel = Math.min(5, Math.floor(affection / 20) + 1);
-        const has = (...words) => words.some(w => msg.includes(w));
-
-        // 1. Keyword-specific emotional answers
-        if (has('안녕', '반가', '하이', '좋은 아침')) {
-          if (archetype === 'cute') {
-            return pickRandom([
-              '안녕! 네가 오기만을 꼬리 살랑이며 기다렸어~',
-              '안녕! 오늘도 나랑 재미있게 놀아줄 거지?',
-              '반가워! 네 목소리를 들으니 하루가 반짝반짝해!'
-            ]);
-          }
-          if (archetype === 'legendary_dragon') {
-            return pickRandom([
-              '다시 만났군. 네가 건네는 인사는 늘 마음을 편안케 해.',
-              '바람이 머무는 곳에서 너의 인사를 받으니 나쁘지 않군.',
-              '왔는가. 너의 다정한 목소리는 언제 들어도 평온하구나.'
-            ]);
-          }
-          return '안녕! 네 목소리를 들으니 하루가 밝아지는 기분이야.';
-        }
-
-        if (has('사랑', '좋아', '애정', '최고', '뽀뽀')) {
-          if (archetype === 'cute') {
-            return pickRandom([
-              '나도 네가 세상에서 제일 좋아! 내 마음 콩닥거려~',
-              '네가 그렇게 말해주니 가슴이 뭉클하고 너무 행복해!',
-              '헤헤, 나도 널 온 마음 다해 사랑해! 우리 영원하자!'
-            ]);
-          }
-          if (archetype === 'legendary_dragon') return '깊은 유대의 맹세를 가슴에 새기마. 곁을 지키겠다.';
-          return '너의 따스한 마음에 보답할 수 있도록 언제나 함께할게.';
-        }
-
-        if (has('귀여', '예뻐', '멋져', '착해', '대단해')) {
-          if (archetype === 'cute') {
-            return pickRandom([
-              '에헤헤, 그렇게 칭찬해주니까 볼이 발그레해지잖아!',
-              '진짜? 네 마음에 쏙 들었다니 날아갈 것 같아!',
-              '너한테 칭찬받는 순간이 하루 중 제일 신나!'
-            ]);
-          }
-          if (archetype === 'legendary_dragon') return '과찬이다. 하지만 네게서 듣는 찬사는 꽤 흡족하군.';
-          return '칭찬 고마워! 네 든든한 파트너가 되어 더 빛나볼게!';
-        }
-
-        if (has('배고', '빵', '밥', '간식', '먹')) {
-          if (fullness >= 4) return '지금은 배가 너무 불러서 둥둥 떠다닐 것만 같아!';
-          return '달콤한 포켓몬빵 한 입이면 더 신나게 놀 수 있을 텐데!';
-        }
-
-        if (has('힘내', '고마워', '응원', '화이팅', '수고')) {
-          if (archetype === 'cute') return '네 따뜻한 응원 한마디에 힘이 퐁퐁 솟아나! 고마워!';
-          if (archetype === 'legendary_dragon') return '너의 믿음이 내 안의 불꽃을 다시금 타오르게 하는군.';
-          return '언제나 내 곁을 지켜줘서 고마워. 너에게 힘이 될게!';
-        }
-
-        if (has('쓰다듬', '만져', '따뜻', '손길', '포근')) {
-          if (archetype === 'cute') return '네 부드러운 손길이 닿을 때마다 온몸이 사르르 녹아~';
-          return '네 손끝에서 전해지는 따스한 온기가 마음을 채우는군.';
-        }
-
-        if (has('놀자', '산책', '가자', '여행', '어디')) {
-          if (archetype === 'cute') return '신난다! 손 꼭 잡고 푸른 언덕 너머로 같이 달려가자!';
-          return '어디든 함께하마. 너와 함께 걷는 길이라면 환영이다.';
-        }
-
-        if (has('잘자', '졸려', '꿈', '쉬어')) {
-          return '오늘 밤 꿈속에서도 우리 함께 푸른 동산을 달리자.';
-        }
-
-        // 2. State & Archetype-based rich pool
-        if (archetype === 'cute') {
-          if (affLevel >= 4) {
-            return pickRandom([
-              '네 손길 진짜 따뜻해! 나랑 계속 함께 있어줄 거지?',
-              '너랑 있으면 세상 모든 게 사탕처럼 달콤해져!',
-              '네 품에 폭 안겨서 하루 종일 도란도란 이야기하고 싶어.',
-              '오늘도 나를 제일 먼저 찾아와줘서 가슴이 뭉클해!'
-            ]);
-          }
-          if (affLevel >= 2) {
-            return pickRandom([
-              '너와 마주 보고 있으니 마음이 솜사탕처럼 부풀어 올라.',
-              '머리를 조심스레 쓰다듬어줄 때마다 기분이 참 좋아.',
-              '우리 오늘 더 재미있는 놀이 많이 하자! 약속해줘!'
-            ]);
-          }
-          return '아직은 조금 부끄럽지만 너와 친구가 되고 싶어.';
-        }
-
-        if (archetype === 'legendary_dragon') {
-          if (affLevel >= 4) {
-            return pickRandom([
-              '너와 함께하는 이 고요한 시간이 꽤 마음에 드는군.',
-              '오랜 세월을 건너 만난 네 온기를 결코 잊지 않으마.',
-              '너의 부름이라면 언제든 거센 폭풍을 뚫고 날아가리라.'
-            ]);
-          }
-          if (affLevel >= 2) {
-            return pickRandom([
-              '너의 눈빛에 깃든 올곧은 다정함이 참으로 인상적이군.',
-              '이곳의 온화한 공기 속에서 잠시 날개를 접고 쉬어가마.'
-            ]);
-          }
-          return '나에게 말을 건넬 용기가 있군. 흥미로운 눈빛이다.';
-        }
-
-        if (archetype === 'cool_loyal') {
-          if (affLevel >= 4) return '너의 신뢰가 나를 더 강하게 해. 끝까지 함께하자!';
-          return '너와 나눈 호흡은 언제나 완벽해. 오늘도 멋진 하루야.';
-        }
-
-        // Mystic or Gentle Default
-        if (affLevel >= 4) return '보이지 않는 마음의 끈이 너와 나를 단단히 잇고 있어.';
-        return '너와 나누는 조용한 교감 속에서 은은한 온기가 전해져.';
       }
 
 
@@ -2405,6 +2281,265 @@ function applyPeriod() {
 let periodTimer = null;
 
 // =====================================================================
+// 7-2. 대화 모델 — 점수 기반 의도 분류 + 기억 + 문장 조립 (외부 API 없음, 브라우저 안에서 동작)
+//   1) 말을 정리하고 의도(인사·칭찬·사과·배고픔·날씨…)를 키워드 점수로 고른다
+//   2) 음식 이름·"~ 좋아해?" 같은 주제어와 이름 소개("나는 ○○야")를 뽑는다
+//   3) 직전에 던진 질문(ask)이 있으면 그 답으로 읽는다(예/아니오·이름·하루 이야기)
+//   4) 말투(귀염·위엄·듬직·차분)·친밀도·포만감·시간대·최근 맞은 일을 반영해 문장을 조립한다
+//   기억: m.talk 에 저장(이름·좋아하는 음식·대화 수·마지막 대화), 세션 기억은 메모리에만 둔다
+// =====================================================================
+// <talk-model>
+const Talk = (() => {
+  const hasBatchim = (w) => { const c = String(w).slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 !== 0; };
+  const josa = (w, pair) => { const [a, b] = pair.split('/'); return w + (hasBatchim(w) ? a : b); };   // josa('철수','이/') → 철수 · josa('민준','이/') → 민준이
+  const VOICE = { cute: 'cute', legendary_dragon: 'noble', cool_loyal: 'cool', mystic: 'calm', gentle: 'calm' };
+  const P = (cute, noble, cool, calm) => ({ cute, noble, cool, calm });
+  const norm = (s) => String(s || '').toLowerCase().replace(/[~!.,…·]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // ---- 의도 사전: [정규식, 가중치] 합이 가장 큰 의도 (동점이면 앞에 둔 것) ----
+  const INTENTS = [
+    { id: 'insult',  w: [[/바보|멍청|못생|꺼져|미워|짜증나|나쁜|한심|쓸모없|재수없/, 3], [/너\s*(?:진짜\s*|너무\s*)?싫어/, 3]] },
+    { id: 'sorry',   w: [[/미안|죄송|잘못했|용서/, 3], [/때려서|아프게|화났|화\s*났|삐졌|삐쳤/, 2]] },
+    { id: 'sad_user', w: [[/슬퍼|슬프|우울|힘들|외로|속상|울고|울었|지쳤|눈물|스트레스|걱정|ㅠ|ㅜ/, 2.5]] },
+    { id: 'bye',     w: [[/잘\s*가|다녀올|다녀오겠|안녕히|나\s*갈게|나\s*간다|내일\s*봐|이만|바이|또\s*봐|또\s*올게|갈게/, 3]] },
+    { id: 'sleepy',  w: [[/잘\s*자|졸려|졸리|자러|잠(?!만보)|꿈|쉬어|피곤/, 2.5]] },
+    { id: 'thanks',  w: [[/고마|감사|땡큐|thanks|thx/, 3]] },
+    { id: 'cheer',   w: [[/힘내|응원|화이팅|파이팅|수고|잘했|잘한다/, 3]] },
+    { id: 'name_q',  w: [[/이름이?\s*뭐|이름\s*알려|누구야|넌\s*누구|너\s*누구|넌\s*뭐야|너\s*뭐야|무슨\s*포켓몬/, 3]] },
+    { id: 'ask_me',  w: [[/내\s*이름|나\s*누구|나\s*알아|나\s*기억|날\s*기억|누군지\s*알/, 3]] },
+    { id: 'favorite_q', w: [[/제일\s*좋아하는|뭘\s*좋아|뭐\s*좋아|좋아하는\s*(?:게|거|음식|열매|것)|최애/, 3]] },
+    { id: 'love',    w: [[/사랑|좋아해|좋아한|좋아하|보고\s*싶|뽀뽀|안아|애정|소중/, 3], [/최고|짱/, 1.5]] },
+    { id: 'praise',  w: [[/귀여|귀엽|예뻐|예쁘|멋져|멋지|잘생|착해|착하|대단|똑똑|사랑스|천재/, 3]] },
+    { id: 'pet_feel', w: [[/쓰다듬|만져|손길|따뜻|포근|토닥|간지럽|안마/, 3]] },
+    { id: 'hungry',  w: [[/배고|배불|밥|간식|먹었|먹을래|먹고\s*싶|먹어|음식|맛있/, 2.5]] },
+    { id: 'play',    w: [[/놀자|놀까|놀아|산책|여행|가자|달리|숨바꼭질|술래|공놀이|뭐\s*하고\s*놀|심심/, 3]] },
+    { id: 'battle',  w: [[/배틀|싸우|싸움|강해|대결|훈련|트레이닝|이겨|이기/, 2.5]] },
+    { id: 'joke',    w: [[/농담|웃긴\s*얘기|재밌는\s*(?:얘기|이야기)|이야기\s*해|얘기\s*해\s*줘|들려\s*줘|수수께끼|퀴즈/, 3]] },
+    { id: 'weather', w: [[/날씨|비가|비\s*오|비\s*와|비\s*내|장마|소나기|눈이\s*(?:오|내|와)|눈\s*와|눈사람|함박눈|바람|더워|더운|추워|추운|맑|흐리|구름|햇살|햇볕|무지개/, 2.5], [/별빛|별이|별을|별\s*보|밤하늘|달빛|보름달/, 3.5]] },
+    { id: 'how_are_you', w: [[/어때|잘\s*지냈|잘\s*지내|잘\s*있었|기분\s*어|컨디션|괜찮|별일|요즘/, 2.5]] },
+    { id: 'what_doing', w: [[/뭐\s*해|뭐하|뭐\s*하고|뭐\s*했|뭐\s*하는|무슨\s*생각/, 3]] },
+    { id: 'happy_user', w: [[/기뻐|기쁘|행복|신나|신난|좋은\s*일|기분\s*좋|웃겨|ㅋㅋ|ㅎㅎ|합격|칭찬\s*받/, 2]] },
+    { id: 'greet',   w: [[/안녕|하이|반가|헬로|좋은\s*아침|나\s*왔|다녀왔|돌아왔/, 3]] }
+  ];
+  const FOOD_ALIAS = { 'oran-berry': ['오랭'], 'sitrus-berry': ['자뭉'], 'pecha-berry': ['복슝'], 'cheri-berry': ['버치'], 'nanab-berry': ['나나', '바나나'], 'pinap-berry': ['파인'],
+    'fresh-water': ['맛있는물', '맛있는 물', '생수'], 'soda-pop': ['사이다', '탄산', '콜라'], 'honey': ['꿀'], 'rare-candy': ['사탕'] };
+  const NOT_TOPIC = new Set(['나를', '너를', '저를', '우리', '너도', '나도', '그걸', '이걸', '저걸', '뭘', '뭐']);
+  const STOP = new Set(['오늘', '내일', '어제', '그냥', '진짜', '너무', '정말', '근데', '그래서', '그리고', '하지만', '나는', '너는', '이거', '저거', '그거', '뭐야', '어때', '있어', '없어', '했어', '해줘', '하자', '있었', '없었']);
+  const YES = /^(응+|웅+|네+|넵|예|그래|맞아|맞지|좋아|좋지|당연|물론|ㅇㅇ|오케이|ok)/, NO = /^(아니|아냐|싫어|싫|글쎄|별로|안\s)/;
+  const POS = /좋|재밌|즐거|행복|신나|맛있|잘\s*(?:했|지냈|됐|놀)|기뻐|최고|괜찮|ㅋ|ㅎ/, NEG = /힘들|슬|우울|피곤|짜증|별로|안\s*좋|아팠|외로|속상|심심|지쳤|ㅠ|ㅜ|싫/;
+
+  // ---- 대답 모음: 말투별(귀염·위엄·듬직·차분) ----
+  const R = {
+    greet: P(['안녕! 기다리고 있었어~', '와, 왔구나! 보고 싶었어!', '안녕안녕! 오늘도 만나서 반가워!'], ['왔는가. 반갑군.', '다시 만났군. 네 목소리는 언제 들어도 평온하다.'], ['어서 와. 기다리고 있었어.', '왔구나! 오늘도 잘 부탁해.'], ['안녕. 네가 오니 마음이 한결 편안해져.', '어서 와, 기다리고 있었어.']),
+    bye: P(['벌써 가? 얼른 또 와야 해! 약속!', '잘 가~ 오늘 정말 즐거웠어!'], ['가는가. 다음에 또 보자.'], ['조심히 가. 기다리고 있을게.'], ['잘 가. 언제든 다시 와도 돼.', '오늘도 와 줘서 고마워. 또 보자.']),
+    sleepy: P(['하암~ 나도 졸려. 같이 자자…', '잘 자! 꿈에서도 만나자~'], ['편히 쉬어라. 밤은 길지만 꿈은 짧으니.'], ['푹 쉬어. 내일도 힘내야지.'], ['오늘 밤은 포근하게 잘 수 있길 바랄게.', '좋은 꿈 꿔. 나도 곁에서 지켜볼게.']),
+    love: P(['헤헤, 나도 네가 제일 좋아!', '가슴이 콩닥콩닥해! 나도 사랑해!'], ['…그 말, 마음에 새겨 두마.', '깊은 유대다. 곁을 지키겠다.'], ['나도 마찬가지야. 널 믿어.', '쑥스럽네… 하지만 나도 같은 마음이야.'], ['고마워. 너의 마음이 그대로 전해져.', '나도 네가 소중해.']),
+    praise: P(['에헤헤, 쑥스러워! 더 말해 줘~', '진짜? 날아갈 것 같아!'], ['과찬이다. 그래도 싫지는 않군.'], ['고마워. 더 멋진 모습 보여 줄게.'], ['칭찬해 줘서 고마워. 기분이 좋아.', '쑥스럽지만 기쁘네.']),
+    thanks: P(['고맙긴~ 우린 친구잖아!', '헤헤, 나도 고마워!'], ['고마울 것 없다. 당연한 일이다.'], ['별말을. 우린 파트너잖아.'], ['나야말로 고마워.', '천만에. 함께라서 좋아.']),
+    sorry: P(['괜찮아… 이제 안 아파. 다시 쓰다듬어 줄 거지?', '조금 놀랐지만 용서해 줄게! 대신 꼭 안아 줘!'], ['…다음엔 없길 바란다.'], ['됐어. 다음부터는 조심해.'], ['알았어. 그렇게 말해 줘서 고마워.']),
+    insult: P(['으앙, 그런 말 하지 마… 마음이 아파.', '나 상처받았어…'], ['…무례하군. 말을 가려서 해라.'], ['그런 말은 듣고 싶지 않아.'], ['그 말은 조금 슬프게 들려.']),
+    cheer: P(['응! 힘이 퐁퐁 솟아! 우리 같이 힘내자!', '고마워! 나 지금 엄청 힘나!'], ['네 믿음이 힘이 되는군.'], ['좋아, 오늘도 해 보자!'], ['응원해 줘서 고마워. 힘이 나.']),
+    sad_user: P(['괜찮아? 내가 옆에 있을게. 꼬옥 안아 줄게!', '울지 마… 나까지 눈물 나려고 해. 같이 있자.'], ['무슨 일이 있었나. 조용히 곁에 있어 주마.'], ['힘든 일이 있었구나. 내가 곁에 있어. 천천히 말해 봐.'], ['힘들었구나. 말하고 싶지 않아도 괜찮아, 곁에 있을게.', '많이 지쳤구나. 잠깐 쉬어도 돼.']),
+    happy_user: P(['와아! 나도 덩달아 신나! 무슨 일이야?', '네가 웃으니까 나도 행복해~'], ['좋은 일이 있었나 보군. 나도 흐뭇하다.'], ['좋은 일이 있었나 보네. 나도 기뻐!'], ['네가 기뻐하니 나도 기뻐.', '웃는 모습이 보기 좋아.']),
+    what_doing: P(['너 기다리면서 꼬리 흔들고 있었지!', '구름 구경하고 있었어. 너는 뭐 했어?'], ['바람 소리를 듣고 있었다.'], ['몸 좀 풀고 있었어. 너는?'], ['가만히 쉬고 있었어. 네 생각도 하면서.']),
+    pet_feel: P(['그 손길 너무 좋아… 더 해 줘!', '사르르 녹을 것 같아~'], ['…나쁘지 않은 손길이군.'], ['따뜻하네. 긴장이 풀려.'], ['손이 따뜻해서 마음까지 편해져.']),
+    play: P(['좋아좋아! 어디로 갈까? 나 달리기 잘해!', '놀자놀자~ 숨바꼭질 어때? 술래는 너!'], ['함께 걷자는 것인가. 좋다.'], ['좋지! 몸 좀 움직여 볼까?'], ['좋아, 천천히 산책하자. 꽃이 핀 곳으로 가 볼까?']),
+    battle: P(['배틀? 난 싸우는 것보다 같이 노는 게 좋아~ 그래도 네가 원하면 힘낼게!'], ['힘을 겨루자는 것인가. 언제든 상대해 주마.'], ['배틀이라면 자신 있어! 같이 훈련할까?'], ['싸우는 것보다 너와 지내는 게 더 좋아. 그래도 필요하면 곁에서 도울게.']),
+    sleepyNight: P(['밤이라 눈이 스르르 감겨… 너랑 있으니 포근해.'], ['밤이 깊었군. 눈을 붙여라.'], ['밤이 깊었어. 푹 쉬어.'], ['밤이 깊었네. 같이 조용히 쉬자.'])
+  };
+  const JOKES = ['꼬부기가 제일 좋아하는 간식은? …꼬북칩!', '잠만보가 제일 싫어하는 시간은? 기상 시간… 쿨…', '메타몽이 거울 앞에 서면 누가 진짜일까? 메타몽도 몰라!', '이상해씨가 제일 좋아하는 날씨는? 햇빛 쨍쨍! 광합성 최고!', '피죤투는 길을 몰라도 괜찮대. 하늘엔 길이 없으니까!', '비밀 하나 알려 줄까? 난 네 발소리를 제일 먼저 알아채!'];
+  const WEATHER = {
+    rain: { 물: '비 오는 날은 최고야! 물이 신나게 튀거든.', 불꽃: '비는 조금 싫어… 불꽃이 약해지거든.', 전기: '번개 칠 때 찌릿해서 설레!', 풀: '비가 오면 쑥쑥 자랄 것 같아!', _: '빗소리 좋지. 너랑 처마 밑에 앉아 있고 싶어.' },
+    snow: { 얼음: '눈이다! 내 계절이야!', 불꽃: '추운 건 싫어… 따뜻하게 안아 줘.', _: '눈 오는 날엔 폭신한 곳에서 같이 있고 싶어.' },
+    hot: { 얼음: '더우면 녹을 것 같아…', 물: '시원한 물가에 가고 싶다!', 불꽃: '이 정도 더위쯤이야!', _: '더울 땐 시원한 물 한 잔 마시고 싶어.' },
+    cold: { 불꽃: '난 괜찮아! 내 옆에서 몸 녹여도 돼.', 얼음: '이 정도 추위는 상쾌해.', _: '추우니까 서로 꼭 붙어 있자.' },
+    sun: { 풀: '햇살 받으면 힘이 나!', _: '햇살이 따뜻해서 낮잠 자고 싶어.' },
+    night: { 고스트: '밤이 되면 마음이 편해져.', 에스퍼: '밤하늘을 보면 생각이 맑아져.', _: '별 보는 거 좋아. 같이 볼래?' },
+    wind: { 비행: '바람 타고 날고 싶다!', _: '바람이 시원해. 눈 감고 느껴 봐.' },
+    any: { _: '날씨 얘기 좋지. 너랑 함께라면 어떤 날씨도 좋아.' }
+  };
+  const FOLLOW = {
+    day: { ask: 'day', casual: ['오늘은 뭐 했어?', '오늘 하루는 어땠어?'], noble: ['오늘은 무엇을 했나.'] },
+    feel: { ask: 'feel', casual: ['너는 요즘 어때?'], noble: ['너는 어떠한가.'] },
+    food: { ask: 'food', casual: ['너는 어떤 음식 좋아해?'], noble: ['너는 무엇을 즐겨 먹는가.'] },
+    name: { ask: 'name', casual: ['참, 네 이름이 뭐야?'], noble: ['그러고 보니 네 이름을 듣지 못했군.'] },
+    play: { ask: 'play', casual: ['우리 같이 놀까?'], noble: ['함께 걸어 보겠나.'] },
+    more: { ask: null, casual: ['더 이야기해 줘!'], noble: ['이야기를 더 들려 보아라.'] }
+  };
+  const WARY = {
+    _: ['…', '왜 말을 거는 거예요…', '조금 무서워요…'],
+    greet: ['…안녕하세요.', '…당신이군요.'], bye: ['…네. 조심히 가요.'],
+    sorry: ['…정말 미안한 거예요? 조금만 더 지켜볼게요.', '아직 아파요… 하지만 사과해 줘서 고마워요.'],
+    love: ['…진짜예요? 아직은 잘 모르겠어요.', '그런 말… 믿어도 될까요?'], praise: ['…진짜예요? 아직은 잘 모르겠어요.'], thanks: ['…아니에요.'],
+    hungry: ['…배고프긴 해요. 먹을 것 좀 주면 안 될까요?'], insult: ['…역시 그렇죠. 저는 괜찮아요…'], sad_user: ['…괜찮아요? 곁에 있어 줄 순 있어요.']
+  };
+  const MOTION = { greet: 'hop', bye: 'nod', sleepy: 'nod', love: 'joy', praise: 'wiggle', thanks: 'nod', sorry: 'nod', insult: 'refuse', cheer: 'hop', sad_user: 'nod', happy_user: 'hop', how_are_you: 'talk', what_doing: 'talk', name_q: 'nod', ask_me: 'nod', tell_name: 'joy', pet_feel: 'joy', weather: 'talk', joke: 'hop', favorite_q: 'wiggle', food: 'wiggle', hungry: 'wiggle', play: 'hop', battle: 'hop', fallback: 'nod' };
+
+  const sessions = new Map();   // 포켓몬별 세션 기억(새로고침하면 사라짐)
+  const sess = (id) => { let s = sessions.get(id); if (!s) { s = { ask: null, recent: [], topics: [], turns: 0, followedAt: -9 }; sessions.set(id, s); } return s; };
+  const fresh = (s, arr) => { const f = arr.filter(x => !s.recent.includes(x)); const v = pick(f.length ? f : arr); s.recent.push(v); if (s.recent.length > 10) s.recent.shift(); return v; };
+  const from = (s, table, voice) => fresh(s, table[voice] || table.calm || table.cute);
+
+  function classify(msg) {
+    let best = null, bestS = 0;
+    for (const it of INTENTS) { let sc = 0; for (const [re, w] of it.w) if (re.test(msg)) sc += w; if (sc > bestS) { bestS = sc; best = it.id; } }
+    return { id: best, score: bestS };
+  }
+  function findFood(msg) {
+    for (const f of FOODS) { const names = [f.name, ...(FOOD_ALIAS[f.id] || [])]; if (names.some(n => msg.includes(n))) return f; }
+    return null;
+  }
+  function likesTopic(msg) {
+    const mt = msg.match(/([가-힣a-zA-Z0-9]{2,8}?)(?:을|를|이|가|은|는)?\s*(?:좋아해|좋아하니|좋아하지|싫어해|먹어\s*봤|먹을래|먹고\s*싶)/);
+    return mt && !NOT_TOPIC.has(mt[1]) ? mt[1] : null;
+  }
+  function pickTopic(msg) {
+    let best = '';
+    for (let t of msg.split(/[^가-힣a-zA-Z0-9]+/)) {
+      t = t.replace(/(이랑|하고|에서|에게|한테|으로|처럼|보다|까지|부터|이야|라고|인데|이다|은|는|이|가|을|를|도|만|와|과|랑|의|에|로|야)$/, '');
+      if (t.length >= 2 && !STOP.has(t) && !(t.length >= 3 && /[어아요다]$/.test(t)) && t.length >= best.length) best = t;   // 서술어(모르겠어·재밌었어)는 주제가 아니다
+    }
+    return best;
+  }
+  function pickName(msg) {
+    const a = msg.match(/(?:내\s*이름은|제\s*이름은)\s*([가-힣a-zA-Z0-9]{1,8})/);
+    if (a) return a[1].replace(/(이야|이에요|예요|입니다|이라고|라고|야)$/, '') || null;
+    const b = msg.match(/^(?:나는|난|저는)\s*([가-힣]{2,4})\s*(?:이야|야|이에요|예요|입니다|이라고|라고)\s*$/);
+    return b && !/^(학생|사람|트레이너|어른|아이|남자|여자|주인|사육사)$/.test(b[1]) ? b[1] : null;
+  }
+  function weatherKind(msg) {
+    return /비가|비\s*오|비\s*와|비\s*내|장마|소나기/.test(msg) ? 'rain' : /눈|함박/.test(msg) ? 'snow' : /더워|더운/.test(msg) ? 'hot' : /추워|추운/.test(msg) ? 'cold'
+      : /맑|햇살|햇볕|구름|무지개/.test(msg) ? 'sun' : /별|달빛|보름달|밤하늘/.test(msg) ? 'night' : /바람/.test(msg) ? 'wind' : 'any';
+  }
+  function feeling(c) {
+    if (c.fullness >= 4) return '배가 불러서 아주 든든해';
+    if (c.fullness === 0) return '조금 출출하지만 괜찮아';
+    if (c.period === 'night') return '살짝 졸리지만 기분은 좋아';
+    return c.aff >= 60 ? '네 덕분에 기분이 최고야' : '그럭저럭 평온해';
+  }
+
+  // ---- 핵심 ----
+  function core(c, intent) {   // → { text, motion, ask? }
+    const { s, voice, m, t } = c, V = (tb) => from(s, tb, voice);
+    const noble = voice === 'noble';
+    switch (intent) {
+      case 'sorry': return { text: (c.hit ? (noble ? '아까는 꽤 아팠다. ' : '아까는 많이 아팠어… ') : '') + V(R.sorry) };
+      case 'greet': {
+        const note = noble ? '' : c.period === 'night' ? ' 밤하늘의 별이 예쁘네.' : c.period === 'sunset' ? ' 노을이 예쁘게 물들었어.' : ' 햇살이 참 좋아.';
+        return { text: V(R.greet) + (Math.random() < 0.5 ? note : '') };
+      }
+      case 'sleepy': return { text: c.period === 'night' && Math.random() < 0.5 ? V(R.sleepyNight) : V(R.sleepy) };
+      case 'sad_user': return { text: V(R.sad_user), ask: 'day' };
+      case 'how_are_you': { const f = feeling(c); return { text: noble ? `나는 ${f}. 너는 어떠냐.` : `${f}! 너는 어때?`, ask: 'feel' }; }
+      case 'name_q': { const n = c.name, y = josa(n, '이/') + '야'; return { text: voice === 'cute' ? `나는 ${n}! 기억해 줘~` : noble ? `나는 ${n}. 기억해 두어라.` : voice === 'cool' ? `${n}. 네 파트너지.` : `나는 ${y}. 잘 부탁해.` }; }
+      case 'ask_me':
+        if (t.userName) return { text: noble ? `${t.userName}, 잊을 리 있겠나.` : `당연히 알지! ${josa(t.userName, '이/')}야!` };
+        return { text: noble ? '아직 이름을 듣지 못했다. 알려 주겠나.' : '아직 네 이름을 못 들었어. 알려 줄래?', ask: 'name' };
+      case 'favorite_q': { const f = favFoodOf(m); return { text: noble ? `내가 즐기는 것은 ${f.name}${f.emoji}이다.` : `내가 제일 좋아하는 건 ${josa(f.name, '이/')}야! ${f.emoji}`, ask: 'food' }; }
+      case 'joke': return { text: fresh(s, JOKES), ask: 'fun' };
+      case 'weather': { const w = WEATHER[weatherKind(c.msg)]; const ty = (c.types || []).find(x => w[x]); return { text: w[ty] || w._ }; }
+      case 'hungry': {
+        const fav = favFoodOf(m);
+        if (c.fullness >= 4) return { text: noble ? '지금은 배가 가득하다. 괜찮다.' : '지금은 배가 너무 불러서 둥둥 떠다닐 것 같아!' };
+        if (c.fullness === 0) return { text: noble ? '…배는 비었다. 열매라면 환영이다.' : `배에서 꼬르륵 소리가 나… ${josa(fav.name, '이/')}면 좋겠어!` };
+        return { text: noble ? '간식이 있다면 마다하진 않겠다.' : pick(['조금 출출해! 간식 주면 잘 먹을게~', `${josa(fav.name, '이/')} 있으면 더 좋고!`]) };
+      }
+      case 'food': {
+        const f = c.food, n = f.name, fav = favFoodOf(m).id === f.id;
+        const lead = fav ? `${josa(n, '이/')}라니! 내가 제일 좋아하는 거잖아! 💖` : f.spicy ? `${n}는 맵지만 은근 중독돼! 🔥` : f.drink ? `${n}? 꿀꺽꿀꺽 마시고 싶다!` : f.sweet ? `${n}? 달콤한 건 사랑이지~ 🍯` : `${n}? 맛있지! 주면 잘 먹을게.`;
+        return { text: lead + (c.fullness >= 4 ? ' …근데 지금은 배가 불러서 나중에!' : ''), motion: fav ? 'joy' : 'wiggle' };
+      }
+      case 'likes_q': return { text: noble ? `'${c.topic}'라… 잘 모르지만 네가 마음에 두는 것이라면 궁금하군.` : `'${c.topic}'? 잘은 몰라도 네가 좋아하는 거라면 나도 궁금해!`, ask: 'more' };
+      default: return { text: V(R[intent] || R.greet) };
+    }
+  }
+
+  function answerAsk(c) {   // 직전 질문(ask)에 대한 답으로 읽기 → { text, motion } | null
+    const { s, t, msg, voice } = c, V = (tb) => from(s, tb, voice), noble = voice === 'noble', ask = s.ask;
+    const short = msg.length <= 8;
+    if (ask === 'name') {
+      const n = pickName(msg) || (short && !/[?？]/.test(c.raw) ? msg.replace(/(이야|이에요|예요|입니다|이라고|라고|야)$/, '').trim() : null);
+      if (n && n.length <= 8) { t.userName = n; return { text: noble ? `${josa(n, '이/')}라… 기억해 두마.` : `${josa(n, '이/')}구나! 이제 절대 안 잊을게!`, motion: 'joy' }; }
+    }
+    if (ask === 'day' || ask === 'feel') {
+      if (c.isQ) return null;   // 되묻는 말은 답이 아니다
+      if (NEG.test(msg)) return { text: V(R.sad_user), motion: 'nod' };
+      if (POS.test(msg)) return { text: pick(noble ? ['좋은 하루였군. 흐뭇하다.'] : voice === 'cute' ? ['와, 좋았겠다! 나도 덩달아 기분 좋아졌어~'] : ['그랬구나. 네가 즐거웠다니 나도 기뻐.']), motion: 'hop' };
+      return { text: noble ? '그렇군. 들려 주어 고맙다.' : pick(['그랬구나. 이야기해 줘서 고마워.', '음음, 그랬구나~']), motion: 'nod' };
+    }
+    if (ask === 'play') return YES.test(msg) ? { text: V(R.play), motion: 'hop' } : NO.test(msg) ? { text: noble ? '그럼 여기서 조용히 쉬자.' : '그래, 그럼 여기서 같이 쉬자.', motion: 'nod' } : null;
+    if (ask === 'fun') return (YES.test(msg) || POS.test(msg)) && !NO.test(msg) ? { text: noble ? '흡족했다니 다행이군.' : '다행이다! 또 해 줄게!', motion: 'hop' } : NO.test(msg) ? { text: noble ? '…다음엔 더 나은 이야기를 준비하마.' : '앗, 별로였어? 다음엔 더 재밌는 걸 준비할게!', motion: 'nod' } : null;
+    if (ask === 'food' && short && !c.isQ && !/모르|몰라|글쎄|없어|별로|싫|그냥/.test(msg)) { const f = msg.replace(/(이야|이에요|예요|이라고|라고|야|을|를)$/, '').trim(); if (f && f.length <= 8) { t.userFav = f; return { text: noble ? `'${f}'라… 기억해 두겠다.` : `'${f}'! 기억해 둘게. 나중에 같이 먹자~`, motion: 'wiggle' }; } }
+    return null;
+  }
+
+  function fallback(c) {
+    const { s, voice } = c, topic = pickTopic(c.msg), noble = voice === 'noble';
+    if (!c.isQ && NEG.test(c.msg)) return { text: from(s, R.sad_user, voice), motion: 'nod' };   // 감정이 드러나면 내용보다 마음에 먼저 답한다
+    if (!c.isQ && POS.test(c.msg)) return { text: from(s, R.happy_user, voice), motion: 'hop' };
+    if (c.isQ) return { text: from(s, P(['음… 잘 모르겠어. 너는 어떻게 생각해?', '으응, 나도 궁금해! 같이 생각해 볼까?'], ['글쎄… 네 생각이 궁금하군.'], ['글쎄, 잘 모르겠어. 네 생각은 어때?'], ['글쎄… 잘 모르겠어. 너는 어떻게 생각해?']), voice), motion: 'talk' };
+    if (topic) return { text: from(s, P([`'${topic}' 얘기구나! 더 들려줘~`, `오오, '${topic}'? 재밌겠다! 그래서?`], [`'${topic}'라… 흥미롭군. 계속해 보아라.`], [`'${topic}'라… 더 자세히 말해 줄래?`], [`'${topic}'… 그렇구나. 조금 더 이야기해 줘.`]), voice), motion: 'nod', topic };
+    return { text: from(s, P(['응응, 계속 말해 줘!', '음음~ 그래서?'], ['…계속하라.'], ['응, 듣고 있어.'], ['응, 듣고 있어.', '그렇구나…']), voice), motion: 'nod' };
+  }
+
+  // 질문 덧붙이기(대화를 이어 가기)
+  function follow(c, used) {
+    if (used || c.s.turns - c.s.followedAt < 2 || Math.random() > 0.5) return null;
+    const keys = c.t.userName ? ['day', 'feel', 'food', 'play', 'more'] : ['name', 'day', 'feel', 'food'];
+    const f = FOLLOW[pick(c.t.userFav ? keys.filter(k => k !== 'food') : keys)];
+    return { text: pick(c.voice === 'noble' ? f.noble : f.casual), ask: f.ask };
+  }
+
+  function reply(m, raw, opt = {}) {
+    const t = m.talk || (m.talk = { turns: 0 }), s = sess(m.id), aff = m.affection || 0;
+    const name = getBasePokemonName(m.pokemon_name) || m.pokemon_name, types = m.types || [];
+    const voice = VOICE[getPokemonArchetype(name, types)] || 'calm';
+    const msg = norm(raw), isQ = /[?？]/.test(raw) || /(니|까|냐|나요|할래|을래|를래|거야|뭐야|뭔데)\s*$/.test(msg);
+    const c = { m, t, s, aff, name, voice, msg, raw, isQ, types, hit: !!opt.recentlyHit, period: getPeriod(), fullness: m.fullness || 0 };
+    const gap = t.last ? Date.now() - t.last : 0;
+
+    // 1) 의도 고르기
+    let { id: intent, score } = classify(msg), extra = {};
+    const nm = pickName(msg), food = findFood(msg), lt = likesTopic(msg);
+    if (nm) { intent = 'tell_name'; extra.name = nm; }
+    else if (food) { intent = 'food'; c.food = food; }
+    else if (lt && isQ && (intent === 'love' || !intent)) { intent = 'likes_q'; c.topic = lt; }
+    const strong = !!intent && (score >= 2 || intent === 'tell_name' || intent === 'food' || intent === 'likes_q');
+
+    let out = null, askNext = null;
+    if (aff <= 10) {                       // 낯가림: 짧고 조심스러운 대답
+      const tb = WARY[intent] || WARY._;
+      out = { text: fresh(s, tb), motion: ['sorry', 'hungry', 'sad_user'].includes(intent) ? 'nod' : 'refuse' };
+      s.ask = null;
+    } else {
+      // 2) 직전 질문의 답인지 먼저 본다 (뚜렷한 다른 의도가 있으면 그쪽이 우선)
+      if (s.ask && !strong) out = answerAsk(c);
+      if (out) s.ask = null;
+      else {
+        s.ask = null;
+        if (intent === 'tell_name') { t.userName = extra.name; out = { text: voice === 'noble' ? `${josa(extra.name, '이/')}라… 기억해 두마.` : `${josa(extra.name, '이/')}구나! 이제 절대 안 잊을게!`, motion: 'joy' }; }
+        else if (strong) { const r = core(c, intent); out = { ...r, motion: r.motion || MOTION[intent] || 'nod' }; askNext = r.ask || null; }
+        else { out = fallback(c); if (out.topic) { s.topics.push(out.topic); if (s.topics.length > 5) s.topics.shift(); } }
+      }
+      // 3) 덧붙이기: 오랜만/이름 부르기/질문 이어 가기
+      let pre = '', post = '';
+      if (s.turns === 0 && gap > 6 * 3600 * 1000 && intent !== 'greet') pre += pick(voice === 'noble' ? ['오랜만이군. '] : voice === 'cute' ? ['오랜만이야! 보고 싶었어~ '] : ['오랜만이야. ']);
+      else if (t.userName && voice !== 'noble' && aff >= 40 && Math.random() < 0.3) pre += `${josa(t.userName, '아/야')}, `;
+      if (t.userFav && ['hungry', 'greet', 'how_are_you'].includes(intent) && Math.random() < 0.3) post += voice === 'noble' ? ` …네가 즐긴다던 '${t.userFav}'가 문득 떠오르는군.` : ` 아, 네가 좋아한다던 '${t.userFav}'도 궁금해졌어.`;
+      if (!askNext && !['bye', 'sleepy', 'insult', 'sorry', 'sad_user', 'joke', 'food'].includes(intent) && !/[?？]$/.test((out.text + post).trim()) && (pre + out.text + post).length <= 46) {
+        const f = follow(c, false); if (f) { post += ' ' + f.text; askNext = f.ask; s.followedAt = s.turns; }
+      }
+      out.text = pre + out.text + post;
+      s.ask = askNext;
+    }
+    s.turns++; t.turns = (t.turns || 0) + 1; t.last = Date.now(); saveHabitat();
+    return { text: out.text, motion: out.motion || 'nod', intent };
+  }
+  return { reply, classify, norm };
+})();
+// </talk-model>
+
+// =====================================================================
 // 8. 월드(사육장 풍경) — 새로 그린 아기자기한 동산
 // =====================================================================
 function sceneSvg() {
@@ -2888,9 +3023,8 @@ function renderPlay(id) {
     e.preventDefault(); const m = cur(), msg = tin.value.trim().slice(0, 30); if (!m || !msg || PL.talking) return;
     PL.talking = true; tin.value = ''; tcnt.textContent = '0/30'; say('…', 0); eng.play('talk'); SFX.click();
     later(() => {
-      const a = m.affection || 0;
-      const reply = a <= 10 ? pick(['…', '왜 말을 거는 거예요…', '조금 무서워요…']) : generateEmotionalSpeech({ pokemonName: m.pokemon_name, affection: a, fullness: m.fullness, userMessage: msg, types: m.types || [] });
-      say(reply, 6000); eng.play(a <= 10 ? 'refuse' : 'nod'); PL.talking = false;
+      let r; try { r = Talk.reply(m, msg, { recentlyHit: PL.hitAt > 0 && performance.now() - PL.hitAt < 90000 }); } catch (err) { console.error('대화 모델 오류', err); r = { text: '…응? 다시 한 번 말해 줄래?', motion: 'nod' }; }
+      say(r.text, clamp(3600 + r.text.length * 90, 4200, 9000)); eng.play(r.motion); PL.talking = false;
     }, 700);
   });
 
