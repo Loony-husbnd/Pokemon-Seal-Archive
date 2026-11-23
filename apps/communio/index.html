@@ -356,16 +356,16 @@ body[data-period="night"] .win .wc { background: rgba(190, 180, 255, .55); box-s
 @keyframes flashOut { to { opacity: 0; } }
 
 /* 손 (흰 장갑, 손가락 4개) */
-.hand { position: absolute; left: 0; top: 0; z-index: 14; width: 150px; pointer-events: none; opacity: 0; will-change: transform; transition: opacity .15s; }
+.hand { position: absolute; left: 0; top: 0; z-index: 14; width: 30px; pointer-events: none; opacity: 0; will-change: transform; transition: opacity .15s; }
 .hand.show { opacity: 1; }
-.hand .inner { transform-origin: 50% 70%; transition: transform .1s ease-out; filter: drop-shadow(0 8px 0 rgba(120, 90, 80, .22)); margin-left: -75px; margin-top: -26px; }
+.hand .inner { transform-origin: 50% 70%; transition: transform .1s ease-out; filter: drop-shadow(0 2px 0 rgba(120, 90, 80, .22)); margin-left: -15px; margin-top: -6px; }
 .hand.hover .inner { transform: rotate(14deg) scale(1.04); }
-.hand.down .inner { transform: rotate(6deg) scale(.9, .86) translateY(8px); }
-.hand svg { width: 150px; height: auto; display: block; }
+.hand.down .inner { transform: rotate(6deg) scale(.9, .86) translateY(2px); }
+.hand svg { width: 30px; height: auto; display: block; }
 .hand .fist { display: none; }
 .hand[data-pose="fist"] .open { display: none; } .hand[data-pose="fist"] .fist { display: block; }
 .hand.smack .inner { animation: smack .36s cubic-bezier(.2, .9, .3, 1) 1; }
-@keyframes smack { 0% { transform: rotate(-38deg) translate(26px, -40px) scale(1.05); } 40% { transform: rotate(-38deg) translate(34px, -52px) scale(1.08); } 62% { transform: rotate(12deg) translate(-4px, 12px) scale(.88); } 100% { transform: rotate(14deg) scale(1.04); } }
+@keyframes smack { 0% { transform: rotate(-38deg) translate(5px, -8px) scale(1.05); } 40% { transform: rotate(-38deg) translate(7px, -10px) scale(1.08); } 62% { transform: rotate(12deg) translate(-1px, 2px) scale(.88); } 100% { transform: rotate(14deg) scale(1.04); } }
 
 /* 도구 버튼 · 음식 쟁반 */
 .modes { display: flex; gap: 10px; margin: 16px 0 12px; }
@@ -2340,7 +2340,7 @@ const FX = {
 // 5. 손 (흰 장갑 · 통통한 손가락 4개) — 쓰다듬기용 펼친 손 / 때리기용 주먹
 // =====================================================================
 const HAND_SVG = `
-<svg class="open" viewBox="0 0 140 176" aria-hidden="true">
+<svg class="open" viewBox="-16 2 172 176" aria-hidden="true">
   <defs><g id="hand-open-shape">
     <rect x="24" y="36" width="30" height="74" rx="15"/><rect x="55" y="14" width="31" height="90" rx="15.5"/><rect x="87" y="32" width="30" height="76" rx="15"/>
     <rect x="-2" y="80" width="34" height="58" rx="17" transform="rotate(-38 15 109)"/>
@@ -2353,7 +2353,7 @@ const HAND_SVG = `
   <rect x="34" y="146" width="72" height="9" fill="#FF7F8F" opacity=".9"/>
   <ellipse cx="46" cy="30" rx="6" ry="3.5" fill="#fff" opacity=".9" transform="rotate(-18 46 30)"/>
 </svg>
-<svg class="fist" viewBox="0 0 140 176" aria-hidden="true">
+<svg class="fist" viewBox="-16 2 172 176" aria-hidden="true">
   <defs><g id="hand-fist-shape">
     <rect x="22" y="34" width="96" height="92" rx="40"/><rect x="34" y="138" width="72" height="28" rx="12"/>
   </g></defs>
